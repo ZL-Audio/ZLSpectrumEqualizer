@@ -1,0 +1,444 @@
+// Copyright (C) 2025 - zsliu98
+// This file is part of ZLSpectrumEqualizer
+//
+// ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
+//
+// ZLSpectrumEqualizer is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
+
+#pragma once
+
+#include <juce_audio_processors/juce_audio_processors.h>
+
+namespace zlp {
+    inline constexpr int kVersionHint = 1;
+
+#ifdef ZL_EQ_BAND_NUM
+    inline constexpr size_t kBandNum = ZL_EQ_BAND_NUM;
+#else
+    inline constexpr size_t kBandNum = 24;
+#endif
+
+    enum FilterStatus {
+        kOff, kBypass, kOn
+    };
+
+    enum FilterStereo {
+        kStereo, kLeft, kRight, kMid, kSide
+    };
+
+    template <typename FloatType>
+    inline juce::NormalisableRange<FloatType> getLogMidRange(
+        const FloatType x_min, const FloatType x_max, const FloatType x_mid, const FloatType x_interval) {
+        const FloatType rng1{std::log(x_mid / x_min) * FloatType(2)};
+        const FloatType rng2{std::log(x_max / x_mid) * FloatType(2)};
+        auto result_range = juce::NormalisableRange<FloatType>{
+            x_min, x_max,
+            [=](FloatType, FloatType, const FloatType v) {
+                return v < FloatType(.5) ? std::exp(v * rng1) * x_min : std::exp((v - FloatType(.5)) * rng2) * x_mid;
+            },
+            [=](FloatType, FloatType, const FloatType v) {
+                return v < x_mid ? std::log(v / x_min) / rng1 : FloatType(.5) + std::log(v / x_mid) / rng2;
+            },
+            [=](FloatType, FloatType, const FloatType v) {
+                const FloatType x = x_min + x_interval * std::round((v - x_min) / x_interval);
+                return x <= x_min ? x_min : (x >= x_max ? x_max : x);
+            }
+        };
+        result_range.interval = x_interval;
+        return result_range;
+    }
+
+    template <typename FloatType>
+    inline juce::NormalisableRange<FloatType> getLogMidRangeShift(
+        const FloatType x_min, const FloatType x_max, const FloatType x_mid,
+        const FloatType x_interval, const FloatType shift) {
+        const auto range = getLogMidRange<FloatType>(x_min, x_max, x_mid, x_interval);
+        auto result_range = juce::NormalisableRange<FloatType>{
+            x_min + shift, x_max + shift,
+            [=](FloatType, FloatType, const FloatType v) {
+                return range.convertFrom0to1(v) + shift;
+            },
+            [=](FloatType, FloatType, const FloatType v) {
+                return range.convertTo0to1(v - shift);
+            },
+            [=](FloatType, FloatType, const FloatType v) {
+                return range.snapToLegalValue(v - shift) + shift;
+            }
+        };
+        result_range.interval = x_interval;
+        return result_range;
+    }
+
+    template <typename FloatType>
+    inline juce::NormalisableRange<FloatType> getSymmetricLogMidRangeShift(
+        const FloatType x_min, const FloatType x_max, const FloatType x_mid,
+        const FloatType x_interval, const FloatType shift) {
+        const auto range = getLogMidRangeShift<FloatType>(x_min, x_max, x_mid, x_interval, shift);
+        auto result_range = juce::NormalisableRange<FloatType>{
+            -(x_max + shift), x_max + shift,
+            [=](FloatType, FloatType, const FloatType v) {
+                if (v > FloatType(0.5)) {
+                    return range.convertFrom0to1(v * FloatType(2) - FloatType(1));
+                } else {
+                    return -range.convertFrom0to1(FloatType(1) - v * FloatType(2));
+                }
+            },
+            [=](FloatType, FloatType, const FloatType v) {
+                if (v > FloatType(0)) {
+                    return range.convertTo0to1(v) * FloatType(0.5) + FloatType(0.5);
+                } else {
+                    return FloatType(0.5) - range.convertTo0to1(-v) * FloatType(0.5);
+                }
+            },
+            [=](FloatType, FloatType, const FloatType v) {
+                if (v > FloatType(0)) {
+                    return range.snapToLegalValue(v);
+                } else {
+                    return -range.snapToLegalValue(-v);
+                }
+            }
+        };
+        result_range.interval = x_interval;
+        return result_range;
+    }
+
+    template <typename FloatType>
+    inline juce::NormalisableRange<FloatType> getLinearMidRange(
+        const FloatType x_min, const FloatType x_max, const FloatType x_mid, const FloatType x_interval) {
+        auto result_range = juce::NormalisableRange<FloatType>{
+            x_min, x_max,
+            [=](FloatType, FloatType, const FloatType v) {
+                return v < FloatType(.5)
+                    ? FloatType(2) * v * (x_mid - x_min) + x_min
+                    : FloatType(2) * (v - FloatType(0.5)) * (x_max - x_mid) + x_mid;
+            },
+            [=](FloatType, FloatType, const FloatType v) {
+                return v < x_mid
+                    ? FloatType(.5) * (v - x_min) / (x_mid - x_min)
+                    : FloatType(.5) + FloatType(.5) * (v - x_mid) / (x_max - x_mid);
+            },
+            [=](FloatType, FloatType, const FloatType v) {
+                const FloatType x = x_min + x_interval * std::round((v - x_min) / x_interval);
+                return x <= x_min ? x_min : (x >= x_max ? x_max : x);
+            }
+        };
+        result_range.interval = x_interval;
+        return result_range;
+    }
+
+    // float
+    template <class T>
+    class FloatParameters {
+    public:
+        static std::unique_ptr<juce::AudioParameterFloat> get(const bool automate = true) {
+            auto attributes = juce::AudioParameterFloatAttributes().withAutomatable(automate).withLabel(T::kName);
+            return std::make_unique<juce::AudioParameterFloat>(juce::ParameterID(T::kID, kVersionHint),
+                                                               T::kName, T::kRange, T::kDefaultV, attributes);
+        }
+
+        static std::unique_ptr<juce::AudioParameterFloat> get(const std::string& suffix) {
+            auto attributes = juce::AudioParameterFloatAttributes().withAutomatable(true).withLabel(T::kName);
+            return std::make_unique<juce::AudioParameterFloat>(juce::ParameterID(T::kID + suffix, kVersionHint),
+                                                               T::kName + suffix, T::kRange, T::kDefaultV, attributes);
+        }
+
+        static std::unique_ptr<juce::AudioParameterFloat> get(const std::string& suffix, const bool meta,
+                                                              const bool automate) {
+            auto attributes = juce::AudioParameterFloatAttributes().withAutomatable(automate).withLabel(T::kName).
+                                                                    withMeta(meta);
+            return std::make_unique<juce::AudioParameterFloat>(juce::ParameterID(T::kID + suffix, kVersionHint),
+                                                               T::kName + suffix, T::kRange, T::kDefaultV, attributes);
+        }
+
+        inline static float convertTo01(const float x) {
+            return T::kRange.convertTo0to1(x);
+        }
+    };
+
+    // bool
+    template <class T>
+    class BoolParameters {
+    public:
+        static std::unique_ptr<juce::AudioParameterBool> get(const bool automate = true) {
+            auto attributes = juce::AudioParameterBoolAttributes().withAutomatable(automate).withLabel(T::kName);
+            return std::make_unique<juce::AudioParameterBool>(juce::ParameterID(T::kID, kVersionHint),
+                                                              T::kName, T::kDefaultV, attributes);
+        }
+
+        static std::unique_ptr<juce::AudioParameterBool> get(const std::string& suffix) {
+            auto attributes = juce::AudioParameterBoolAttributes().withAutomatable(true).withLabel(T::kName);
+            return std::make_unique<juce::AudioParameterBool>(juce::ParameterID(T::kID + suffix, kVersionHint),
+                                                              T::kName + suffix, T::kDefaultV, attributes);
+        }
+
+        static std::unique_ptr<juce::AudioParameterBool> get(const std::string& suffix, const bool meta,
+                                                             const bool automate) {
+            auto attributes = juce::AudioParameterBoolAttributes().withAutomatable(automate).withLabel(T::kName).
+                                                                   withMeta(meta);
+            return std::make_unique<juce::AudioParameterBool>(juce::ParameterID(T::kID + suffix, kVersionHint),
+                                                              T::kName + suffix, T::kDefaultV, attributes);
+        }
+
+        inline static float convertTo01(const bool x) {
+            return x ? 1.f : 0.f;
+        }
+    };
+
+    // choice
+    template <class T>
+    class ChoiceParameters {
+    public:
+        static std::unique_ptr<juce::AudioParameterChoice> get(const bool automate = true) {
+            auto attributes = juce::AudioParameterChoiceAttributes().withAutomatable(automate).withLabel(T::kName);
+            return std::make_unique<juce::AudioParameterChoice>(juce::ParameterID(T::kID, kVersionHint),
+                                                                T::kName, T::kChoices, T::kDefaultI, attributes);
+        }
+
+        static std::unique_ptr<juce::AudioParameterChoice> get(const std::string& suffix) {
+            auto attributes = juce::AudioParameterChoiceAttributes().withAutomatable(true).withLabel(T::kName);
+            return std::make_unique<juce::AudioParameterChoice>(juce::ParameterID(T::kID + suffix, kVersionHint),
+                                                                T::kName + suffix, T::kChoices, T::kDefaultI,
+                                                                attributes);
+        }
+
+        static std::unique_ptr<juce::AudioParameterChoice> get(const std::string& suffix, const bool meta,
+                                                               const bool automate) {
+            auto attributes = juce::AudioParameterChoiceAttributes().withAutomatable(automate).withLabel(T::kName).
+                                                                     withMeta(meta);
+            return std::make_unique<juce::AudioParameterChoice>(juce::ParameterID(T::kID + suffix, kVersionHint),
+                                                                T::kName + suffix, T::kChoices, T::kDefaultI,
+                                                                attributes);
+        }
+
+        inline static float convertTo01(const int x) {
+            return static_cast<float>(x) / static_cast<float>(T::kChoices.size() - 1);
+        }
+    };
+
+    class PExtSide : public BoolParameters<PExtSide> {
+    public:
+        static constexpr auto kID = "total_external_side";
+        static constexpr auto kName = "External Side";
+        static constexpr auto kDefaultV = false;
+    };
+
+    class PBypass : public ChoiceParameters<PBypass> {
+    public:
+        static constexpr auto kID = "total_bypass";
+        static constexpr auto kName = "Bypass";
+        inline static const auto kChoices = juce::StringArray{
+            "On", "Bypass"
+        };
+        static constexpr int kDefaultI = 0;
+    };
+
+    class PSpecSmooth : public FloatParameters<PSpecSmooth> {
+    public:
+        static constexpr auto kID = "spectrum_smooth";
+        static constexpr auto kName = "Spectrum Smooth";
+        inline static const auto kRange = juce::NormalisableRange<float>(0.f, 1.f, .01f);
+        static constexpr auto kDefaultV = .5f;
+    };
+
+    class POutputGain : public FloatParameters<POutputGain> {
+    public:
+        static constexpr auto kID = "total_output_gain";
+        static constexpr auto kName = "Output Gain";
+        inline static const auto kRange = juce::NormalisableRange<float>(-30.f, 30.f, .01f);
+        static constexpr auto kDefaultV = 0.f;
+    };
+
+    class PGainScale : public FloatParameters<PGainScale> {
+    public:
+        static constexpr auto kID = "total_gain_scale";
+        static constexpr auto kName = "Gain Scale";
+        inline static const auto kRange = juce::NormalisableRange<float>(-100.f, 200.f, .1f);
+        static constexpr auto kDefaultV = 100.f;
+    };
+
+    class PStaticGain : public ChoiceParameters<PStaticGain> {
+    public:
+        static constexpr auto kID = "total_static_gain";
+        static constexpr auto kName = "Static Gain";
+        inline static const auto kChoices = juce::StringArray{
+            "Off", "On"
+        };
+        static constexpr int kDefaultI = 0;
+    };
+
+    // band parameters
+    class PFilterStatus : public ChoiceParameters<PFilterStatus> {
+    public:
+        static constexpr auto kID = "filter_status";
+        static constexpr auto kName = "Filter Status";
+        inline static const auto kChoices = juce::StringArray{
+            "Off", "Bypass", "On"
+        };
+        static constexpr int kDefaultI = 0;
+    };
+
+    class PFilterType : public ChoiceParameters<PFilterType> {
+    public:
+        static constexpr auto kID = "filter_type";
+        static constexpr auto kName = "Filter Type";
+        inline static const auto kChoices = juce::StringArray{
+            "Peak", "Low Shelf", "Low Pass",
+            "High Shelf", "High Pass", "Notch",
+            "Band Pass", "Tilt Shelf"
+        };
+        static constexpr int kDefaultI = 0;
+    };
+
+    class POrder : public ChoiceParameters<POrder> {
+    public:
+        static constexpr auto kID = "order";
+        static constexpr auto kName = "Order";
+        inline static const auto kChoices = juce::StringArray{
+            "6 dB/oct", "12 dB/oct", "24 dB/oct", "36 dB/oct", "48 dB/oct", "72 dB/oct", "96 dB/oct"
+        };
+        static constexpr int kDefaultI = 1;
+        static constexpr std::array<size_t, 8> kOrderArray{1, 2, 4, 6, 8, 12, 16};
+
+        static size_t convertToIdx(const size_t order) {
+            switch (order) {
+            case 1:
+                return 0;
+            case 2:
+                return 1;
+            case 4:
+                return 2;
+            case 6:
+                return 3;
+            case 8:
+                return 4;
+            case 12:
+                return 5;
+            case 16:
+                return 6;
+            default:
+                return 0;
+            }
+        }
+    };
+
+    class PLRMode : public ChoiceParameters<PLRMode> {
+    public:
+        static constexpr auto kID = "lr_mode";
+        static constexpr auto kName = "LRMode";
+        inline static const auto kChoices = juce::StringArray{"Stereo", "Left", "Right", "Mid", "Side"};
+        static constexpr int kDefaultI = 0;
+    };
+
+    class PFreq : public FloatParameters<PFreq> {
+    public:
+        static constexpr auto kID = "freq";
+        static constexpr auto kName = "Freq";
+        inline static const auto kRange = getLogMidRange(10.f, 160000.f, 1000.f, 0.1f);
+        static constexpr auto kDefaultV = 1000.f;
+    };
+
+    class PGain : public FloatParameters<PGain> {
+    public:
+        static constexpr auto kID = "gain";
+        static constexpr auto kName = "Gain";
+        inline static const auto kRange = juce::NormalisableRange<float>(-30, 30, .01f);
+        static constexpr auto kDefaultV = 0.f;
+    };
+
+    class PTargetGain : public FloatParameters<PTargetGain> {
+    public:
+        static constexpr auto kID = "target_gain";
+        static constexpr auto kName = "Target Gain";
+        inline static const auto kRange = juce::NormalisableRange<float>(-30, 30, .01f);
+        static constexpr auto kDefaultV = 0.f;
+    };
+
+    class PQ : public FloatParameters<PQ> {
+    public:
+        static constexpr auto kID = "q";
+        static constexpr auto kName = "Q";
+        inline static const auto kRange = getLogMidRange(0.025f, 25.f, 0.707f, 0.001f);
+        static constexpr auto kDefaultV = 0.707f;
+    };
+
+    class PDynamicON : public BoolParameters<PDynamicON> {
+    public:
+        static constexpr auto kID = "dynamic_on";
+        static constexpr auto kName = "Dynamic ON";
+        static constexpr auto kDefaultV = false;
+    };
+
+    class PDynamicBypass : public BoolParameters<PDynamicBypass> {
+    public:
+        static constexpr auto kID = "dynamic_bypass";
+        static constexpr auto kName = "Dynamic Bypass";
+        static constexpr auto kDefaultV = false;
+    };
+
+    class PSideSwap : public BoolParameters<PSideSwap> {
+    public:
+        static constexpr auto kID = "side_swap";
+        static constexpr auto kName = "Side Swap";
+        static constexpr auto kDefaultV = false;
+    };
+
+    class PThreshold : public FloatParameters<PThreshold> {
+    public:
+        static constexpr auto kID = "threshold";
+        static constexpr auto kName = "Threshold (dB)";
+        inline static const auto kRange = juce::NormalisableRange<float>(-80.f, 0.f, 0.1f);
+        static constexpr auto kDefaultV = -40.f;
+    };
+
+    class PKneeW : public FloatParameters<PKneeW> {
+    public:
+        static constexpr auto kID = "knee_width";
+        static constexpr auto kName = "Knee Width";
+        inline static const auto kRange = getLogMidRangeShift(1.f, 33.f, 9.f, 0.01f, -1.f);
+        static constexpr auto kDefaultV = 8.f;
+    };
+
+    class PAttack : public FloatParameters<PAttack> {
+    public:
+        static constexpr auto kID = "attack";
+        static constexpr auto kName = "Attack";
+        inline static const auto kRange = getLogMidRangeShift(20.f, 1020.f, 120.f, 0.01f, -20.f);
+        static constexpr auto kDefaultV = 100.f;
+    };
+
+    class PRelease : public FloatParameters<PRelease> {
+    public:
+        static constexpr auto kID = "release";
+        static constexpr auto kName = "Release";
+        inline static const auto kRange = getLogMidRangeShift(100.f, 5100.f, 600.f, 0.01f, -100.f);
+        static constexpr auto kDefaultV = 500.f;
+    };
+
+    inline juce::AudioProcessorValueTreeState::ParameterLayout getParameterLayout() {
+        juce::AudioProcessorValueTreeState::ParameterLayout layout;
+        layout.add(PExtSide::get(), PBypass::get(), PSpecSmooth::get(),
+                   POutputGain::get(), PGainScale::get(),
+                   PStaticGain::get());
+        for (size_t i = 0; i < kBandNum; ++i) {
+            const auto suffix = std::to_string(i);
+            layout.add(PFilterStatus::get(suffix),
+                       PFilterType::get(suffix, true, true),
+                       POrder::get(suffix), PLRMode::get(suffix),
+                       PFreq::get(suffix, true, true),
+                       PGain::get(suffix), PTargetGain::get(suffix),
+                       PQ::get(suffix, true, true),
+                       PDynamicON::get(suffix), PDynamicBypass::get(suffix),
+                       PSideSwap::get(suffix),
+                       PThreshold::get(suffix), PKneeW::get(suffix), PAttack::get(suffix), PRelease::get(suffix));
+        }
+        return layout;
+    }
+c
+    inline void updateParaNotifyHost(juce::RangedAudioParameter* para, const float value) {
+        para->beginChangeGesture();
+        para->setValueNotifyingHost(value);
+        para->endChangeGesture();
+    }
+}

@@ -1,0 +1,7 @@
+[submodule "JUCE"]
+	path = JUCE
+	url = https://github.com/ZL-Audio/JUCE
+	branch = master
+[submodule "kfr"]
+	path = kfr
+	url = https://github.com/ZL-Audio/kfr
