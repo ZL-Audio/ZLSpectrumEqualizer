@@ -1,5 +1,6 @@
 <p align="center">
   <img src="docs/zlaudio.svg" width="7.5%"/>
+    &nbsp; &nbsp; &nbsp;
   <img src="docs/logo.svg" width="7.5%"/>
 </p>
 
@@ -24,7 +25,7 @@ sudo apt-get update && sudo apt install libasound2-dev libx11-dev libxinerama-de
 
 ### Clone and Build
 
-Once you have set up the environment, you can clone the ZL Equalizer code, populate all submodules, then configure & build the code. Please set:
+Once you have set up the environment, you can clone the ZL Spectrum Equalizer code, populate all submodules, then configure & build the code. Please set:
 - the variable `ZL_JUCE_FORMATS` as a list of formats that you want, e.g., `"VST3;LV2"`.
   - AAX plug-ins need to be digitally signed using PACE Anti-Piracy's signing tools before they will run in commercially available versions of Pro Tools.
 - the variable `ZL_EQ_BAND_NUM` as the number of bands, default 24 bands
