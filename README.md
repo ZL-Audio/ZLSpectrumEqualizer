@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="docs/zlaudio.svg" width="7.5%" hspace="6.068%"/>
-  <img src="docs/logo.svg" width="7.5%" hspace="6.068%"/>
+  <img src="docs/zlaudio.svg" width="7.5%"/>
+  <img src="docs/logo.svg" width="7.5%"/>
 </p>
 
 # ZL Spectrum Equalizer
@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)](https://opensource.org/license/agpl-v3)
 [![Downloads](https://img.shields.io/github/downloads/ZL-Audio/ZLSpectrumEqualizer/total)](https://somsubhra.github.io/github-release-stats/?username=ZL-Audio&repository=ZLSpectrumEqualizer&page=1&per_page=30)
 
-ZL Spectrum Equalizer is an spectrum equalizer plugin.
+ZL Spectrum Equalizer is a spectrum equalizer plugin.
 
 ## Build from Source
 
@@ -39,13 +39,13 @@ Once you have set up the environment, you can clone the ZL Equalizer code, popul
   - On Windows, you may pass `-DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl`.
 
 ```console
-git clone https://github.com/ZL-Audio/ZLEqualizer
-cd ZLEqualizer
+git clone https://github.com/ZL-Audio/ZLSpectrumEqualizer
+cd ZLSpectrumEqualizer
 git submodule update --init --recursive
 cmake -B Builds -G Ninja -DCMAKE_BUILD_TYPE=Release -DKFR_ENABLE_MULTIARCH=ON -DKFR_ARCHS="sse2;avx;avx2" -DZL_JUCE_FORMATS="VST3;LV2" -DZL_EQ_BAND_NUM=24 .
 cmake --build Builds --config Release
 ```
-After building, the plugins should have been copied to the corresponding folders. If you want to disable the copy process, you can pass `-DZL_JUCE_COPY_PLUGIN=FALSE`, find the binary folders under `Builds/ZLEqualizer_artefacts/Release` and copy them manually.
+After building, the plugins should have been copied to the corresponding folders. If you want to disable the copy process, you can pass `-DZL_JUCE_COPY_PLUGIN=FALSE`, find the binary folders under `Builds/ZLSpectrumEqualizer_artefacts/Release` and copy them manually.
 
 ## License
 
