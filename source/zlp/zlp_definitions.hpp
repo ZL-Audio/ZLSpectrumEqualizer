@@ -435,7 +435,7 @@ namespace zlp {
         }
         return layout;
     }
-c
+
     inline void updateParaNotifyHost(juce::RangedAudioParameter* para, const float value) {
         para->beginChangeGesture();
         para->setValueNotifyingHost(value);

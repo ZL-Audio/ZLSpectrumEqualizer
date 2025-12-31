@@ -54,18 +54,21 @@ namespace zldsp::spectrum {
         }
 
         /**
-         * smooth the spectrum [start_idx, end_idx] by two-pass box blur
+         * smooth the spectrum [start_idx, start_idx + length - 1] by two-pass box blur
          * @param spectrum
-         * @param start_idx
-         * @param end_idx
+         * @param left_idx
+         * @param length
          */
-        void smooth(std::span<FloatType> spectrum, const size_t start_idx, const size_t end_idx) {
-            const size_t pass1_start = low_idx_[start_idx];
-            const size_t pass1_end = std::min(high_idx_[end_idx], spectrum.size() - 1);
+        void smooth(std::span<FloatType> spectrum, const size_t left_idx, const size_t length) {
+            if (length == 0) {
+                return;
+            }
+            const size_t pass1_start = low_idx_[left_idx];
+            const size_t pass1_end = std::min(high_idx_[left_idx + length - 1], spectrum.size() - 1);
             internal_smooth(spectrum, pass1_start, pass1_end);
-            internal_smooth(spectrum, start_idx, end_idx);
-            auto v1 = kfr::make_univector(spectrum.data() + start_idx, end_idx - start_idx + 1);
-            auto v2 = kfr::make_univector(scale_.data() + start_idx, end_idx - start_idx + 1);
+            internal_smooth(spectrum, left_idx, length);
+            auto v1 = kfr::make_univector(spectrum.data() + left_idx, length);
+            auto v2 = kfr::make_univector(scale_.data() + left_idx, length);
             v1 = v1 * v2;
         }
 
@@ -88,10 +91,11 @@ namespace zldsp::spectrum {
             }
         }
 
-        void internal_smooth(std::span<FloatType> spectrum, const size_t start_idx, const size_t end_idx) {
+        void internal_smooth(std::span<FloatType> spectrum, const size_t left_idx, const size_t length) {
             // calculate prefix sum
-            const auto low = low_idx_[start_idx];
-            const auto high = high_idx_[end_idx];
+            const auto right_idx = left_idx + length - 1;
+            const auto low = low_idx_[left_idx];
+            const auto high = high_idx_[right_idx];
             double sum{0.0};
             for (auto idx = low; idx < high; ++idx) {
                 prefix_sum_[idx] = static_cast<FloatType>(sum);
@@ -99,7 +103,7 @@ namespace zldsp::spectrum {
             }
             prefix_sum_[high] = static_cast<FloatType>(sum);
             // calculate moving average
-            for (auto idx = start_idx; idx <= end_idx; ++idx) {
+            for (auto idx = left_idx; idx <= right_idx; ++idx) {
                 spectrum[idx] = prefix_sum_[high_idx_[idx]] - prefix_sum_[low_idx_[idx]];
             }
         }

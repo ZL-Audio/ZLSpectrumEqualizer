@@ -11,11 +11,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-#if (MSVC)
-#include "ipps.h"
-#endif
-
-class PluginProcessor : public juce::AudioProcessor {
+class PluginProcessor final : public juce::AudioProcessor {
 public:
     PluginProcessor();
 
@@ -25,11 +21,11 @@ public:
 
     void releaseResources() override;
 
-    bool isBusesLayoutSupported(const BusesLayout &layouts) const override;
+    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
-    void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
+    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
-    juce::AudioProcessorEditor *createEditor() override;
+    juce::AudioProcessorEditor* createEditor() override;
 
     bool hasEditor() const override;
 
@@ -51,12 +47,12 @@ public:
 
     const juce::String getProgramName(int index) override;
 
-    void changeProgramName(int index, const juce::String &newName) override;
+    void changeProgramName(int index, const juce::String& newName) override;
 
-    void getStateInformation(juce::MemoryBlock &destData) override;
+    void getStateInformation(juce::MemoryBlock& destData) override;
 
-    void setStateInformation(const void *data, int sizeInBytes) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
 
 private:
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };
