@@ -20,11 +20,11 @@ namespace zlp {
     inline constexpr size_t kBandNum = 24;
 #endif
 
-    enum FilterStatus {
+    enum class FilterStatus {
         kOff, kBypass, kOn
     };
 
-    enum FilterStereo {
+    enum class FilterStereo {
         kStereo, kLeft, kRight, kMid, kSide
     };
 
