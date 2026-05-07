@@ -45,14 +45,26 @@ namespace zlp {
         static constexpr size_t kFilterSize = 16;
         static constexpr size_t kAnalyzerPointNum = 251;
 
+        enum class LRMS {
+            kStereo, kL, kR, kM, kS
+        };
+
         explicit Controller(juce::AudioProcessor& p);
 
         void prepare(double sample_rate, size_t max_num_samples);
 
-        template <bool bypass = false>
+        template <bool bypass = false, bool ext_side = false>
         void processBuffer(std::array<float*, 2> main_buffer,
                            std::array<float*, 2> side_buffer,
                            size_t num_samples);
+
+        auto& getEmptyFilter(const size_t band) {
+            return empty_filters_[band];
+        }
+
+        auto& getEmptyFlag(const size_t band) {
+            return empty_to_update_[band];
+        }
 
     private:
         static constexpr float kSqrt2Over2 = static_cast<float>(
@@ -98,6 +110,12 @@ namespace zlp {
         enum class LRMSStatus {
             kStereo, kLR, kMS, kLRMS
         };
+
+        LRMSStatus lrms_status_{LRMSStatus::kStereo};
+
+        std::array<zldsp::filter::FilterParameters, kBandNum> filter_paras_{};
+        std::array<zldsp::filter::Empty, kBandNum> empty_filters_{};
+        std::array<std::atomic<bool>, kBandNum> empty_to_update_{};
 
         std::atomic<bool> update_flag_{};
 

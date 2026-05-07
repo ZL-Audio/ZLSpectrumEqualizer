@@ -45,12 +45,11 @@ namespace zldsp::spectrum {
         }
 
         /**
-         * set spectrum smoothing parameter (should be greater or equal to 1.0)
-         * @param smooth
+         * set spectrum smoothing parameter
+         * @param smooth_oct smoothing in octave, non-negative
          */
-        void setSmooth(const FloatType smooth) {
-            smooth_ = std::max(FloatType(1), smooth);
-            updateLowHighIdx();
+        void setSmooth(const FloatType smooth_oct) {
+            updateLowHighIdx(std::max(FloatType(1), std::pow(2.0, smooth_oct / 2.0)));
         }
 
         /**
@@ -64,9 +63,9 @@ namespace zldsp::spectrum {
                 return;
             }
             const size_t pass1_start = low_idx_[left_idx];
-            const size_t pass1_end = std::min(high_idx_[left_idx + length - 1], spectrum.size() - 1);
-            internal_smooth(spectrum, pass1_start, pass1_end);
-            internal_smooth(spectrum, left_idx, length);
+            const size_t pass1_end = high_idx_[left_idx + length - 1];
+            applyBoxcarAverage(spectrum, pass1_start, pass1_end - pass1_start);
+            applyBoxcarAverage(spectrum, left_idx, length);
             auto v1 = kfr::make_univector(spectrum.data() + left_idx, length);
             auto v2 = kfr::make_univector(scale_.data() + left_idx, length);
             v1 = v1 * v2;
@@ -76,22 +75,20 @@ namespace zldsp::spectrum {
         std::vector<FloatType> prefix_sum_{};
         std::vector<size_t> low_idx_{}, high_idx_{};
         std::vector<FloatType> scale_{};
-        FloatType smooth_{FloatType(1)};
 
-        void updateLowHighIdx() {
+        void updateLowHighIdx(const double smooth) {
             const auto spectrum_size = low_idx_.size();
-            const auto smooth = static_cast<double>(smooth_);
             const auto smooth_r = 1.0 / smooth;
             for (size_t idx = 0; idx < spectrum_size; ++idx) {
                 low_idx_[idx] = static_cast<size_t>(std::round(static_cast<double>(idx) * smooth_r));
                 high_idx_[idx] = std::min(static_cast<size_t>(std::round(static_cast<double>(idx) * smooth) + 1.0),
                                           spectrum_size);
                 const auto diff = static_cast<double>(high_idx_[idx] - low_idx_[idx]);
-                scale_[idx] = static_cast<FloatType>(1.0 / (diff * diff));
+                scale_[idx] = static_cast<FloatType>(1.0 / diff);
             }
         }
 
-        void internal_smooth(std::span<FloatType> spectrum, const size_t left_idx, const size_t length) {
+        void applyBoxcarAverage(std::span<FloatType> spectrum, const size_t left_idx, const size_t length) {
             // calculate prefix sum
             const auto right_idx = left_idx + length - 1;
             const auto low = low_idx_[left_idx];
@@ -104,7 +101,7 @@ namespace zldsp::spectrum {
             prefix_sum_[high] = static_cast<FloatType>(sum);
             // calculate moving average
             for (auto idx = left_idx; idx <= right_idx; ++idx) {
-                spectrum[idx] = prefix_sum_[high_idx_[idx]] - prefix_sum_[low_idx_[idx]];
+                spectrum[idx] = (prefix_sum_[high_idx_[idx]] - prefix_sum_[low_idx_[idx]]) * scale_[idx];
             }
         }
     };

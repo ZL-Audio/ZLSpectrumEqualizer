@@ -22,14 +22,35 @@ namespace zlp {
 
     }
 
-    template <bool bypass>
+    template <bool bypass, bool ext_side>
     void Controller::processBuffer(const std::array<float*, 2> main_buffer,
                                    const std::array<float*, 2> side_buffer,
                                    const size_t num_samples) {
-        if (ext_side_) {
-            processBufferInternal<bypass, true>(main_buffer, side_buffer, num_samples);
-        } else {
-            processBufferInternal<bypass, false>(main_buffer, side_buffer, num_samples);
+        // M/S split main & side
+        if (lrms_status_ == LRMSStatus::kMS) {
+            for (size_t idx = 0; idx < num_samples; ++idx) {
+                const auto s0 = main_buffer[0][idx] * kSqrt2Over2;
+                const auto s1 = main_buffer[1][idx] * kSqrt2Over2;
+                main_buffer[0][idx] = s0 + s1;
+                main_buffer[1][idx] = s0 - s1;
+            }
+            if constexpr (ext_side) {
+                for (size_t idx = 0; idx < num_samples; ++idx) {
+                    const auto s0 = side_buffer[0][idx] * kSqrt2Over2;
+                    const auto s1 = side_buffer[1][idx] * kSqrt2Over2;
+                    side_buffer[0][idx] = s0 + s1;
+                    side_buffer[1][idx] = s0 - s1;
+                }
+            }
+        }
+        processBufferInternal<bypass, ext_side>(main_buffer, side_buffer, num_samples);
+        if (lrms_status_ == LRMSStatus::kMS || lrms_status_ == LRMSStatus::kLRMS) {
+            for (size_t idx = 0; idx < num_samples; ++idx) {
+                const auto s0 = main_buffer[0][idx] * kSqrt2Over2;
+                const auto s1 = main_buffer[1][idx] * kSqrt2Over2;
+                main_buffer[0][idx] = s0 + s1;
+                main_buffer[1][idx] = s0 - s1;
+            }
         }
     }
 
@@ -97,7 +118,24 @@ namespace zlp {
             }
         }
         // process spectrum
-        processSpectrumStereo<bypass, ext_side>();
+        switch (lrms_status_) {
+        case LRMSStatus::kStereo: {
+            processSpectrumStereo<bypass, ext_side>();
+            break;
+        }
+        case LRMSStatus::kLR: {
+            processSpectrumLR<bypass, ext_side>();
+            break;
+        }
+        case LRMSStatus::kMS: {
+            processSpectrumMS<bypass, ext_side>();
+            break;
+        }
+        case LRMSStatus::kLRMS: {
+            processSpectrumLRMS<bypass, ext_side>();
+            break;
+        }
+        }
         // main backward FFT & overlap-add
         for (size_t chan = 0; chan < 2; ++chan) {
             fft_plan_->execute(fft_in_, cspectrum_[chan], fft_temp_buffer_);
