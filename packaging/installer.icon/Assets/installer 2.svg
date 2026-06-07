@@ -1,3 +1,14 @@
+<!--
+  - Copyright (C) 2026 - zsliu98
+  - This file is part of ZLSpectrumEqualizer
+  -
+  - ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
+  -
+  - ZLSpectrumEqualizer is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+  -
+  - You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
+  -->
+
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M58.5 26.5V39.5H45.5V26.5H58.5Z" stroke="black" stroke-width="5"/>
 <path d="M19 24H37V42H19V24Z" fill="black"/>

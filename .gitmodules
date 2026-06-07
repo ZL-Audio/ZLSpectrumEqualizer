@@ -2,6 +2,9 @@
 	path = JUCE
 	url = https://github.com/ZL-Audio/JUCE
 	branch = master
-[submodule "kfr"]
-	path = kfr
-	url = https://github.com/ZL-Audio/kfr
+[submodule "source/dsp/fft/zldsp_fft"]
+	path = source/dsp/fft/zldsp_fft
+	url = https://github.com/ZL-Audio/zldsp_fft
+[submodule "highway"]
+	path = highway
+	url = https://github.com/ZL-Audio/highway

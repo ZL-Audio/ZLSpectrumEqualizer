@@ -1,4 +1,4 @@
-// Copyright (C) 2025 - zsliu98
+// Copyright (C) 2026 - zsliu98
 // This file is part of ZLSpectrumEqualizer
 //
 // ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
@@ -12,16 +12,17 @@
 #include "circular_buffer.hpp"
 
 namespace zldsp::container {
+    /**
+     * a circular buffer that can track the min/max value
+     * @tparam T the type of elements
+     * @tparam FindMin
+     * @tparam FindMax
+     */
     enum MinMaxBufferType {
         kFindMin, kFindMax
     };
 
-    /**
-     * a circular buffer that can track the min/max value
-     * @tparam T the type of elements
-     * @tparam kBufferType
-     */
-    template <typename T, MinMaxBufferType kBufferType>
+    template <typename T, MinMaxBufferType BufferType>
     class CircularMinMaxBuffer {
     public:
         explicit CircularMinMaxBuffer(const size_t capacity = 1) {
@@ -66,12 +67,12 @@ namespace zldsp::container {
                 minmax_buffer_.popFront();
             }
             // maintain monotonicity
-            if constexpr (kBufferType == kFindMin) {
+            if constexpr (BufferType == kFindMin) {
                 while (!minmax_buffer_.isEmpty() && minmax_buffer_.getBack().first >= x) {
                     minmax_buffer_.popBack();
                 }
             }
-            if constexpr (kBufferType == kFindMax) {
+            if constexpr (BufferType == kFindMax) {
                 while (!minmax_buffer_.isEmpty() && minmax_buffer_.getBack().first <= x) {
                     minmax_buffer_.popBack();
                 }

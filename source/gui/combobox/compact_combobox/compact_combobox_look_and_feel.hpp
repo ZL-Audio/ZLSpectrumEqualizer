@@ -1,4 +1,4 @@
-// Copyright (C) 2025 - zsliu98
+// Copyright (C) 2026 - zsliu98
 // This file is part of ZLSpectrumEqualizer
 //
 // ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
@@ -67,6 +67,7 @@ namespace zlgui::combobox {
             const auto corner_size = base_.getFontSize() * 0.375f;
             const auto box_bound = juce::Rectangle<float>(0, 0, static_cast<float>(width),
                                                           static_cast<float>(height));
+            g.setColour(base_.getBackgroundColour().withAlpha(.95f));
             g.fillRoundedRectangle(box_bound, corner_size);
         }
 

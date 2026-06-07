@@ -1,4 +1,4 @@
-// Copyright (C) 2025 - zsliu98
+// Copyright (C) 2026 - zsliu98
 // This file is part of ZLSpectrumEqualizer
 //
 // ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
@@ -10,9 +10,8 @@
 #pragma once
 
 #include <vector>
-#include <bit> // For std::bit_ceil (C++20) or implement fallback
+#include <bit>
 #include <algorithm>
-#include <cassert>
 
 namespace zldsp::container {
     /**

@@ -1,4 +1,4 @@
-// Copyright (C) 2025 - zsliu98
+// Copyright (C) 2026 - zsliu98
 // This file is part of ZLSpectrumEqualizer
 //
 // ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
@@ -73,7 +73,7 @@ namespace zlgui::attachment {
         void parameterChanged(const juce::String&, const float value) override {
             if constexpr (kUpdateFromAPVTS) {
                 atomic_.store(value, std::memory_order::relaxed);
-                updater_ref_.getFlag().store(true, std::memory_order::release);
+                updater_ref_.getFlag().signal();
             }
         }
 

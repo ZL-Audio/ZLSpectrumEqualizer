@@ -1,4 +1,4 @@
-// Copyright (C) 2025 - zsliu98
+// Copyright (C) 2026 - zsliu98
 // This file is part of ZLSpectrumEqualizer
 //
 // ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
@@ -45,8 +45,10 @@ namespace zlgui {
         kOutputPanel,
         kAnalyzerPanel,
         kDynamicExtraPanel,
+        kFFTFrozen,
         kMatchPanel,
-        kMatchDrawing,
+        kSuggestedNumBand,
+        kMaximumNumBand,
         kPanelSettingNum
     };
 
@@ -57,8 +59,10 @@ namespace zlgui {
         juce::Identifier("output_panel"),
         juce::Identifier("analyzer_panel"),
         juce::Identifier("dynamic_extra_panel"),
+        juce::Identifier("fft_frozen"),
         juce::Identifier("match_panel"),
-        juce::Identifier("match_drawing")
+        juce::Identifier("suggested_num_band"),
+        juce::Identifier("maximum_num_band")
     };
 
     inline juce::Identifier kSoloIdentifier("solo_whole_idx");
@@ -242,7 +246,7 @@ namespace zlgui {
                 alpha * colour.getFloatRed() + (1.f - alpha) * background_color.getFloatRed(),
                 alpha * colour.getFloatGreen() + (1.f - alpha) * background_color.getFloatGreen(),
                 alpha * colour.getFloatBlue() + (1.f - alpha) * background_color.getFloatBlue(),
-            1.f);
+                1.f);
         }
 
         juce::Colour getDarkShadowColour() const {
@@ -403,6 +407,10 @@ namespace zlgui {
 
         juce::ValueTree& getPanelValueTree() { return panel_value_tree_; }
 
+        void setWindowSizeFix(const bool f) { window_size_fix_ = f; }
+
+        bool getWindowSizeFix() const { return window_size_fix_; }
+
         bool isPanelIdentifier(const PanelSettingIdx idx, const juce::Identifier& identifier) const {
             return identifier == kPanelSettingIdentifiers[static_cast<size_t>(idx)];
         }
@@ -415,7 +423,7 @@ namespace zlgui {
             panel_value_tree_.setProperty(kPanelSettingIdentifiers[idx], v, nullptr);
         }
 
-        juce::ValueTree& getSoloWholeIdxTree() {return solo_whole_idx_tree_;}
+        juce::ValueTree& getSoloWholeIdxTree() { return solo_whole_idx_tree_; }
 
         size_t getSoloWholeIdx() const {
             return static_cast<size_t>(static_cast<int>(solo_whole_idx_tree_.getProperty(kSoloIdentifier)));
@@ -429,7 +437,7 @@ namespace zlgui {
 
         void setSelectedBand(const size_t x) { selected_band_ = x; }
 
-        juce::SelectedItemSet<size_t> &getSelectedBandSet() { return selected_band_set_; }
+        juce::SelectedItemSet<size_t>& getSelectedBandSet() { return selected_band_set_; }
 
     private:
         juce::AudioProcessorValueTreeState& state;
@@ -440,6 +448,7 @@ namespace zlgui {
         size_t font_mode_{0};
         float font_scale_{9.f};
         float static_font_size_{0.f};
+        bool window_size_fix_{false};
         std::array<juce::Colour, kColourNum> custom_colours_;
         std::array<float, kSensitivityNum> wheel_sensitivity_{1.f, 0.12f, 1.f, .25f};
         size_t rotary_style_id_{0};
