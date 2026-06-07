@@ -1,4 +1,4 @@
-// Copyright (C) 2025 - zsliu98
+// Copyright (C) 2026 - zsliu98
 // This file is part of ZLSpectrumEqualizer
 //
 // ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
@@ -105,8 +105,7 @@ namespace zldsp::filter {
 
     inline double getGainCompensation(const FilterParameters& paras) {
         switch (paras.filter_type) {
-        case kPeak:
-        case kBandShelf: {
+        case kPeak: {
             return sgc_detail::getPeakGainCompensation(paras.freq, paras.gain, paras.q);
         }
         case kLowShelf: {
@@ -120,6 +119,7 @@ namespace zldsp::filter {
         case kBandPass:
         case kNotch:
         case kTiltShelf:
+        case kFlatTilt:
         default:
             return 0.0;
         }

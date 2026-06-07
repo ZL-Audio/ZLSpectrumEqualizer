@@ -1,7 +1,7 @@
 # 3.24.1 is bundled in Visual Studio 2022 v17.4
 # 3.24.1 is also bundled in CLion as of 2023
 cmake_minimum_required(VERSION 3.24.1)
-set (CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 20)
 
 # This tells cmake we have goodies in the /cmake folder
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake-includes")
@@ -39,7 +39,15 @@ set(LV2URI "https://github.com/ZL-Audio/ZLSpectrumEqualizer")
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
 
 if (NOT DEFINED ZL_JUCE_COPY_PLUGIN)
-    set (ZL_JUCE_COPY_PLUGIN TRUE)
+    set(ZL_JUCE_COPY_PLUGIN TRUE)
+endif ()
+
+if (NOT DEFINED ZL_EQ_BAND_NUM)
+    message(STATUS "Compiling with default band number: 24")
+    add_definitions(-DZL_EQ_BAND_NUM=24)
+else ()
+    message(STATUS "Compiling with custom band number: ${ZL_EQ_BAND_NUM}")
+    add_definitions(-DZL_EQ_BAND_NUM=${ZL_EQ_BAND_NUM})
 endif ()
 
 if (DEFINED ZL_JUCE_FORMATS)
@@ -68,9 +76,6 @@ endif ()
 
 # Sanitizer support, comment out to disable
 include(Sanitizer)
-
-# include boost for this project
-# find_package(Boost 1.80.0 REQUIRED)
 
 # Couple tweaks that IMO should be JUCE defaults
 include(JUCEDefaults)
@@ -122,11 +127,22 @@ juce_add_plugin("${PROJECT_NAME}"
         HARDENED_RUNTIME_ENABLED TRUE
         HARDENED_RUNTIME_OPTIONS com.apple.security.device.audio-input
 
-        # The name of your final executable
-        # This is how it's listed in the DAW
-        # This can be different from PROJECT_NAME and can have spaces!
-        # You might want to use v${MAJOR_VERSION} here once you go to v2...
-        PRODUCT_NAME "${PRODUCT_NAME}")
+        PRODUCT_NAME "${PRODUCT_NAME}"
+        ZL_EQ_BAND_NUM "${ZL_EQ_BAND_NUM}"
+)
+
+# Add LV2 tags
+if ("LV2" IN_LIST FORMATS)
+    set(LV2_TARGET "${PROJECT_NAME}_LV2")
+    set(LV2_SHORT_TAGS eq paraeq)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    set(PATCH_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/packaging/patch_lv2.py")
+    add_custom_command(TARGET ${LV2_TARGET} POST_BUILD
+            COMMAND Python3::Interpreter "${PATCH_SCRIPT}" "$<TARGET_FILE_DIR:${LV2_TARGET}>" ${LV2_SHORT_TAGS}
+            COMMENT "Running Python script to patch LV2 tags: ${LV2_SHORT_TAGS}..."
+            VERBATIM
+    )
+endif ()
 
 # This lets us use our code in both the JUCE targets and our Test target
 # Without running into ODR violations
@@ -165,6 +181,8 @@ target_compile_definitions(SharedCode
 
         # JucePlugin_Name is for some reason doesn't use the nicer PRODUCT_NAME
         PRODUCT_NAME_WITHOUT_VERSION="${PRODUCT_NAME}"
+        #        JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1
+        JUCE_SILENCE_XCODE_15_LINKER_WARNING=1}
 )
 
 # Link to any other modules you added (with juce_add_module) here!
@@ -184,12 +202,34 @@ target_link_libraries(SharedCode
         juce::juce_recommended_warning_flags
 )
 
-# add kfr
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-add_subdirectory(kfr)
-target_link_libraries(SharedCode INTERFACE kfr kfr_dsp kfr_dft)
+# add highway
+set(ZL_HWY_STATIC_TARGET "NONE" CACHE STRING "Target architecture for static dispatch")
+if (ZL_HWY_STATIC_TARGET STREQUAL "NONE")
+    message(FATAL_ERROR "ZL_HWY_STATIC_TARGET must be set: SSE2/SEE42/AVX2/NEON.")
+endif ()
+set(HWY_ENABLE_EXAMPLES OFF CACHE BOOL "Disable highway examples" FORCE)
+set(HWY_ENABLE_TESTS OFF CACHE BOOL "Disable highway tests" FORCE)
+set(HWY_COMPILE_ONLY_STATIC ON CACHE BOOL "Force highway static dispatch" FORCE)
+if (ZL_HWY_STATIC_TARGET STREQUAL "NEON")
+    set(ZL_HWY_ARCH_FLAGS "-march=armv8-a+simd")
+elseif (ZL_HWY_STATIC_TARGET STREQUAL "SSE2")
+    set(ZL_HWY_ARCH_FLAGS "-march=x86-64")
+elseif (ZL_HWY_STATIC_TARGET STREQUAL "SSE4")
+    set(ZL_HWY_ARCH_FLAGS "-march=x86-64-v2" "-maes" "-mpclmul")
+elseif (ZL_HWY_STATIC_TARGET STREQUAL "AVX2")
+    set(ZL_HWY_ARCH_FLAGS "-march=x86-64-v3" "-maes" "-mpclmul")
+else ()
+    message(FATAL_ERROR "Unsupported ZL_HWY_STATIC_TARGET chosen: ${ZL_HWY_STATIC_TARGET}")
+endif ()
+message(STATUS "SIMD target is ${ZL_HWY_STATIC_TARGET}")
+target_compile_definitions(SharedCode INTERFACE HWY_COMPILE_ONLY_STATIC)
+target_compile_options(SharedCode INTERFACE ${ZL_HWY_ARCH_FLAGS})
+add_compile_definitions(HWY_COMPILE_ONLY_STATIC)
+add_compile_options(${ZL_HWY_ARCH_FLAGS})
+add_subdirectory(highway)
+target_link_libraries(SharedCode INTERFACE hwy)
 
-# Link the nlopt targets our SharedCode target
+# Link our SharedCode target
 target_link_libraries("${PROJECT_NAME}" PRIVATE SharedCode)
 
 # IPP support, comment out to disable

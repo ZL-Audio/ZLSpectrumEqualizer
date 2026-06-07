@@ -1,4 +1,4 @@
-// Copyright (C) 2025 - zsliu98
+// Copyright (C) 2026 - zsliu98
 // This file is part of ZLSpectrumEqualizer
 //
 // ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
@@ -39,7 +39,7 @@ namespace zlstate {
         static std::unique_ptr<juce::AudioParameterFloat> get(const std::string& suffix, const bool meta,
                                                               const bool automate = true) {
             auto attributes = juce::AudioParameterFloatAttributes().withAutomatable(automate).withLabel(T::kName).
-                                                                    withMeta(meta);
+                withMeta(meta);
             return std::make_unique<juce::AudioParameterFloat>(juce::ParameterID(T::kID + suffix, kVersionHint),
                                                                T::kName + suffix, T::kRange, T::kDefaultV, attributes);
         }
@@ -68,7 +68,7 @@ namespace zlstate {
         static std::unique_ptr<juce::AudioParameterBool> get(const std::string& suffix, const bool meta,
                                                              const bool automate = true) {
             auto attributes = juce::AudioParameterBoolAttributes().withAutomatable(automate).withLabel(T::kName).
-                                                                   withMeta(meta);
+                withMeta(meta);
             return std::make_unique<juce::AudioParameterBool>(juce::ParameterID(T::kID + suffix, kVersionHint),
                                                               T::kName + suffix, T::kDefaultV, attributes);
         }
@@ -98,7 +98,7 @@ namespace zlstate {
         static std::unique_ptr<juce::AudioParameterChoice> get(const std::string& suffix, const bool meta,
                                                                const bool automate = true) {
             auto attributes = juce::AudioParameterChoiceAttributes().withAutomatable(automate).withLabel(T::kName).
-                                                                     withMeta(meta);
+                withMeta(meta);
             return std::make_unique<juce::AudioParameterChoice>(juce::ParameterID(T::kID + suffix, kVersionHint),
                                                                 T::kName + suffix, T::kChoices, T::kDefaultI,
                                                                 attributes);
@@ -163,7 +163,7 @@ namespace zlstate {
         inline static const auto kChoices = juce::StringArray{
             "Very Fast", "Fast", "Medium", "Slow", "Very Slow"
         };
-        static constexpr std::array<float, 5> kSpeeds{0.85f, 0.90f, 0.93f, 0.95f, 0.98f};
+        static constexpr std::array kSpeeds = {4.0, 2.0, 1.0, 0.5, 0.25};
         static constexpr int kDefaultI = 2;
     };
 
@@ -237,6 +237,16 @@ namespace zlstate {
         static constexpr auto kMaxV = 6000.f;
         static constexpr auto kDefaultV = 371.f;
         inline static const auto kRange = juce::NormalisableRange<float>(kMinV, kMaxV, 1.f);
+    };
+
+    class PWindowSizeFix : public ChoiceParameters<PWindowSizeFix> {
+    public:
+        static constexpr auto kID = "window_size_fix";
+        static constexpr auto kName = "";
+        inline static const auto kChoices = juce::StringArray{
+            "Off", "On"
+        };
+        static constexpr int kDefaultI = 0;
     };
 
     class PFontMode : public ChoiceParameters<PFontMode> {
@@ -489,7 +499,7 @@ namespace zlstate {
 
     inline juce::AudioProcessorValueTreeState::ParameterLayout getStateParameterLayout() {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
-        layout.add(PWindowW::get(), PWindowH::get(),
+        layout.add(PWindowW::get(), PWindowH::get(), PWindowSizeFix::get(),
                    PFontMode::get(), PFontScale::get(), PStaticFontSize::get(),
                    PWheelSensitivity::get(), PWheelFineSensitivity::get(), PWheelShiftReverse::get(),
                    PDragSensitivity::get(), PDragFineSensitivity::get(),

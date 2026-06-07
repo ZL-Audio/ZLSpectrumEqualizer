@@ -1,4 +1,4 @@
-// Copyright (C) 2025 - zsliu98
+// Copyright (C) 2026 - zsliu98
 // This file is part of ZLSpectrumEqualizer
 //
 // ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
@@ -20,9 +20,12 @@ namespace zldsp::filter {
     inline constexpr double pi = std::numbers::pi;
     inline constexpr double ppi = 2 * std::numbers::pi;
 
+    inline constexpr double kDbToExp2 = 0.16609640474436813;
+    inline constexpr double kDbToExp2Sqrt = kDbToExp2 * 0.5;
+
     enum FilterType {
         kPeak, kLowShelf, kLowPass, kHighShelf, kHighPass,
-        kNotch, kBandPass, kTiltShelf, kBandShelf,
+        kNotch, kBandPass, kTiltShelf, kFlatTilt
     };
 
     enum FilterStructure {
@@ -36,7 +39,7 @@ namespace zldsp::filter {
     };
 
     inline double dotProduct(const std::array<double, 3>& x, const std::array<double, 3>& y) {
-        return std::inner_product(x.begin(), x.end(), y.begin(), 0.0);
+        return x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
     }
 
     inline double gainToDB(const double gain) {

@@ -1,4 +1,4 @@
-// Copyright (C) 2025 - zsliu98
+// Copyright (C) 2026 - zsliu98
 // This file is part of ZLSpectrumEqualizer
 //
 // ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
@@ -13,6 +13,7 @@
 #include <unordered_set>
 
 #include "component_attachment.hpp"
+#include "../../chore/thread/notifier.hpp"
 
 namespace zlgui::attachment {
     class ComponentUpdater {
@@ -31,17 +32,17 @@ namespace zlgui::attachment {
         }
 
         void updateComponents() {
-            if (updater_flag_.exchange(false, std::memory_order::acquire)) {
+            if (updater_flag_.check()) {
                 for (auto& attachment : attachments_) {
                     attachment->updateComponent();
                 }
             }
         }
 
-        std::atomic<bool>& getFlag() { return updater_flag_; }
+        auto& getFlag() { return updater_flag_; }
 
     private:
         std::unordered_set<ComponentAttachment*> attachments_;
-        std::atomic<bool> updater_flag_{true};
+        zlchore::thread::Notifier updater_flag_{true};
     };
 }

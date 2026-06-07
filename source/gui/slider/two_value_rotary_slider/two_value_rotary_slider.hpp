@@ -1,4 +1,4 @@
-// Copyright (C) 2025 - zsliu98
+// Copyright (C) 2026 - zsliu98
 // This file is part of ZLSpectrumEqualizer
 //
 // ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
@@ -272,9 +272,9 @@ namespace zlgui::slider {
             } else if (show_slider2_ && event.mods.isRightButtonDown()) {
                 slider2_.mouseDown(event);
             }
-            const auto currentShiftPressed = event.mods.isShiftDown();
-            if (currentShiftPressed != is_shift_pressed_) {
-                is_shift_pressed_ = currentShiftPressed;
+            const auto current_shift_pressed = event.mods.isShiftDown();
+            if (current_shift_pressed != is_shift_pressed_) {
+                is_shift_pressed_ = current_shift_pressed;
                 updateDragDistance();
             }
         }
