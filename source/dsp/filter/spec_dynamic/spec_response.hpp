@@ -20,7 +20,8 @@ namespace zldsp::filter {
     public:
         explicit SpecResponse() = default;
 
-        void prepare(const size_t spec_size) {
+        void prepare(const size_t fft_size) {
+            const auto spec_size = fft_size / 2;
             base_response_.resize(spec_size);
             diff_response_.resize(spec_size);
             start_idx_ = 0;
