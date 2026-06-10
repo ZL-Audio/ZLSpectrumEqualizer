@@ -8,6 +8,9 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "PluginProcessor.h"
+
+#include <numbers>
+
 #include "PluginEditor.h"
 
 //==============================================================================
@@ -83,7 +86,10 @@ void PluginProcessor::changeProgramName(int index, const juce::String& newName) 
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    juce::ignoreUnused(sampleRate, samplesPerBlock);
+    s1_.resize(2);
+    s2_.resize(2);
+
+    high_pass_coeff_ = static_cast<float>(std::exp(-1.0 / sampleRate));
 }
 
 void PluginProcessor::releaseResources() {
@@ -138,6 +144,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     for (int channel = 0; channel < totalNumInputChannels; ++channel) {
         auto* channelData = buffer.getWritePointer(channel);
         juce::ignoreUnused(channelData);
+        auto s1 = s1_[channel];
+        auto s2 = s2_[channel];
+        for (int i = 0; i < buffer.getNumSamples(); ++i) {
+            const auto in = channelData[i];
+            s1 = in - s2 + high_pass_coeff_ * s1;
+            channelData[i] = s1;
+            s2 = in;
+        }
+        s1_[channel] = s1;
+        s2_[channel] = s2;
         // ..do something to the data...
     }
 }

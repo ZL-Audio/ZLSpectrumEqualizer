@@ -55,4 +55,7 @@ public:
 
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
+
+    float high_pass_coeff_{0.9999f};
+    std::vector<float> s1_, s2_;
 };

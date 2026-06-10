@@ -87,12 +87,12 @@ include(JUCEDefaults)
 add_subdirectory(JUCE)
 
 # Add any other modules you want modules here, before the juce_add_plugin call
-#juce_add_module("${CMAKE_CURRENT_LIST_DIR}/modules/friz/Source/friz")
+# juce_add_module("${CMAKE_CURRENT_LIST_DIR}/modules/friz/Source/friz")
 
 # See `docs/CMake API.md` in the JUCE repo for all config options
 juce_add_plugin("${PROJECT_NAME}"
         # Icons for the standalone app
-        ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icon.png"
+        # ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icon.png"
 
         # Change me!
         COMPANY_NAME "${COMPANY_NAME}"
