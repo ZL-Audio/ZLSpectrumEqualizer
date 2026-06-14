@@ -71,6 +71,6 @@ namespace zldsp::filter {
     private:
         FloatType coeff_a_, coeff_b_;
         vector::aligned_vector<FloatType> states_;
-        static constexpr double kLogScale = 2.1714724095162588;
+        static constexpr double kLogScale = 2.1714724095162588; // 5.0 / ln(10.0)
     };
 }

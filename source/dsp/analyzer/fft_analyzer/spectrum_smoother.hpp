@@ -30,13 +30,13 @@ namespace zldsp::analyzer {
             assert(low_idx_.size() != 0);
             const double factor = std::pow(2.0, smooth_oct / 2.0);
             const double factor_rep = 1.0 / factor;
-            const size_t max_idx = low_idx_.size() - 1;
+            const auto num_bins = low_idx_.size();
 
             for (size_t i = 0; i < low_idx_.size(); ++i) {
                 const double lower = static_cast<double>(i) * factor_rep;
                 const double upper = static_cast<double>(i) * factor;
                 low_idx_[i] = static_cast<size_t>(std::round(lower));
-                high_idx_[i] = std::min(max_idx, static_cast<size_t>(std::round(upper) + 1.0));
+                high_idx_[i] = std::min(num_bins, static_cast<size_t>(std::round(upper) + 1.0));
                 count_req_[i] = 1.f / static_cast<float>(high_idx_[i] - low_idx_[i]);
             }
         }

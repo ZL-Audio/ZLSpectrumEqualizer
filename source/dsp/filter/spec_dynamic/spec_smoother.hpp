@@ -1,0 +1,97 @@
+// Copyright (C) 2026 - zsliu98
+// This file is part of ZLSpectrumEqualizer
+//
+// ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
+//
+// ZLSpectrumEqualizer is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
+
+#pragma once
+
+#include <span>
+#include <vector>
+#include <cmath>
+#include <algorithm>
+
+namespace zldsp::filter {
+    class SpecSmoother {
+    public:
+        struct SmoothBounds {
+            size_t pass1_start;
+            size_t pass1_end;
+            size_t pass2_start;
+            size_t pass2_end;
+            size_t target_start;
+            size_t target_end;
+        };
+
+        explicit SpecSmoother() = default;
+
+        void prepare(const size_t fft_size) {
+            const size_t num_bins = fft_size / 2 + 1;
+            low_idx_.resize(num_bins);
+            high_idx_.resize(num_bins);
+            count_req_.resize(num_bins);
+            temp_cum_sum_.resize(num_bins + 1);
+        }
+
+        void setSmooth(const double smooth_oct) {
+            const double factor = std::pow(2.0, smooth_oct / 2.0);
+            const double factor_rep = 1.0 / factor;
+            const auto num_bins = low_idx_.size();
+
+            for (size_t i = 0; i < num_bins; ++i) {
+                const double lower = static_cast<double>(i) * factor_rep;
+                const double upper = static_cast<double>(i) * factor;
+
+                low_idx_[i] = static_cast<size_t>(std::round(lower));
+                high_idx_[i] = std::min(num_bins, static_cast<size_t>(std::round(upper) + 1.0));
+                count_req_[i] = 1.f / static_cast<float>(high_idx_[i] - low_idx_[i]);
+            }
+        }
+
+        SmoothBounds cacheRange(const size_t start_idx, const size_t diff_size) const {
+            SmoothBounds bounds{};
+
+            const size_t end_idx = start_idx + diff_size;
+
+            bounds.target_start = start_idx;
+            bounds.target_end = end_idx;
+
+            bounds.pass2_start = low_idx_[start_idx];
+            bounds.pass2_end = high_idx_[end_idx - 1];
+
+            bounds.pass1_start = low_idx_[bounds.pass2_start];
+            bounds.pass1_end = high_idx_[bounds.pass2_end - 1];
+
+            return bounds;
+        }
+
+        void smoothRange(const std::span<float> spectrum_abs_sqr, const SmoothBounds& bounds) {
+            applyBoxcarAverage(spectrum_abs_sqr,
+                               bounds.pass1_start, bounds.pass1_end,
+                               bounds.pass2_start, bounds.pass2_end);
+            applyBoxcarAverage(spectrum_abs_sqr,
+                               bounds.pass2_start, bounds.pass2_end,
+                               bounds.target_start, bounds.target_end);
+        }
+
+    private:
+        std::vector<size_t> low_idx_, high_idx_;
+        std::vector<float> count_req_;
+        std::vector<double> temp_cum_sum_;
+
+        void applyBoxcarAverage(const std::span<float> data,
+                                const size_t source_start, const size_t source_end,
+                                const size_t target_start, const size_t target_end) {
+            temp_cum_sum_[source_start] = 0.0;
+            for (size_t i = source_start; i < source_end; ++i) {
+                temp_cum_sum_[i + 1] = temp_cum_sum_[i] + static_cast<double>(data[i]);
+            }
+            for (size_t i = target_start; i < target_end; ++i) {
+                data[i] = static_cast<float>(temp_cum_sum_[high_idx_[i]] - temp_cum_sum_[low_idx_[i]]) * count_req_[i];
+            }
+        }
+    };
+}
