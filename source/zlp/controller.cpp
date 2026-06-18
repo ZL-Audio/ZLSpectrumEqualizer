@@ -155,4 +155,8 @@ namespace zlp {
             hn::Store(hn::Sub(vm_imag, vs_imag), d, r_imag_ptr + i);
         }
     }
+
+    void Controller::processStereoDynamic() {
+
+    }
 }

@@ -101,5 +101,7 @@ namespace zlp {
         void processMSStatic();
 
         void processLRMSStatic();
+
+        void processStereoDynamic();
     };
 }
