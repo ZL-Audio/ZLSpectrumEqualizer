@@ -15,6 +15,7 @@
 #include <algorithm>
 
 namespace zldsp::filter {
+    template <typename FloatType>
     class SpecSmoother {
     public:
         struct SmoothBounds {
@@ -47,7 +48,7 @@ namespace zldsp::filter {
 
                 low_idx_[i] = static_cast<size_t>(std::round(lower));
                 high_idx_[i] = std::min(num_bins, static_cast<size_t>(std::round(upper) + 1.0));
-                count_req_[i] = 1.f / static_cast<float>(high_idx_[i] - low_idx_[i]);
+                count_req_[i] = static_cast<FloatType>(1) / static_cast<FloatType>(high_idx_[i] - low_idx_[i]);
             }
         }
 
@@ -68,7 +69,7 @@ namespace zldsp::filter {
             return bounds;
         }
 
-        void smoothRange(const std::span<float> spectrum_abs_sqr, const SmoothBounds& bounds) {
+        void smoothRange(const std::span<FloatType> spectrum_abs_sqr, const SmoothBounds& bounds) {
             applyBoxcarAverage(spectrum_abs_sqr,
                                bounds.pass1_start, bounds.pass1_end,
                                bounds.pass2_start, bounds.pass2_end);
@@ -79,10 +80,10 @@ namespace zldsp::filter {
 
     private:
         std::vector<size_t> low_idx_, high_idx_;
-        std::vector<float> count_req_;
+        std::vector<FloatType> count_req_;
         std::vector<double> temp_cum_sum_;
 
-        void applyBoxcarAverage(const std::span<float> data,
+        void applyBoxcarAverage(const std::span<FloatType> data,
                                 const size_t source_start, const size_t source_end,
                                 const size_t target_start, const size_t target_end) {
             temp_cum_sum_[source_start] = 0.0;
@@ -90,7 +91,8 @@ namespace zldsp::filter {
                 temp_cum_sum_[i + 1] = temp_cum_sum_[i] + static_cast<double>(data[i]);
             }
             for (size_t i = target_start; i < target_end; ++i) {
-                data[i] = static_cast<float>(temp_cum_sum_[high_idx_[i]] - temp_cum_sum_[low_idx_[i]]) * count_req_[i];
+                data[i] = static_cast<FloatType>(
+                    temp_cum_sum_[high_idx_[i]] - temp_cum_sum_[low_idx_[i]]) * count_req_[i];
             }
         }
     };

@@ -144,16 +144,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     for (int channel = 0; channel < totalNumInputChannels; ++channel) {
         auto* channelData = buffer.getWritePointer(channel);
         juce::ignoreUnused(channelData);
-        auto s1 = s1_[channel];
-        auto s2 = s2_[channel];
+        auto s1 = s1_[static_cast<size_t>(channel)];
+        auto s2 = s2_[static_cast<size_t>(channel)];
         for (int i = 0; i < buffer.getNumSamples(); ++i) {
             const auto in = channelData[i];
             s1 = in - s2 + high_pass_coeff_ * s1;
             channelData[i] = s1;
             s2 = in;
         }
-        s1_[channel] = s1;
-        s2_[channel] = s2;
+        s1_[static_cast<size_t>(channel)] = s1;
+        s2_[static_cast<size_t>(channel)] = s2;
         // ..do something to the data...
     }
 }
