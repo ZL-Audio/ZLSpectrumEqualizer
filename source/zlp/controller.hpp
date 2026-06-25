@@ -19,6 +19,7 @@
 #include "../dsp/filter/spec_dynamic/spec_dynamic.hpp"
 #include "../dsp/filter/spec_dynamic/spec_smoother.hpp"
 #include "../dsp/splitter/inplace_ms_splitter.hpp"
+#include "../dsp/fft/zldsp_fft_include.hpp"
 
 #include "../chore/thread/notifier.hpp"
 
@@ -59,6 +60,7 @@ namespace zlp {
         };
 
         struct ChannelData {
+            bool is_static_active_{false};
             zldsp::vector::aligned_vector<float> static_response_linear;
             zldsp::filter::SpecSmoother<float>::SmoothBounds smooth_bounds;
         };
@@ -80,17 +82,19 @@ namespace zlp {
             = make_array_of<zldsp::filter::SpecDynamic<float>, kBandNum>();
         zldsp::filter::SpecSmoother<float> spec_smoother_;
         // fft working space
+        std::unique_ptr<zldsp::fft::RFFT<float>> fft_;
         size_t fft_order_ = 12;
         size_t fft_size_ = static_cast<size_t>(1) << fft_order_;
         size_t num_bin_ = fft_size_ / 2 + 1;
         size_t num_bin_effective_ = fft_size_ / 2;
+        zldsp::vector::aligned_vector<float> window1_, window2_, window_bypass_;
 
         std::array<zldsp::vector::aligned_vector<float>, 4> input_fifos_, output_fifos_;
-        zldsp::vector::aligned_vector<float> fft_in_;
+        std::array<zldsp::vector::aligned_vector<float>, 4> fft_ins_;
         std::array<zldsp::vector::aligned_vector<float>, 2> fft_out_reals_, fft_out_imags_;
         zldsp::vector::aligned_vector<float> fft_side_abs_sqr_;
 
-        ChannelData l_data_, r_data_, m_data_, s_data_;
+        ChannelData stereo_data_, l_data_, r_data_, m_data_, s_data_;
 
         void handleAsyncUpdate() override {}
 
@@ -101,7 +105,5 @@ namespace zlp {
         void processMSStatic();
 
         void processLRMSStatic();
-
-        void processStereoDynamic();
     };
 }
