@@ -60,8 +60,11 @@ namespace zlp {
         };
 
         struct ChannelData {
+            bool is_side_required_{false};
             bool is_static_active_{false};
             zldsp::vector::aligned_vector<float> static_response_linear;
+
+            zldsp::vector::aligned_vector<float> fft_side_abs_sqr_;
             zldsp::filter::SpecSmoother<float>::SmoothBounds smooth_bounds;
         };
 
@@ -92,7 +95,6 @@ namespace zlp {
         std::array<zldsp::vector::aligned_vector<float>, 4> input_fifos_, output_fifos_;
         std::array<zldsp::vector::aligned_vector<float>, 4> fft_ins_;
         std::array<zldsp::vector::aligned_vector<float>, 2> fft_out_reals_, fft_out_imags_;
-        zldsp::vector::aligned_vector<float> fft_side_abs_sqr_;
 
         ChannelData stereo_data_, l_data_, r_data_, m_data_, s_data_;
 
@@ -105,5 +107,11 @@ namespace zlp {
         void processMSStatic();
 
         void processLRMSStatic();
+
+        void processSideLR();
+
+        void processSideMS();
+
+        void processSideLRMS();
     };
 }

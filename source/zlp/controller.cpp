@@ -193,4 +193,157 @@ namespace zlp {
         zldsp::vector::multiply(fft_ins_[0].data(), window2_.data(), fft_size_);
         zldsp::vector::multiply(fft_ins_[1].data(), window2_.data(), fft_size_);
     }
+
+    void Controller::processSideLR() {
+        if (l_data_.is_side_required_ || stereo_data_.is_side_required_) {
+            zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
+            fft_->forward_sqr_mag(fft_ins_[2].data(), l_data_.fft_side_abs_sqr_.data());
+        }
+        if (r_data_.is_side_required_ || stereo_data_.is_side_required_) {
+            zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
+            fft_->forward_sqr_mag(fft_ins_[3].data(), r_data_.fft_side_abs_sqr_.data());
+        }
+        if (stereo_data_.is_side_required_) {
+            auto* HWY_RESTRICT stereo_abs_sqr = stereo_data_.fft_side_abs_sqr_.data();
+            const auto* HWY_RESTRICT l_abs_sqr = l_data_.fft_side_abs_sqr_.data();
+            const auto* HWY_RESTRICT r_abs_sqr = r_data_.fft_side_abs_sqr_.data();
+            for (size_t i = stereo_data_.smooth_bounds.pass1_start;
+                 i < stereo_data_.smooth_bounds.pass1_end;
+                 i += lanes) {
+                const auto l_v = hn::Load(d, l_abs_sqr + i);
+                const auto r_v = hn::Load(d, r_abs_sqr + i);
+                hn::Store(hn::Add(l_v, r_v), d, stereo_abs_sqr + i);
+            }
+            spec_smoother_.smoothRange(stereo_data_.fft_side_abs_sqr_, stereo_data_.smooth_bounds);
+        }
+        if (l_data_.is_side_required_) {
+            spec_smoother_.smoothRange(l_data_.fft_side_abs_sqr_, l_data_.smooth_bounds);
+        }
+        if (r_data_.is_side_required_) {
+            spec_smoother_.smoothRange(r_data_.fft_side_abs_sqr_, r_data_.smooth_bounds);
+        }
+    }
+
+    void Controller::processSideMS() {
+        zldsp::splitter::InplaceMSSplitter<float>::split(fft_ins_[2].data(), fft_ins_[3].data(), fft_size_);
+        if (m_data_.is_side_required_ || stereo_data_.is_side_required_) {
+            zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
+            fft_->forward_sqr_mag(fft_ins_[2].data(), m_data_.fft_side_abs_sqr_.data());
+        }
+        if (s_data_.is_side_required_ || stereo_data_.is_side_required_) {
+            zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
+            fft_->forward_sqr_mag(fft_ins_[3].data(), s_data_.fft_side_abs_sqr_.data());
+        }
+        if (stereo_data_.is_side_required_) {
+            auto* HWY_RESTRICT stereo_abs_sqr = stereo_data_.fft_side_abs_sqr_.data();
+            const auto* HWY_RESTRICT m_abs_sqr = m_data_.fft_side_abs_sqr_.data();
+            const auto* HWY_RESTRICT s_abs_sqr = s_data_.fft_side_abs_sqr_.data();
+            for (size_t i = stereo_data_.smooth_bounds.pass1_start;
+                 i < stereo_data_.smooth_bounds.pass1_end;
+                 i += lanes) {
+                const auto m_v = hn::Load(d, m_abs_sqr + i);
+                const auto s_v = hn::Load(d, s_abs_sqr + i);
+                hn::Store(hn::Add(m_v, s_v), d, stereo_abs_sqr + i);
+            }
+            spec_smoother_.smoothRange(stereo_data_.fft_side_abs_sqr_, stereo_data_.smooth_bounds);
+        }
+        if (m_data_.is_side_required_) {
+            spec_smoother_.smoothRange(m_data_.fft_side_abs_sqr_, m_data_.smooth_bounds);
+        }
+        if (s_data_.is_side_required_) {
+            spec_smoother_.smoothRange(s_data_.fft_side_abs_sqr_, s_data_.smooth_bounds);
+        }
+    }
+
+    void Controller::processSideLRMS() {
+        auto* HWY_RESTRICT l_real_ptr = fft_out_reals_[0].data();
+        auto* HWY_RESTRICT l_imag_ptr = fft_out_imags_[0].data();
+        auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
+        auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
+
+        zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
+        zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
+        fft_->forward(fft_ins_[2].data(), {l_real_ptr, l_imag_ptr});
+        fft_->forward(fft_ins_[3].data(), {r_real_ptr, r_imag_ptr});
+
+        if (l_data_.is_side_required_) {
+            auto* HWY_RESTRICT l_abs_sqr = l_data_.fft_side_abs_sqr_.data();
+            for (size_t i = l_data_.smooth_bounds.pass1_start;
+                 i < l_data_.smooth_bounds.pass1_end;
+                 i += lanes) {
+                const auto real_v = hn::Load(d, l_real_ptr + i);
+                const auto imag_v = hn::Load(d, l_imag_ptr + i);
+
+                const auto abs_sqr_v = hn::MulAdd(real_v, real_v, hn::Mul(imag_v, imag_v));
+                hn::Store(abs_sqr_v, d, l_abs_sqr + i);
+            }
+            spec_smoother_.smoothRange(l_data_.fft_side_abs_sqr_, l_data_.smooth_bounds);
+        }
+        if (r_data_.is_side_required_) {
+            auto* HWY_RESTRICT r_abs_sqr = r_data_.fft_side_abs_sqr_.data();
+            for (size_t i = r_data_.smooth_bounds.pass1_start; i < r_data_.smooth_bounds.pass1_end; i += lanes) {
+                const auto real_v = hn::Load(d, r_real_ptr + i);
+                const auto imag_v = hn::Load(d, r_imag_ptr + i);
+
+                const auto abs_sqr_v = hn::MulAdd(real_v, real_v, hn::Mul(imag_v, imag_v));
+                hn::Store(abs_sqr_v, d, r_abs_sqr + i);
+            }
+            spec_smoother_.smoothRange(r_data_.fft_side_abs_sqr_, r_data_.smooth_bounds);
+        }
+        if (stereo_data_.is_side_required_) {
+            auto* HWY_RESTRICT st_abs_sqr = stereo_data_.fft_side_abs_sqr_.data();
+            for (size_t i = stereo_data_.smooth_bounds.pass1_start; i < stereo_data_.smooth_bounds.pass1_end; i +=
+                 lanes) {
+                const auto l_real_v = hn::Load(d, l_real_ptr + i);
+                const auto l_imag_v = hn::Load(d, l_imag_ptr + i);
+                const auto l_abs_sqr_v = hn::MulAdd(l_real_v, l_real_v, hn::Mul(l_imag_v, l_imag_v));
+
+                const auto r_real_v = hn::Load(d, r_real_ptr + i);
+                const auto r_imag_v = hn::Load(d, r_imag_ptr + i);
+                const auto r_abs_sqr_v = hn::MulAdd(r_real_v, r_real_v, hn::Mul(r_imag_v, r_imag_v));
+
+                const auto abs_sqr_v = hn::Add(l_abs_sqr_v, r_abs_sqr_v);
+                hn::Store(abs_sqr_v, d, st_abs_sqr + i);
+            }
+            spec_smoother_.smoothRange(stereo_data_.fft_side_abs_sqr_, stereo_data_.smooth_bounds);
+        }
+
+        if (m_data_.is_side_required_) {
+            auto* HWY_RESTRICT m_abs_sqr = m_data_.fft_side_abs_sqr_.data();
+            const auto quarter_v = hn::Set(d, 0.25f);
+
+            for (size_t i = m_data_.smooth_bounds.pass1_start; i < m_data_.smooth_bounds.pass1_end; i += lanes) {
+                const auto l_real_v = hn::Load(d, l_real_ptr + i);
+                const auto r_real_v = hn::Load(d, r_real_ptr + i);
+                const auto m_real_v = hn::Add(l_real_v, r_real_v);
+
+                const auto l_imag_v = hn::Load(d, l_imag_ptr + i);
+                const auto r_imag_v = hn::Load(d, r_imag_ptr + i);
+                const auto m_imag_v = hn::Add(l_imag_v, r_imag_v);
+
+                const auto abs_sqr_v = hn::MulAdd(m_real_v, m_real_v, hn::Mul(m_imag_v, m_imag_v));
+                hn::Store(hn::Mul(abs_sqr_v, quarter_v), d, m_abs_sqr + i);
+            }
+            spec_smoother_.smoothRange(m_data_.fft_side_abs_sqr_, m_data_.smooth_bounds);
+        }
+
+        if (s_data_.is_side_required_) {
+            auto* HWY_RESTRICT s_abs_sqr = s_data_.fft_side_abs_sqr_.data();
+            const auto quarter_v = hn::Set(d, 0.25f);
+
+            for (size_t i = s_data_.smooth_bounds.pass1_start; i < s_data_.smooth_bounds.pass1_end; i += lanes) {
+                const auto l_real_v = hn::Load(d, l_real_ptr + i);
+                const auto r_real_v = hn::Load(d, r_real_ptr + i);
+                const auto s_real_v = hn::Sub(l_real_v, r_real_v);
+
+                const auto l_imag_v = hn::Load(d, l_imag_ptr + i);
+                const auto r_imag_v = hn::Load(d, r_imag_ptr + i);
+                const auto s_imag_v = hn::Sub(l_imag_v, r_imag_v);
+
+                const auto abs_sqr_v = hn::MulAdd(s_real_v, s_real_v, hn::Mul(s_imag_v, s_imag_v));
+                hn::Store(hn::Mul(abs_sqr_v, quarter_v), d, s_abs_sqr + i);
+            }
+            spec_smoother_.smoothRange(s_data_.fft_side_abs_sqr_, s_data_.smooth_bounds);
+        }
+    }
 }
