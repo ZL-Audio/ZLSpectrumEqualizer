@@ -94,6 +94,10 @@ namespace zldsp::filter {
             return start_idx_;
         }
 
+        [[nodiscard]] auto getEndIdx() const {
+            return end_idx_;
+        }
+
         [[nodiscard]] auto getDiffSize() const {
             return diff_size_;
         }
@@ -101,7 +105,7 @@ namespace zldsp::filter {
     private:
         vector::aligned_vector<FloatType> base_response_;
         vector::aligned_vector<FloatType> diff_response_;
-        size_t start_idx_{0}, diff_size_{0};
+        size_t start_idx_{0}, end_idx_{0}, diff_size_{0};
 
         static constexpr auto kLogSqrMin = static_cast<FloatType>(1e-24);
         static constexpr auto kDiffMin = static_cast<FloatType>(1e-2);

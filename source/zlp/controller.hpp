@@ -62,10 +62,13 @@ namespace zlp {
         struct ChannelData {
             bool is_side_required_{false};
             bool is_static_active_{false};
-            zldsp::vector::aligned_vector<float> static_response_linear;
+            zldsp::vector::aligned_vector<float> static_response;
 
             zldsp::vector::aligned_vector<float> fft_side_abs_sqr_;
             zldsp::filter::SpecSmoother<float>::SmoothBounds smooth_bounds;
+
+            std::vector<size_t> dyn_bands_{};
+            zldsp::vector::aligned_vector<float> dynamic_response;
         };
 
         static constexpr float kSqrt2Over2 = static_cast<float>(
@@ -98,7 +101,8 @@ namespace zlp {
 
         ChannelData stereo_data_, l_data_, r_data_, m_data_, s_data_;
 
-        void handleAsyncUpdate() override {}
+        void handleAsyncUpdate() override {
+        }
 
         void processStereoStatic();
 
@@ -113,5 +117,7 @@ namespace zlp {
         void processSideMS();
 
         void processSideLRMS();
+
+        void processDynamicBands(ChannelData& data);
     };
 }

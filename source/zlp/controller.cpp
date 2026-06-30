@@ -30,7 +30,7 @@ namespace zlp {
         auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
         auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
 
-        const auto* HWY_RESTRICT mag_ptr = l_data_.static_response_linear.data();
+        const auto* HWY_RESTRICT mag_ptr = l_data_.static_response.data();
 
         for (size_t i = 0; i < num_bin_effective_; i += lanes) {
             const auto v_mag = hn::Load(d, mag_ptr + i);
@@ -61,7 +61,7 @@ namespace zlp {
             fft_->forward(fft_ins_[0].data(), {fft_out_reals_[0].data(), fft_out_imags_[0].data()});
             auto* HWY_RESTRICT l_real_ptr = fft_out_reals_[0].data();
             auto* HWY_RESTRICT l_imag_ptr = fft_out_imags_[0].data();
-            const auto* HWY_RESTRICT l_mag_ptr = l_data_.static_response_linear.data();
+            const auto* HWY_RESTRICT l_mag_ptr = l_data_.static_response.data();
             for (size_t i = 0; i < num_bin_effective_; i += lanes) {
                 const auto vl_mag = hn::Load(d, l_mag_ptr + i);
                 const auto vl_real = hn::Load(d, l_real_ptr + i);
@@ -79,7 +79,7 @@ namespace zlp {
             fft_->forward(fft_ins_[1].data(), {fft_out_reals_[1].data(), fft_out_imags_[1].data()});
             auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
             auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
-            const auto* HWY_RESTRICT r_mag_ptr = r_data_.static_response_linear.data();
+            const auto* HWY_RESTRICT r_mag_ptr = r_data_.static_response.data();
             for (size_t i = 0; i < num_bin_effective_; i += lanes) {
                 const auto vr_mag = hn::Load(d, r_mag_ptr + i);
                 const auto vr_real = hn::Load(d, r_real_ptr + i);
@@ -101,7 +101,7 @@ namespace zlp {
             fft_->forward(fft_ins_[0].data(), {fft_out_reals_[0].data(), fft_out_imags_[0].data()});
             auto* HWY_RESTRICT m_real_ptr = fft_out_reals_[0].data();
             auto* HWY_RESTRICT m_imag_ptr = fft_out_imags_[0].data();
-            const auto* HWY_RESTRICT m_mag_ptr = m_data_.static_response_linear.data();
+            const auto* HWY_RESTRICT m_mag_ptr = m_data_.static_response.data();
             for (size_t i = 0; i < num_bin_effective_; i += lanes) {
                 const auto vl_mag = hn::Load(d, m_mag_ptr + i);
                 const auto vl_real = hn::Load(d, m_real_ptr + i);
@@ -119,7 +119,7 @@ namespace zlp {
             fft_->forward(fft_ins_[1].data(), {fft_out_reals_[1].data(), fft_out_imags_[1].data()});
             auto* HWY_RESTRICT s_real_ptr = fft_out_reals_[1].data();
             auto* HWY_RESTRICT s_imag_ptr = fft_out_imags_[1].data();
-            const auto* HWY_RESTRICT s_mag_ptr = s_data_.static_response_linear.data();
+            const auto* HWY_RESTRICT s_mag_ptr = s_data_.static_response.data();
             for (size_t i = 0; i < num_bin_effective_; i += lanes) {
                 const auto vr_mag = hn::Load(d, s_mag_ptr + i);
                 const auto vr_real = hn::Load(d, s_real_ptr + i);
@@ -147,10 +147,10 @@ namespace zlp {
         auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
         auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
 
-        const auto* HWY_RESTRICT l_mag_ptr = l_data_.static_response_linear.data();
-        const auto* HWY_RESTRICT r_mag_ptr = r_data_.static_response_linear.data();
-        const auto* HWY_RESTRICT m_mag_ptr = m_data_.static_response_linear.data();
-        const auto* HWY_RESTRICT s_mag_ptr = s_data_.static_response_linear.data();
+        const auto* HWY_RESTRICT l_mag_ptr = l_data_.static_response.data();
+        const auto* HWY_RESTRICT r_mag_ptr = r_data_.static_response.data();
+        const auto* HWY_RESTRICT m_mag_ptr = m_data_.static_response.data();
+        const auto* HWY_RESTRICT s_mag_ptr = s_data_.static_response.data();
 
         const auto v_half = hn::Set(d, 0.5f);
 
@@ -207,9 +207,9 @@ namespace zlp {
             auto* HWY_RESTRICT stereo_abs_sqr = stereo_data_.fft_side_abs_sqr_.data();
             const auto* HWY_RESTRICT l_abs_sqr = l_data_.fft_side_abs_sqr_.data();
             const auto* HWY_RESTRICT r_abs_sqr = r_data_.fft_side_abs_sqr_.data();
-            for (size_t i = stereo_data_.smooth_bounds.pass1_start;
-                 i < stereo_data_.smooth_bounds.pass1_end;
-                 i += lanes) {
+            const auto start_idx = stereo_data_.smooth_bounds.pass1_start;
+            const auto end_idx = stereo_data_.smooth_bounds.pass1_end;
+            for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto l_v = hn::Load(d, l_abs_sqr + i);
                 const auto r_v = hn::Load(d, r_abs_sqr + i);
                 hn::Store(hn::Add(l_v, r_v), d, stereo_abs_sqr + i);
@@ -238,9 +238,9 @@ namespace zlp {
             auto* HWY_RESTRICT stereo_abs_sqr = stereo_data_.fft_side_abs_sqr_.data();
             const auto* HWY_RESTRICT m_abs_sqr = m_data_.fft_side_abs_sqr_.data();
             const auto* HWY_RESTRICT s_abs_sqr = s_data_.fft_side_abs_sqr_.data();
-            for (size_t i = stereo_data_.smooth_bounds.pass1_start;
-                 i < stereo_data_.smooth_bounds.pass1_end;
-                 i += lanes) {
+            const auto start_idx = stereo_data_.smooth_bounds.pass1_start;
+            const auto end_idx = stereo_data_.smooth_bounds.pass1_end;
+            for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto m_v = hn::Load(d, m_abs_sqr + i);
                 const auto s_v = hn::Load(d, s_abs_sqr + i);
                 hn::Store(hn::Add(m_v, s_v), d, stereo_abs_sqr + i);
@@ -268,9 +268,9 @@ namespace zlp {
 
         if (l_data_.is_side_required_) {
             auto* HWY_RESTRICT l_abs_sqr = l_data_.fft_side_abs_sqr_.data();
-            for (size_t i = l_data_.smooth_bounds.pass1_start;
-                 i < l_data_.smooth_bounds.pass1_end;
-                 i += lanes) {
+            const auto start_idx = l_data_.smooth_bounds.pass1_start;
+            const auto end_idx = l_data_.smooth_bounds.pass1_end;
+            for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto real_v = hn::Load(d, l_real_ptr + i);
                 const auto imag_v = hn::Load(d, l_imag_ptr + i);
 
@@ -281,7 +281,9 @@ namespace zlp {
         }
         if (r_data_.is_side_required_) {
             auto* HWY_RESTRICT r_abs_sqr = r_data_.fft_side_abs_sqr_.data();
-            for (size_t i = r_data_.smooth_bounds.pass1_start; i < r_data_.smooth_bounds.pass1_end; i += lanes) {
+            const auto start_idx = r_data_.smooth_bounds.pass1_start;
+            const auto end_idx = r_data_.smooth_bounds.pass1_end;
+            for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto real_v = hn::Load(d, r_real_ptr + i);
                 const auto imag_v = hn::Load(d, r_imag_ptr + i);
 
@@ -292,8 +294,9 @@ namespace zlp {
         }
         if (stereo_data_.is_side_required_) {
             auto* HWY_RESTRICT st_abs_sqr = stereo_data_.fft_side_abs_sqr_.data();
-            for (size_t i = stereo_data_.smooth_bounds.pass1_start; i < stereo_data_.smooth_bounds.pass1_end; i +=
-                 lanes) {
+            const auto start_idx = stereo_data_.smooth_bounds.pass1_start;
+            const auto end_idx = stereo_data_.smooth_bounds.pass1_end;
+            for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto l_real_v = hn::Load(d, l_real_ptr + i);
                 const auto l_imag_v = hn::Load(d, l_imag_ptr + i);
                 const auto l_abs_sqr_v = hn::MulAdd(l_real_v, l_real_v, hn::Mul(l_imag_v, l_imag_v));
@@ -307,12 +310,12 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(stereo_data_.fft_side_abs_sqr_, stereo_data_.smooth_bounds);
         }
-
         if (m_data_.is_side_required_) {
             auto* HWY_RESTRICT m_abs_sqr = m_data_.fft_side_abs_sqr_.data();
             const auto quarter_v = hn::Set(d, 0.25f);
-
-            for (size_t i = m_data_.smooth_bounds.pass1_start; i < m_data_.smooth_bounds.pass1_end; i += lanes) {
+            const auto start_idx = m_data_.smooth_bounds.pass1_start;
+            const auto end_idx = m_data_.smooth_bounds.pass1_end;
+            for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto l_real_v = hn::Load(d, l_real_ptr + i);
                 const auto r_real_v = hn::Load(d, r_real_ptr + i);
                 const auto m_real_v = hn::Add(l_real_v, r_real_v);
@@ -326,12 +329,12 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(m_data_.fft_side_abs_sqr_, m_data_.smooth_bounds);
         }
-
         if (s_data_.is_side_required_) {
             auto* HWY_RESTRICT s_abs_sqr = s_data_.fft_side_abs_sqr_.data();
             const auto quarter_v = hn::Set(d, 0.25f);
-
-            for (size_t i = s_data_.smooth_bounds.pass1_start; i < s_data_.smooth_bounds.pass1_end; i += lanes) {
+            const auto start_idx = s_data_.smooth_bounds.pass1_start;
+            const auto end_idx = s_data_.smooth_bounds.pass1_end;
+            for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto l_real_v = hn::Load(d, l_real_ptr + i);
                 const auto r_real_v = hn::Load(d, r_real_ptr + i);
                 const auto s_real_v = hn::Sub(l_real_v, r_real_v);
@@ -344,6 +347,41 @@ namespace zlp {
                 hn::Store(hn::Mul(abs_sqr_v, quarter_v), d, s_abs_sqr + i);
             }
             spec_smoother_.smoothRange(s_data_.fft_side_abs_sqr_, s_data_.smooth_bounds);
+        }
+    }
+
+    void Controller::processDynamicBands(ChannelData& data) {
+        if (data.dyn_bands_.empty()) {
+            return;
+        }
+        const auto start_idx = data.smooth_bounds.target_start;
+        const auto end_idx = data.smooth_bounds.target_end;
+        auto* HWY_RESTRICT side_ptr = data.fft_side_abs_sqr_.data();
+        auto* HWY_RESTRICT dyn_ptr = data.dynamic_response.data();
+        // convert side from abs sqr to log
+        {
+            const auto v_min = hn::Set(d, 1e-24f);
+            for (size_t i = start_idx; i < end_idx; i += lanes) {
+                const auto v = hn::Load(d, side_ptr + i);
+                hn::Store(hn::Log(d, hn::Max(v, v_min)), d, side_ptr + i);
+            }
+        }
+        // process each dynamic band
+        {
+            const auto band = data.dyn_bands_[0];
+            spec_dynamic_[band].template process<false>(side_ptr, dyn_ptr,
+                                                        spec_response_[band], spec_follower_[band]);
+            std::fill(dyn_ptr + spec_response_[band].getEndIdx(), dyn_ptr + end_idx, 0.f);
+        }
+        for (size_t i = 1; i < data.dyn_bands_.size(); ++i) {
+            const auto band = data.dyn_bands_[i];
+            spec_dynamic_[band].template process<true>(side_ptr, dyn_ptr,
+                                                       spec_response_[band], spec_follower_[band]);
+        }
+        // convert dynamic response from db to linear
+        for (size_t i = start_idx; i < end_idx; i += lanes) {
+            const auto v = hn::Load(d, dyn_ptr + i);
+            hn::Store(hn::Exp(d, v), d, dyn_ptr + i);
         }
     }
 }

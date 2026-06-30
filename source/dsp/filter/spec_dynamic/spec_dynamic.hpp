@@ -24,6 +24,7 @@ namespace zldsp::filter {
             states_.resize(fft_size);
         }
 
+        template <bool to_add = true>
         void process(FloatType* HWY_RESTRICT side_log_sqr,
                      FloatType* HWY_RESTRICT dynamic_db,
                      SpecResponse<FloatType>& response,
@@ -40,7 +41,7 @@ namespace zldsp::filter {
             const auto v_zero = hn::Set(d, static_cast<FloatType>(0));
             const auto v_one = hn::Set(d, static_cast<FloatType>(1));
             const auto i_start = response.getStartIdx();
-            const auto i_stop = i_start + response.getDiffSize();
+            const auto i_stop = response.getEndIdx();
             for (size_t i = i_start; i < i_stop; i+= lanes) {
                 // threshold & knee
                 const auto v_side = hn::Load(d, side_log_sqr + i);
@@ -57,8 +58,13 @@ namespace zldsp::filter {
                 hn::Store(v_state, d, states + (i << 1));
                 hn::Store(v_y, d, states + (i << 1) + lanes);
                 // calculate diff
-                const auto v_diff = hn::Load(d, diffs + i);
-                hn::Store(hn::Mul(v_diff, v_y), d, dynamic_db + i);
+                const auto v_diff = hn::Mul(hn::Load(d, diffs + i), v_y);
+                if constexpr (to_add) {
+                    const auto v_dyn = hn::Load(d, dynamic_db + i);
+                    hn::Store(hn::Add(v_diff, v_dyn), d, dynamic_db + i);
+                } else {
+                    hn::Store(v_diff, d, dynamic_db + i);
+                }
             }
         }
 
