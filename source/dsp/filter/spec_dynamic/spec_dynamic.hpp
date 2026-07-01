@@ -40,8 +40,8 @@ namespace zldsp::filter {
             const auto v_coeffb = hn::Set(d, coeff_b_);
             const auto v_zero = hn::Set(d, static_cast<FloatType>(0));
             const auto v_one = hn::Set(d, static_cast<FloatType>(1));
-            const auto i_start = response.getStartIdx();
-            const auto i_stop = response.getEndIdx();
+            const auto i_start = response.getDiffStartIdx();
+            const auto i_stop = response.getDiffEndIdx();
             for (size_t i = i_start; i < i_stop; i+= lanes) {
                 // threshold & knee
                 const auto v_side = hn::Load(d, side_log_sqr + i);

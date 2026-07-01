@@ -24,7 +24,7 @@ namespace zldsp::filter {
             const auto spec_size = fft_size / 2;
             base_response_.resize(spec_size);
             diff_response_.resize(spec_size);
-            start_idx_ = 0;
+            diff_start_idx_ = 0;
             diff_size_ = 0;
         }
 
@@ -65,7 +65,7 @@ namespace zldsp::filter {
                     break;
                 }
             }
-            start_idx_ = i;
+            diff_start_idx_ = i;
             for (; i < base_response_.size(); i += lanes) {
                 const auto v = hn::Load(d, diff_response_.data() + i);
                 const auto v_log = hn::Log(d, hn::Max(v, v_min));
@@ -76,9 +76,9 @@ namespace zldsp::filter {
                 }
                 hn::Store(diff, d, diff_response_.data() + i);
             }
-            diff_size_ = i - start_idx_;
+            diff_size_ = i - diff_start_idx_;
             if (diff_size_ == 0) {
-                start_idx_ = 0;
+                diff_start_idx_ = 0;
             }
         }
 
@@ -90,12 +90,12 @@ namespace zldsp::filter {
             return diff_response_;
         }
 
-        [[nodiscard]] auto getStartIdx() const {
-            return start_idx_;
+        [[nodiscard]] auto getDiffStartIdx() const {
+            return diff_start_idx_;
         }
 
-        [[nodiscard]] auto getEndIdx() const {
-            return end_idx_;
+        [[nodiscard]] auto getDiffEndIdx() const {
+            return diff_end_idx_;
         }
 
         [[nodiscard]] auto getDiffSize() const {
@@ -105,7 +105,7 @@ namespace zldsp::filter {
     private:
         vector::aligned_vector<FloatType> base_response_;
         vector::aligned_vector<FloatType> diff_response_;
-        size_t start_idx_{0}, end_idx_{0}, diff_size_{0};
+        size_t diff_start_idx_{0}, diff_end_idx_{0}, diff_size_{0};
 
         static constexpr auto kLogSqrMin = static_cast<FloatType>(1e-24);
         static constexpr auto kDiffMin = static_cast<FloatType>(1e-2);

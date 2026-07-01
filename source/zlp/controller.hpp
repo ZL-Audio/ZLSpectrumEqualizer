@@ -44,30 +44,31 @@ namespace zlp {
 
         void prepare(double sample_rate, size_t max_num_samples);
 
+        void process(bool is_bypass);
+
+        template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
+        void processImpl();
+
     private:
         static constexpr hn::ScalableTag<float> d;
         static constexpr size_t lanes = hn::MaxLanes(d);
 
-        enum class Status {
-            kStereoStatic,
-            kLRStatic,
-            kMSStatic,
-            kLRMSStatic,
-            kStereoDynamic,
-            kLRDynamic,
-            kMSDynamic,
-            KLRMSDynamic
+        enum class SideStatus {
+            kNotRequired, kLR, kMS, kLRMS
         };
 
         struct ChannelData {
-            bool is_side_required_{false};
-            bool is_static_active_{false};
+            bool is_side_required{false};
+            bool is_active{false};
+
+            std::vector<size_t> bands{};
             zldsp::vector::aligned_vector<float> static_response;
 
-            zldsp::vector::aligned_vector<float> fft_side_abs_sqr_;
+            zldsp::vector::aligned_vector<float> fft_side_abs_sqr;
             zldsp::filter::SpecSmoother<float>::SmoothBounds smooth_bounds;
 
-            std::vector<size_t> dyn_bands_{};
+            size_t dynamic_start_idx{0}, dynamic_end_idx{0};
+            std::vector<size_t> dynamic_bands{};
             zldsp::vector::aligned_vector<float> dynamic_response;
         };
 
@@ -99,18 +100,12 @@ namespace zlp {
         std::array<zldsp::vector::aligned_vector<float>, 4> fft_ins_;
         std::array<zldsp::vector::aligned_vector<float>, 2> fft_out_reals_, fft_out_imags_;
 
+        size_t dispatch_mask_{0};
         ChannelData stereo_data_, l_data_, r_data_, m_data_, s_data_;
 
-        void handleAsyncUpdate() override {
-        }
+        SideStatus side_status_{SideStatus::kNotRequired};
 
-        void processStereoStatic();
-
-        void processLRStatic();
-
-        void processMSStatic();
-
-        void processLRMSStatic();
+        void processSide();
 
         void processSideLR();
 
@@ -119,5 +114,9 @@ namespace zlp {
         void processSideLRMS();
 
         void processDynamicBands(ChannelData& data);
+
+        void processMain(bool is_bypass);
+
+        void handleAsyncUpdate() override;
     };
 }
