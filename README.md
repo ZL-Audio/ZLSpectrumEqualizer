@@ -68,6 +68,8 @@ JUCE template from [pamplejuce](https://github.com/sudara/pamplejuce)
 
 ## References
 
+Dimitrios Giannoulis, Michael Massberg, and Joshua D. Reiss. *Digital dynamic range compressor design—A tutorial and analysis*. Journal of the Audio Engineering Society. (2012).
+
 Nigel Redmon. *Cascading filters*. (2016).
 
 Cleve Moler. [*Makima Piecewise Cubic Interpolation*](https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/). MathWorks Blogs. (2019).
