@@ -13,7 +13,7 @@ namespace zlp {
     namespace {
         template <size_t Mask>
         void dispatchMask(Controller* instance) {
-            instance->processImpl<
+            instance->processMainImpl<
                 (Mask & 1) != 0,
                 (Mask & 2) != 0,
                 (Mask & 4) != 0,
@@ -24,7 +24,7 @@ namespace zlp {
 
         template <size_t... Is>
         constexpr std::array<void (*)(Controller*), sizeof...(Is)> makeDispatchTable(std::index_sequence<Is...>) {
-            return { &dispatchMask<Is>... };
+            return {&dispatchMask<Is>...};
         }
 
         constexpr auto dispatcher = makeDispatchTable(std::make_index_sequence<32>{});
@@ -38,21 +38,106 @@ namespace zlp {
 
     }
 
-    void Controller::process(const bool is_bypass) {
-        processSide();
-        processDynamicBands(stereo_data_);
-        processDynamicBands(l_data_);
-        processDynamicBands(r_data_);
-        processDynamicBands(m_data_);
-        processDynamicBands(s_data_);
-        processMain(is_bypass);
+    void Controller::process(const std::array<float*, 4>& buffer, const size_t num_samples, const bool is_bypass) {
+        size_t samples_processed = 0;
+        const bool requires_side = (side_status_ != SideStatus::kNotRequired);
+
+        while (samples_processed < num_samples) {
+            // copy data to FIFO until reach a hop size or buffer size
+            const size_t chunk = std::min(num_samples - samples_processed, fft_hop_size_ - fft_count_);
+            const size_t chunk1 = std::min(chunk, fft_size_ - fft_pos_);
+            const size_t chunk2 = chunk - chunk1;
+            for (size_t chan = 0; chan < 2; ++chan) {
+                std::copy_n(buffer[chan] + samples_processed, chunk1,
+                    input_fifos_[chan].data() + fft_pos_);
+                if (chunk2 > 0) {
+                    std::copy_n(buffer[chan] + samples_processed + chunk1, chunk2,
+                        input_fifos_[chan].data());
+                }
+                std::copy_n(output_fifos_[chan].data() + fft_pos_, chunk1,
+                    buffer[chan] + samples_processed);
+                if (chunk2 > 0) {
+                    std::copy_n(output_fifos_[chan].data(), chunk2,
+                        buffer[chan] + samples_processed + chunk1);
+                }
+                std::fill_n(output_fifos_[chan].data() + fft_pos_, chunk1, 0.0f);
+                if (chunk2 > 0) {
+                    std::fill_n(output_fifos_[chan].data(), chunk2, 0.0f);
+                }
+            }
+            if (requires_side) {
+                for (size_t chan = 2; chan < 4; ++chan) {
+                    std::copy_n(buffer[chan] + samples_processed, chunk1,
+                        input_fifos_[chan].data() + fft_pos_);
+                    if (chunk2 > 0) {
+                        std::copy_n(buffer[chan] + samples_processed + chunk1, chunk2,
+                            input_fifos_[chan].data());
+                    }
+                }
+            }
+            // forward FFT pos
+            fft_pos_ += chunk;
+            if (fft_pos_ >= fft_size_) {
+                fft_pos_ -= fft_size_;
+            }
+            fft_count_ += chunk;
+            // if reach a hop size, process spectrum
+            if (fft_count_ >= fft_hop_size_) {
+                fft_count_ = 0;
+                // copy to FFT working space
+                for (size_t chan = 0; chan < 2; ++chan) {
+                    std::copy_n(input_fifos_[chan].data() + fft_pos_, fft_size_ - fft_pos_,
+                        fft_ins_[chan].data());
+                    if (fft_pos_ > 0) {
+                        std::copy_n(input_fifos_[chan].data(), fft_pos_,
+                            fft_ins_[chan].data() + fft_size_ - fft_pos_);
+                    }
+                }
+                if (requires_side) {
+                    for (size_t chan = 2; chan < 4; ++chan) {
+                        std::copy_n(input_fifos_[chan].data() + fft_pos_, fft_size_ - fft_pos_,
+                            fft_ins_[chan].data());
+                        if (fft_pos_ > 0) {
+                            std::copy_n(input_fifos_[chan].data(), fft_pos_,
+                                        fft_ins_[chan].data() + fft_size_ - fft_pos_);
+                        }
+                    }
+                    processSide();
+                    processDynamicBands(stereo_data_);
+                    processDynamicBands(l_data_);
+                    processDynamicBands(r_data_);
+                    processDynamicBands(m_data_);
+                    processDynamicBands(s_data_);
+                }
+                processMain(is_bypass);
+                // overlap-add
+                const size_t range1 = fft_size_ - fft_pos_;
+                for (size_t chan = 0; chan < 2; ++chan) {
+                    {
+                        auto* HWY_RESTRICT out_ptr = output_fifos_[chan].data() + fft_pos_;
+                        const auto* HWY_RESTRICT in_ptr = fft_ins_[chan].data();
+                        for (size_t k = 0; k < range1; k += lanes) {
+                            const auto v_out = hn::Load(d, out_ptr + k);
+                            const auto v_in = hn::Load(d, in_ptr + k);
+                            hn::Store(hn::Add(v_out, v_in), d, out_ptr + k);
+                        }
+                    }
+                    {
+                        auto* HWY_RESTRICT out_ptr = output_fifos_[chan].data();
+                        const auto* HWY_RESTRICT in_ptr = fft_ins_[chan].data() + range1;
+                        for (size_t k = 0; k < fft_pos_; k += lanes) {
+                            const auto v_out = hn::Load(d, out_ptr + k);
+                            const auto v_in = hn::Load(d, in_ptr + k);
+                            hn::Store(hn::Add(v_out, v_in), d, out_ptr + k);
+                        }
+                    }
+                }
+            }
+            samples_processed += chunk;
+        }
     }
 
     void Controller::processSide() {
-        if (side_status_ == SideStatus::kNotRequired) {
-            return;
-        }
-        // side FFT FIFO in
         if (side_status_ == SideStatus::kLR) {
             processSideLR();
         } else if (side_status_ == SideStatus::kMS) {
@@ -63,13 +148,11 @@ namespace zlp {
     }
 
     void Controller::processMain(const bool is_bypass) {
-        // main FFT FIFO in
         if (is_bypass) {
             dispatcher[0](this);
         } else {
             dispatcher[dispatch_mask_](this);
         }
-        // main FFT FIFO out
     }
 
     void Controller::processSideLR() {
@@ -266,7 +349,7 @@ namespace zlp {
     }
 
     template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
-    void Controller::processImpl() {
+    void Controller::processMainImpl() {
         if constexpr (!(has_stereo || has_l || has_r || has_m || has_s)) {
             zldsp::vector::multiply(fft_ins_[0].data(), window_bypass_.data(), fft_size_);
             zldsp::vector::multiply(fft_ins_[1].data(), window_bypass_.data(), fft_size_);

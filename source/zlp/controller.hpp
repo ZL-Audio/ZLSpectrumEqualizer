@@ -44,10 +44,10 @@ namespace zlp {
 
         void prepare(double sample_rate, size_t max_num_samples);
 
-        void process(bool is_bypass);
+        void process(const std::array<float*, 4>& buffer, size_t num_samples, bool is_bypass);
 
         template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
-        void processImpl();
+        void processMainImpl();
 
     private:
         static constexpr hn::ScalableTag<float> d;
@@ -72,9 +72,6 @@ namespace zlp {
             zldsp::vector::aligned_vector<float> dynamic_response;
         };
 
-        static constexpr float kSqrt2Over2 = static_cast<float>(
-            0.7071067811865475244008443621048490392848359376884740365883398690);
-
         juce::AudioProcessor& p_ref_;
 
         std::array<zldsp::filter::Empty, kBandNum> emptys_{};
@@ -89,12 +86,19 @@ namespace zlp {
             = make_array_of<zldsp::filter::SpecDynamic<float>, kBandNum>();
         zldsp::filter::SpecSmoother<float> spec_smoother_;
         // fft working space
-        std::unique_ptr<zldsp::fft::RFFT<float>> fft_;
-        size_t fft_order_ = 12;
+        std::unique_ptr<zldsp::fft::RFFT<float>> fft_low_;
+        std::unique_ptr<zldsp::fft::RFFT<float>> fft_medium_;
+        std::unique_ptr<zldsp::fft::RFFT<float>> fft_high_;
+        std::unique_ptr<zldsp::fft::RFFT<float>> fft_extreme_;
+        zldsp::fft::RFFT<float>* fft_{nullptr};
+        size_t fft_order_ = 13;
         size_t fft_size_ = static_cast<size_t>(1) << fft_order_;
         size_t num_bin_ = fft_size_ / 2 + 1;
         size_t num_bin_effective_ = fft_size_ / 2;
         zldsp::vector::aligned_vector<float> window1_, window2_, window_bypass_;
+        size_t fft_count_ = 0;
+        size_t fft_pos_ = 0;
+        size_t fft_hop_size_ = fft_size_ / 4;
 
         std::array<zldsp::vector::aligned_vector<float>, 4> input_fifos_, output_fifos_;
         std::array<zldsp::vector::aligned_vector<float>, 4> fft_ins_;
