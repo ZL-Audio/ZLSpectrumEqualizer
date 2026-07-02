@@ -39,9 +39,11 @@ namespace zlp {
     }
 
     void Controller::process(const std::array<float*, 4>& buffer, const size_t num_samples, const bool is_bypass) {
+        if (fft_ == nullptr) {
+            return;
+        }
         size_t samples_processed = 0;
         const bool requires_side = (side_status_ != SideStatus::kNotRequired);
-
         while (samples_processed < num_samples) {
             // copy data to FIFO until reach a hop size or buffer size
             const size_t chunk = std::min(num_samples - samples_processed, fft_hop_size_ - fft_count_);
@@ -49,16 +51,16 @@ namespace zlp {
             const size_t chunk2 = chunk - chunk1;
             for (size_t chan = 0; chan < 2; ++chan) {
                 std::copy_n(buffer[chan] + samples_processed, chunk1,
-                    input_fifos_[chan].data() + fft_pos_);
+                            input_fifos_[chan].data() + fft_pos_);
                 if (chunk2 > 0) {
                     std::copy_n(buffer[chan] + samples_processed + chunk1, chunk2,
-                        input_fifos_[chan].data());
+                                input_fifos_[chan].data());
                 }
                 std::copy_n(output_fifos_[chan].data() + fft_pos_, chunk1,
-                    buffer[chan] + samples_processed);
+                            buffer[chan] + samples_processed);
                 if (chunk2 > 0) {
                     std::copy_n(output_fifos_[chan].data(), chunk2,
-                        buffer[chan] + samples_processed + chunk1);
+                                buffer[chan] + samples_processed + chunk1);
                 }
                 std::fill_n(output_fifos_[chan].data() + fft_pos_, chunk1, 0.0f);
                 if (chunk2 > 0) {
@@ -68,10 +70,10 @@ namespace zlp {
             if (requires_side) {
                 for (size_t chan = 2; chan < 4; ++chan) {
                     std::copy_n(buffer[chan] + samples_processed, chunk1,
-                        input_fifos_[chan].data() + fft_pos_);
+                                input_fifos_[chan].data() + fft_pos_);
                     if (chunk2 > 0) {
                         std::copy_n(buffer[chan] + samples_processed + chunk1, chunk2,
-                            input_fifos_[chan].data());
+                                    input_fifos_[chan].data());
                     }
                 }
             }
@@ -87,16 +89,16 @@ namespace zlp {
                 // copy to FFT working space
                 for (size_t chan = 0; chan < 2; ++chan) {
                     std::copy_n(input_fifos_[chan].data() + fft_pos_, fft_size_ - fft_pos_,
-                        fft_ins_[chan].data());
+                                fft_ins_[chan].data());
                     if (fft_pos_ > 0) {
                         std::copy_n(input_fifos_[chan].data(), fft_pos_,
-                            fft_ins_[chan].data() + fft_size_ - fft_pos_);
+                                    fft_ins_[chan].data() + fft_size_ - fft_pos_);
                     }
                 }
                 if (requires_side) {
                     for (size_t chan = 2; chan < 4; ++chan) {
                         std::copy_n(input_fifos_[chan].data() + fft_pos_, fft_size_ - fft_pos_,
-                            fft_ins_[chan].data());
+                                    fft_ins_[chan].data());
                         if (fft_pos_ > 0) {
                             std::copy_n(input_fifos_[chan].data(), fft_pos_,
                                         fft_ins_[chan].data() + fft_size_ - fft_pos_);
@@ -158,11 +160,11 @@ namespace zlp {
     void Controller::processSideLR() {
         if (l_data_.is_side_required || stereo_data_.is_side_required) {
             zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
-            fft_->forward_sqr_mag(fft_ins_[2].data(), l_data_.fft_side_abs_sqr.data());
+            fft_->forward_sqr_mag(fft_ins_[2].data(), l_data_.fft_side_abs_sqr.data()); // NOLINT
         }
         if (r_data_.is_side_required || stereo_data_.is_side_required) {
             zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
-            fft_->forward_sqr_mag(fft_ins_[3].data(), r_data_.fft_side_abs_sqr.data());
+            fft_->forward_sqr_mag(fft_ins_[3].data(), r_data_.fft_side_abs_sqr.data()); // NOLINT
         }
         if (stereo_data_.is_side_required) {
             auto* HWY_RESTRICT stereo_abs_sqr = stereo_data_.fft_side_abs_sqr.data();
@@ -189,11 +191,11 @@ namespace zlp {
         zldsp::splitter::InplaceMSSplitter<float>::split(fft_ins_[2].data(), fft_ins_[3].data(), fft_size_);
         if (m_data_.is_side_required || stereo_data_.is_side_required) {
             zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
-            fft_->forward_sqr_mag(fft_ins_[2].data(), m_data_.fft_side_abs_sqr.data());
+            fft_->forward_sqr_mag(fft_ins_[2].data(), m_data_.fft_side_abs_sqr.data()); // NOLINT
         }
         if (s_data_.is_side_required || stereo_data_.is_side_required) {
             zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
-            fft_->forward_sqr_mag(fft_ins_[3].data(), s_data_.fft_side_abs_sqr.data());
+            fft_->forward_sqr_mag(fft_ins_[3].data(), s_data_.fft_side_abs_sqr.data()); // NOLINT
         }
         if (stereo_data_.is_side_required) {
             auto* HWY_RESTRICT stereo_abs_sqr = stereo_data_.fft_side_abs_sqr.data();
@@ -224,8 +226,8 @@ namespace zlp {
 
         zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
         zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
-        fft_->forward(fft_ins_[2].data(), {l_real_ptr, l_imag_ptr});
-        fft_->forward(fft_ins_[3].data(), {r_real_ptr, r_imag_ptr});
+        fft_->forward(fft_ins_[2].data(), {l_real_ptr, l_imag_ptr}); // NOLINT
+        fft_->forward(fft_ins_[3].data(), {r_real_ptr, r_imag_ptr}); // NOLINT
 
         if (l_data_.is_side_required) {
             auto* HWY_RESTRICT l_abs_sqr = l_data_.fft_side_abs_sqr.data();
@@ -330,14 +332,14 @@ namespace zlp {
         // process each dynamic band
         {
             const auto band = data.dynamic_bands[0];
-            spec_dynamic_[band].template process<false>(side_ptr, dynamic_ptr,
-                                                        spec_response_[band], spec_follower_[band]);
+            spec_dynamic_[band].process<false>(side_ptr, dynamic_ptr,
+                                               spec_response_[band], spec_follower_[band]);
             std::fill(dynamic_ptr + spec_response_[band].getDiffEndIdx(), dynamic_ptr + end_idx, 0.f);
         }
         for (size_t i = 1; i < data.dynamic_bands.size(); ++i) {
             const auto band = data.dynamic_bands[i];
-            spec_dynamic_[band].template process<true>(side_ptr, dynamic_ptr,
-                                                       spec_response_[band], spec_follower_[band]);
+            spec_dynamic_[band].process<true>(side_ptr, dynamic_ptr,
+                                              spec_response_[band], spec_follower_[band]);
         }
         // convert dynamic response from db to linear
         auto* HWY_RESTRICT static_ptr = data.static_response.data();
@@ -359,8 +361,8 @@ namespace zlp {
         zldsp::vector::multiply(fft_ins_[0].data(), window1_.data(), fft_size_);
         zldsp::vector::multiply(fft_ins_[1].data(), window1_.data(), fft_size_);
 
-        fft_->forward(fft_ins_[0].data(), {fft_out_reals_[0].data(), fft_out_imags_[0].data()});
-        fft_->forward(fft_ins_[1].data(), {fft_out_reals_[1].data(), fft_out_imags_[1].data()});
+        fft_->forward(fft_ins_[0].data(), {fft_out_reals_[0].data(), fft_out_imags_[0].data()}); // NOLINT
+        fft_->forward(fft_ins_[1].data(), {fft_out_reals_[1].data(), fft_out_imags_[1].data()}); // NOLINT
 
         auto* HWY_RESTRICT l_real_ptr = fft_out_reals_[0].data();
         auto* HWY_RESTRICT l_imag_ptr = fft_out_imags_[0].data();
@@ -431,8 +433,8 @@ namespace zlp {
             hn::Store(vr_imag, d, r_imag_ptr + i);
         }
 
-        fft_->backward({fft_out_reals_[0].data(), fft_out_imags_[0].data()}, fft_ins_[0].data());
-        fft_->backward({fft_out_reals_[1].data(), fft_out_imags_[1].data()}, fft_ins_[1].data());
+        fft_->backward({fft_out_reals_[0].data(), fft_out_imags_[0].data()}, fft_ins_[0].data()); // NOLINT
+        fft_->backward({fft_out_reals_[1].data(), fft_out_imags_[1].data()}, fft_ins_[1].data()); // NOLINT
 
         zldsp::vector::multiply(fft_ins_[0].data(), window2_.data(), fft_size_);
         zldsp::vector::multiply(fft_ins_[1].data(), window2_.data(), fft_size_);
