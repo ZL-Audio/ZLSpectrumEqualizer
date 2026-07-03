@@ -49,16 +49,21 @@ namespace zlp {
         template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
         void processMainImpl();
 
-    private:
-        static constexpr hn::ScalableTag<float> d;
-        static constexpr size_t lanes = hn::MaxLanes(d);
+        void setFilterStatus(const size_t idx, const FilterStatus filter_status) {
+            filter_status_[idx].store(filter_status, std::memory_order::relaxed);
+            to_update_status_.signal();
+            to_update_.signal();
+        }
 
+    private:
         enum class SideStatus {
             kNotRequired, kLR, kMS, kLRMS
         };
 
+        static constexpr hn::ScalableTag<float> d;
+        static constexpr size_t lanes = hn::MaxLanes(d);
+
         struct ChannelData {
-            bool is_side_required{false};
             bool is_active{false};
 
             std::vector<size_t> bands{};
@@ -73,7 +78,13 @@ namespace zlp {
         };
 
         juce::AudioProcessor& p_ref_;
-
+        zlchore::thread::Notifier to_update_{false};
+        // filter status
+        std::array<std::atomic<FilterStatus>, kBandNum> filter_status_{};
+        std::array<FilterStatus, kBandNum> c_filter_status_{};
+        std::vector<size_t> not_off_total_{};
+        zlchore::thread::Notifier to_update_status_{false};
+        // empty filters for holding atomic parameters
         std::array<zldsp::filter::Empty, kBandNum> emptys_{};
         std::array<zlchore::thread::Notifier, kBandNum> empty_update_flags_{};
         std::array<zldsp::filter::FilterParameters, kBandNum> filter_paras_{};
@@ -109,7 +120,15 @@ namespace zlp {
 
         SideStatus side_status_{SideStatus::kNotRequired};
 
+        bool isSideRequired() const {
+            return side_status_ != SideStatus::kNotRequired;
+        }
+
+        void processFrame(bool is_bypass);
+
         void processSide();
+
+        void processDualChannelSide(ChannelData& ch1, ChannelData& ch2);
 
         void processSideLR();
 
@@ -120,6 +139,9 @@ namespace zlp {
         void processDynamicBands(ChannelData& data);
 
         void processMain(bool is_bypass);
+
+        void multiplyWithWindow(float* HWY_RESTRICT in1_ptr, float* HWY_RESTRICT in2_ptr,
+                                const float* HWY_RESTRICT window_ptr) const;
 
         void handleAsyncUpdate() override;
     };

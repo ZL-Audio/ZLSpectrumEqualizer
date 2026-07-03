@@ -43,7 +43,6 @@ namespace zlp {
             return;
         }
         size_t samples_processed = 0;
-        const bool requires_side = (side_status_ != SideStatus::kNotRequired);
         while (samples_processed < num_samples) {
             // copy data to FIFO until reach a hop size or buffer size
             const size_t chunk = std::min(num_samples - samples_processed, fft_hop_size_ - fft_count_);
@@ -67,7 +66,7 @@ namespace zlp {
                     std::fill_n(output_fifos_[chan].data(), chunk2, 0.0f);
                 }
             }
-            if (requires_side) {
+            if (isSideRequired()) {
                 for (size_t chan = 2; chan < 4; ++chan) {
                     std::copy_n(buffer[chan] + samples_processed, chunk1,
                                 input_fifos_[chan].data() + fft_pos_);
@@ -95,7 +94,7 @@ namespace zlp {
                                     fft_ins_[chan].data() + fft_size_ - fft_pos_);
                     }
                 }
-                if (requires_side) {
+                if (isSideRequired()) {
                     for (size_t chan = 2; chan < 4; ++chan) {
                         std::copy_n(input_fifos_[chan].data() + fft_pos_, fft_size_ - fft_pos_,
                                     fft_ins_[chan].data());
@@ -104,14 +103,8 @@ namespace zlp {
                                         fft_ins_[chan].data() + fft_size_ - fft_pos_);
                         }
                     }
-                    processSide();
-                    processDynamicBands(stereo_data_);
-                    processDynamicBands(l_data_);
-                    processDynamicBands(r_data_);
-                    processDynamicBands(m_data_);
-                    processDynamicBands(s_data_);
                 }
-                processMain(is_bypass);
+                processFrame(is_bypass);
                 // overlap-add
                 const size_t range1 = fft_size_ - fft_pos_;
                 for (size_t chan = 0; chan < 2; ++chan) {
@@ -139,6 +132,18 @@ namespace zlp {
         }
     }
 
+    void Controller::processFrame(const bool is_bypass) {
+        if (isSideRequired()) {
+            processSide();
+            processDynamicBands(stereo_data_);
+            processDynamicBands(l_data_);
+            processDynamicBands(r_data_);
+            processDynamicBands(m_data_);
+            processDynamicBands(s_data_);
+        }
+        processMain(is_bypass);
+    }
+
     void Controller::processSide() {
         if (side_status_ == SideStatus::kLR) {
             processSideLR();
@@ -157,65 +162,44 @@ namespace zlp {
         }
     }
 
-    void Controller::processSideLR() {
-        if (l_data_.is_side_required || stereo_data_.is_side_required) {
+    void Controller::processDualChannelSide(ChannelData& ch1, ChannelData& ch2) {
+        if (!ch1.dynamic_bands.empty() || !stereo_data_.dynamic_bands.empty()) {
             zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
-            fft_->forward_sqr_mag(fft_ins_[2].data(), l_data_.fft_side_abs_sqr.data()); // NOLINT
+            fft_->forward_sqr_mag(fft_ins_[2].data(), ch1.fft_side_abs_sqr.data()); // NOLINT
         }
-        if (r_data_.is_side_required || stereo_data_.is_side_required) {
+        if (!ch2.dynamic_bands.empty() || !stereo_data_.dynamic_bands.empty()) {
             zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
-            fft_->forward_sqr_mag(fft_ins_[3].data(), r_data_.fft_side_abs_sqr.data()); // NOLINT
+            fft_->forward_sqr_mag(fft_ins_[3].data(), ch2.fft_side_abs_sqr.data()); // NOLINT
         }
-        if (stereo_data_.is_side_required) {
+        if (!stereo_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT stereo_abs_sqr = stereo_data_.fft_side_abs_sqr.data();
-            const auto* HWY_RESTRICT l_abs_sqr = l_data_.fft_side_abs_sqr.data();
-            const auto* HWY_RESTRICT r_abs_sqr = r_data_.fft_side_abs_sqr.data();
+            const auto* HWY_RESTRICT ch1_abs_sqr = ch1.fft_side_abs_sqr.data();
+            const auto* HWY_RESTRICT ch2_abs_sqr = ch2.fft_side_abs_sqr.data();
             const auto start_idx = stereo_data_.smooth_bounds.pass1_start;
             const auto end_idx = stereo_data_.smooth_bounds.pass1_end;
+
             for (size_t i = start_idx; i < end_idx; i += lanes) {
-                const auto l_v = hn::Load(d, l_abs_sqr + i);
-                const auto r_v = hn::Load(d, r_abs_sqr + i);
-                hn::Store(hn::Add(l_v, r_v), d, stereo_abs_sqr + i);
+                const auto v1 = hn::Load(d, ch1_abs_sqr + i);
+                const auto v2 = hn::Load(d, ch2_abs_sqr + i);
+                hn::Store(hn::Add(v1, v2), d, stereo_abs_sqr + i);
             }
             spec_smoother_.smoothRange(stereo_data_.fft_side_abs_sqr, stereo_data_.smooth_bounds);
         }
-        if (l_data_.is_side_required) {
-            spec_smoother_.smoothRange(l_data_.fft_side_abs_sqr, l_data_.smooth_bounds);
+        if (!ch1.dynamic_bands.empty()) {
+            spec_smoother_.smoothRange(ch1.fft_side_abs_sqr, ch1.smooth_bounds);
         }
-        if (r_data_.is_side_required) {
-            spec_smoother_.smoothRange(r_data_.fft_side_abs_sqr, r_data_.smooth_bounds);
+        if (!ch2.dynamic_bands.empty()) {
+            spec_smoother_.smoothRange(ch2.fft_side_abs_sqr, ch2.smooth_bounds);
         }
+    }
+
+    void Controller::processSideLR() {
+        processDualChannelSide(l_data_, r_data_);
     }
 
     void Controller::processSideMS() {
         zldsp::splitter::InplaceMSSplitter<float>::split(fft_ins_[2].data(), fft_ins_[3].data(), fft_size_);
-        if (m_data_.is_side_required || stereo_data_.is_side_required) {
-            zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
-            fft_->forward_sqr_mag(fft_ins_[2].data(), m_data_.fft_side_abs_sqr.data()); // NOLINT
-        }
-        if (s_data_.is_side_required || stereo_data_.is_side_required) {
-            zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
-            fft_->forward_sqr_mag(fft_ins_[3].data(), s_data_.fft_side_abs_sqr.data()); // NOLINT
-        }
-        if (stereo_data_.is_side_required) {
-            auto* HWY_RESTRICT stereo_abs_sqr = stereo_data_.fft_side_abs_sqr.data();
-            const auto* HWY_RESTRICT m_abs_sqr = m_data_.fft_side_abs_sqr.data();
-            const auto* HWY_RESTRICT s_abs_sqr = s_data_.fft_side_abs_sqr.data();
-            const auto start_idx = stereo_data_.smooth_bounds.pass1_start;
-            const auto end_idx = stereo_data_.smooth_bounds.pass1_end;
-            for (size_t i = start_idx; i < end_idx; i += lanes) {
-                const auto m_v = hn::Load(d, m_abs_sqr + i);
-                const auto s_v = hn::Load(d, s_abs_sqr + i);
-                hn::Store(hn::Add(m_v, s_v), d, stereo_abs_sqr + i);
-            }
-            spec_smoother_.smoothRange(stereo_data_.fft_side_abs_sqr, stereo_data_.smooth_bounds);
-        }
-        if (m_data_.is_side_required) {
-            spec_smoother_.smoothRange(m_data_.fft_side_abs_sqr, m_data_.smooth_bounds);
-        }
-        if (s_data_.is_side_required) {
-            spec_smoother_.smoothRange(s_data_.fft_side_abs_sqr, s_data_.smooth_bounds);
-        }
+        processDualChannelSide(m_data_, s_data_);
     }
 
     void Controller::processSideLRMS() {
@@ -224,12 +208,11 @@ namespace zlp {
         auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
         auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
 
-        zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
-        zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
+        multiplyWithWindow(fft_ins_[2].data(), fft_ins_[3].data(), window1_.data());
         fft_->forward(fft_ins_[2].data(), {l_real_ptr, l_imag_ptr}); // NOLINT
         fft_->forward(fft_ins_[3].data(), {r_real_ptr, r_imag_ptr}); // NOLINT
 
-        if (l_data_.is_side_required) {
+        if (!l_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT l_abs_sqr = l_data_.fft_side_abs_sqr.data();
             const auto start_idx = l_data_.smooth_bounds.pass1_start;
             const auto end_idx = l_data_.smooth_bounds.pass1_end;
@@ -242,7 +225,7 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(l_data_.fft_side_abs_sqr, l_data_.smooth_bounds);
         }
-        if (r_data_.is_side_required) {
+        if (!r_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT r_abs_sqr = r_data_.fft_side_abs_sqr.data();
             const auto start_idx = r_data_.smooth_bounds.pass1_start;
             const auto end_idx = r_data_.smooth_bounds.pass1_end;
@@ -255,7 +238,7 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(r_data_.fft_side_abs_sqr, r_data_.smooth_bounds);
         }
-        if (stereo_data_.is_side_required) {
+        if (!stereo_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT st_abs_sqr = stereo_data_.fft_side_abs_sqr.data();
             const auto start_idx = stereo_data_.smooth_bounds.pass1_start;
             const auto end_idx = stereo_data_.smooth_bounds.pass1_end;
@@ -273,7 +256,7 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(stereo_data_.fft_side_abs_sqr, stereo_data_.smooth_bounds);
         }
-        if (m_data_.is_side_required) {
+        if (!m_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT m_abs_sqr = m_data_.fft_side_abs_sqr.data();
             const auto quarter_v = hn::Set(d, 0.25f);
             const auto start_idx = m_data_.smooth_bounds.pass1_start;
@@ -292,7 +275,7 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(m_data_.fft_side_abs_sqr, m_data_.smooth_bounds);
         }
-        if (s_data_.is_side_required) {
+        if (!s_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT s_abs_sqr = s_data_.fft_side_abs_sqr.data();
             const auto quarter_v = hn::Set(d, 0.25f);
             const auto start_idx = s_data_.smooth_bounds.pass1_start;
@@ -353,13 +336,11 @@ namespace zlp {
     template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
     void Controller::processMainImpl() {
         if constexpr (!(has_stereo || has_l || has_r || has_m || has_s)) {
-            zldsp::vector::multiply(fft_ins_[0].data(), window_bypass_.data(), fft_size_);
-            zldsp::vector::multiply(fft_ins_[1].data(), window_bypass_.data(), fft_size_);
+            multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window_bypass_.data());
             return;
         }
 
-        zldsp::vector::multiply(fft_ins_[0].data(), window1_.data(), fft_size_);
-        zldsp::vector::multiply(fft_ins_[1].data(), window1_.data(), fft_size_);
+        multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window1_.data());
 
         fft_->forward(fft_ins_[0].data(), {fft_out_reals_[0].data(), fft_out_imags_[0].data()}); // NOLINT
         fft_->forward(fft_ins_[1].data(), {fft_out_reals_[1].data(), fft_out_imags_[1].data()}); // NOLINT
@@ -436,8 +417,19 @@ namespace zlp {
         fft_->backward({fft_out_reals_[0].data(), fft_out_imags_[0].data()}, fft_ins_[0].data()); // NOLINT
         fft_->backward({fft_out_reals_[1].data(), fft_out_imags_[1].data()}, fft_ins_[1].data()); // NOLINT
 
-        zldsp::vector::multiply(fft_ins_[0].data(), window2_.data(), fft_size_);
-        zldsp::vector::multiply(fft_ins_[1].data(), window2_.data(), fft_size_);
+        multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window2_.data());
+    }
+
+    void Controller::multiplyWithWindow(float* HWY_RESTRICT in1_ptr,
+                                        float* HWY_RESTRICT in2_ptr,
+                                        const float* HWY_RESTRICT window_ptr) const {
+        for (size_t i = 0; i < fft_size_; i += lanes) {
+            const auto v_window = hn::Load(d, window_ptr + i);
+            const auto v_in1 = hn::Load(d, in1_ptr + i);
+            const auto v_in2 = hn::Load(d, in2_ptr + i);
+            hn::Store(hn::Mul(v_window, v_in1), d, in1_ptr + i);
+            hn::Store(hn::Mul(v_window, v_in2), d, in2_ptr + i);
+        }
     }
 
     void Controller::handleAsyncUpdate() {
