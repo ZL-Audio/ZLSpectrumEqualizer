@@ -46,7 +46,7 @@ namespace zlp {
         void process(const std::array<float*, 4>& buffer, size_t num_samples, bool is_bypass);
 
         template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
-        void processMainImpl();
+        void processMainImpl(bool perform_fft);
 
         void setFilterStatus(const size_t idx, const FilterStatus filter_status) {
             a_filter_status_[idx].store(filter_status, std::memory_order::relaxed);
@@ -57,6 +57,11 @@ namespace zlp {
         void setLRMS(const size_t idx, const FilterStereo filter_stereo) {
             a_lrms_[idx].store(filter_stereo, std::memory_order::relaxed);
             to_update_lrms_.signal();
+            to_update_.signal();
+        }
+
+        void setExtSide(bool is_ext_side) {
+            a_is_ext_side_.store(is_ext_side, std::memory_order::relaxed);
             to_update_.signal();
         }
 
@@ -157,9 +162,14 @@ namespace zlp {
 
         SideStatus side_status_{SideStatus::kNotRequired};
 
+        std::atomic<bool> a_is_ext_side_{false};
+        bool is_ext_side_{false};
+
         void processFrame(bool is_bypass);
 
         void processSide();
+
+        void computeSideAbsSqrFromMain();
 
         void processDualChannelSide(ChannelData& ch1, ChannelData& ch2);
 
@@ -171,7 +181,7 @@ namespace zlp {
 
         void processDynamicBands(ChannelData& data);
 
-        void processMain(bool is_bypass);
+        void processMain(bool is_bypass, bool perform_fft);
 
         void multiplyWithWindow(float* HWY_RESTRICT in1_ptr, float* HWY_RESTRICT in2_ptr,
                                 const float* HWY_RESTRICT window_ptr) const;

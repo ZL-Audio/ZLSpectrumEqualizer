@@ -13,18 +13,18 @@
 namespace zlp {
     namespace {
         template <size_t Mask>
-        void dispatchMask(Controller* instance) {
+        void dispatchMask(Controller* instance, bool perform_fft) {
             instance->processMainImpl<
                 (Mask & 1) != 0,
                 (Mask & 2) != 0,
                 (Mask & 4) != 0,
                 (Mask & 8) != 0,
                 (Mask & 16) != 0
-            >();
+            >(perform_fft);
         }
 
         template <size_t... Is>
-        constexpr std::array<void (*)(Controller*), sizeof...(Is)> makeDispatchTable(std::index_sequence<Is...>) {
+        constexpr std::array<void (*)(Controller*, bool), sizeof...(Is)> makeDispatchTable(std::index_sequence<Is...>) {
             return {&dispatchMask<Is>...};
         }
 
@@ -43,6 +43,7 @@ namespace zlp {
         if (fft_ == nullptr) {
             return;
         }
+        is_ext_side_ = a_is_ext_side_.load(std::memory_order::relaxed);
         size_t samples_processed = 0;
         while (samples_processed < num_samples) {
             // copy data to FIFO until reach a hop size or buffer size
@@ -67,7 +68,7 @@ namespace zlp {
                     std::fill_n(output_fifos_[chan].data(), chunk2, 0.0f);
                 }
             }
-            if (isSideRequired()) {
+            if (isSideRequired() && is_ext_side_) {
                 for (size_t chan = 2; chan < 4; ++chan) {
                     std::copy_n(buffer[chan] + samples_processed, chunk1,
                                 input_fifos_[chan].data() + fft_pos_);
@@ -95,7 +96,7 @@ namespace zlp {
                                     fft_ins_[chan].data() + fft_size_ - fft_pos_);
                     }
                 }
-                if (isSideRequired()) {
+                if (isSideRequired() && is_ext_side_) {
                     for (size_t chan = 2; chan < 4; ++chan) {
                         std::copy_n(input_fifos_[chan].data() + fft_pos_, fft_size_ - fft_pos_,
                                     fft_ins_[chan].data());
@@ -134,15 +135,24 @@ namespace zlp {
     }
 
     void Controller::processFrame(const bool is_bypass) {
+        bool main_fft_done = false;
         if (isSideRequired()) {
-            processSide();
+            if (is_ext_side_) {
+                processSide();
+            } else {
+                multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window1_.data());
+                fft_->forward(fft_ins_[0].data(), {fft_out_reals_[0].data(), fft_out_imags_[0].data()}); // NOLINT
+                fft_->forward(fft_ins_[1].data(), {fft_out_reals_[1].data(), fft_out_imags_[1].data()}); // NOLINT
+                main_fft_done = true;
+                computeSideAbsSqrFromMain();
+            }
             processDynamicBands(stereo_data_);
             processDynamicBands(l_data_);
             processDynamicBands(r_data_);
             processDynamicBands(m_data_);
             processDynamicBands(s_data_);
         }
-        processMain(is_bypass);
+        processMain(is_bypass, !main_fft_done);
     }
 
     void Controller::processSide() {
@@ -155,11 +165,11 @@ namespace zlp {
         }
     }
 
-    void Controller::processMain(const bool is_bypass) {
+    void Controller::processMain(const bool is_bypass, const bool perform_fft) {
         if (is_bypass) {
-            dispatcher[0](this);
+            dispatcher[0](this, perform_fft);
         } else {
-            dispatcher[dispatch_mask_](this);
+            dispatcher[dispatch_mask_](this, perform_fft);
         }
     }
 
@@ -212,6 +222,15 @@ namespace zlp {
         multiplyWithWindow(fft_ins_[2].data(), fft_ins_[3].data(), window1_.data());
         fft_->forward(fft_ins_[2].data(), {l_real_ptr, l_imag_ptr}); // NOLINT
         fft_->forward(fft_ins_[3].data(), {r_real_ptr, r_imag_ptr}); // NOLINT
+
+        computeSideAbsSqrFromMain();
+    }
+
+    void Controller::computeSideAbsSqrFromMain() {
+        const auto* HWY_RESTRICT l_real_ptr = fft_out_reals_[0].data();
+        const auto* HWY_RESTRICT l_imag_ptr = fft_out_imags_[0].data();
+        const auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
+        const auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
 
         if (!l_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT l_abs_sqr = l_data_.fft_side_abs_sqr.data();
@@ -344,16 +363,17 @@ namespace zlp {
     }
 
     template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
-    void Controller::processMainImpl() {
+    void Controller::processMainImpl(const bool perform_fft) {
         if constexpr (!(has_stereo || has_l || has_r || has_m || has_s)) {
             multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window_bypass_.data());
             return;
         }
 
-        multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window1_.data());
-
-        fft_->forward(fft_ins_[0].data(), {fft_out_reals_[0].data(), fft_out_imags_[0].data()}); // NOLINT
-        fft_->forward(fft_ins_[1].data(), {fft_out_reals_[1].data(), fft_out_imags_[1].data()}); // NOLINT
+        if (perform_fft) {
+            multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window1_.data());
+            fft_->forward(fft_ins_[0].data(), {fft_out_reals_[0].data(), fft_out_imags_[0].data()}); // NOLINT
+            fft_->forward(fft_ins_[1].data(), {fft_out_reals_[1].data(), fft_out_imags_[1].data()}); // NOLINT
+        }
 
         auto* HWY_RESTRICT l_real_ptr = fft_out_reals_[0].data();
         auto* HWY_RESTRICT l_imag_ptr = fft_out_imags_[0].data();
