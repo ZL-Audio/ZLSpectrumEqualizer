@@ -28,6 +28,10 @@ namespace zlp {
         kStereo, kLeft, kRight, kMid, kSide
     };
 
+    enum class FFTResolution {
+        kLow, kMedium, kHigh, kExtreme
+    };
+
     template <typename FloatType>
     inline juce::NormalisableRange<FloatType> getLogMidRange(
         const FloatType x_min, const FloatType x_max, const FloatType x_mid, const FloatType x_interval) {
@@ -215,6 +219,16 @@ namespace zlp {
         inline static float convertTo01(const int x) {
             return static_cast<float>(x) / static_cast<float>(T::kChoices.size() - 1);
         }
+    };
+
+    class PFFTResolution : public ChoiceParameters<PFFTResolution> {
+    public:
+        static constexpr auto kID = "fft_resolution";
+        static constexpr auto kName = "FFT Resolution";
+        inline static const auto kChoices = juce::StringArray{
+            "Low", "Medium", "High", "Extreme"
+        };
+        static constexpr int kDefaultI = 0;
     };
 
     class PExtSide : public BoolParameters<PExtSide> {

@@ -100,6 +100,9 @@ namespace zlp {
 
         juce::AudioProcessor& p_ref_;
         zlchore::thread::Notifier to_update_{false};
+        // fft resolution
+        std::atomic<FFTResolution> a_fft_resolution_{FFTResolution::kMedium};
+        zlchore::thread::Notifier resolution_{false};
         // filter status
         std::array<std::atomic<FilterStatus>, kBandNum> a_filter_status_{};
         std::array<FilterStatus, kBandNum> filter_status_{};
