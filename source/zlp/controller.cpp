@@ -8,6 +8,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "controller.hpp"
+#include "../dsp/splitter/inplace_ms_splitter.hpp"
 
 namespace zlp {
     namespace {
@@ -315,14 +316,23 @@ namespace zlp {
         // process each dynamic band
         {
             const auto band = data.dynamic_bands[0];
-            spec_dynamic_[band].process<false>(side_ptr, dynamic_ptr,
-                                               spec_response_[band], spec_follower_[band]);
-            std::fill(dynamic_ptr + spec_response_[band].getDiffEndIdx(), dynamic_ptr + end_idx, 0.f);
+            if (dynamic_bypass_[band]) {
+                spec_dynamic_[band].process<false, true>(side_ptr, dynamic_ptr,
+                                                         spec_response_[band], spec_follower_[band]);
+            } else {
+                spec_dynamic_[band].process<false, false>(side_ptr, dynamic_ptr,
+                                                          spec_response_[band], spec_follower_[band]);
+            }
         }
         for (size_t i = 1; i < data.dynamic_bands.size(); ++i) {
             const auto band = data.dynamic_bands[i];
-            spec_dynamic_[band].process<true>(side_ptr, dynamic_ptr,
-                                              spec_response_[band], spec_follower_[band]);
+            if (dynamic_bypass_[band]) {
+                spec_dynamic_[band].process<true, true>(side_ptr, dynamic_ptr,
+                                                        spec_response_[band], spec_follower_[band]);
+            } else {
+                spec_dynamic_[band].process<true, false>(side_ptr, dynamic_ptr,
+                                                         spec_response_[band], spec_follower_[band]);
+            }
         }
         // convert dynamic response from db to linear
         auto* HWY_RESTRICT static_ptr = data.static_response.data();

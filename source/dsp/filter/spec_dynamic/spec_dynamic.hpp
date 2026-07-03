@@ -24,7 +24,7 @@ namespace zldsp::filter {
             states_.resize(fft_size);
         }
 
-        template <bool to_add = true>
+        template <bool to_add = true, bool bypass = false>
         void process(FloatType* HWY_RESTRICT side_log_sqr,
                      FloatType* HWY_RESTRICT dynamic_db,
                      SpecResponse<FloatType>& response,
@@ -58,13 +58,18 @@ namespace zldsp::filter {
                 hn::Store(v_state, d, states + (i << 1));
                 hn::Store(v_y, d, states + (i << 1) + lanes);
                 // calculate diff
-                const auto v_diff = hn::Mul(hn::Load(d, diffs + i), v_y);
-                if constexpr (to_add) {
-                    const auto v_dyn = hn::Load(d, dynamic_db + i);
-                    hn::Store(hn::Add(v_diff, v_dyn), d, dynamic_db + i);
-                } else {
-                    hn::Store(v_diff, d, dynamic_db + i);
+                if constexpr (!bypass) {
+                    const auto v_diff = hn::Mul(hn::Load(d, diffs + i), v_y);
+                    if constexpr (to_add) {
+                        const auto v_dyn = hn::Load(d, dynamic_db + i);
+                        hn::Store(hn::Add(v_diff, v_dyn), d, dynamic_db + i);
+                    } else {
+                        hn::Store(v_diff, d, dynamic_db + i);
+                    }
                 }
+            }
+            if constexpr (to_add && bypass) {
+                std::fill(dynamic_db + i_start, dynamic_db + i_stop, static_cast<FloatType>(0));
             }
         }
 

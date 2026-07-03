@@ -18,7 +18,6 @@
 #include "../dsp/filter/spec_dynamic/spec_follower.hpp"
 #include "../dsp/filter/spec_dynamic/spec_dynamic.hpp"
 #include "../dsp/filter/spec_dynamic/spec_smoother.hpp"
-#include "../dsp/splitter/inplace_ms_splitter.hpp"
 #include "../dsp/fft/zldsp_fft_include.hpp"
 
 #include "../chore/thread/notifier.hpp"
@@ -50,9 +49,31 @@ namespace zlp {
         void processMainImpl();
 
         void setFilterStatus(const size_t idx, const FilterStatus filter_status) {
-            filter_status_[idx].store(filter_status, std::memory_order::relaxed);
+            a_filter_status_[idx].store(filter_status, std::memory_order::relaxed);
             to_update_status_.signal();
             to_update_.signal();
+        }
+
+        void setLRMS(const size_t idx, const FilterStereo filter_stereo) {
+            a_lrms_[idx].store(filter_stereo, std::memory_order::relaxed);
+            to_update_lrms_.signal();
+            to_update_.signal();
+        }
+
+        auto& getEmptyFilters() {
+            return emptys_;
+        }
+
+        auto& getEmptyUpdateFlags() {
+            return empty_update_flags_;
+        }
+
+        auto& getUpdateFlag() {
+            return to_update_;
+        }
+
+        bool isSideRequired() const {
+            return side_status_ != SideStatus::kNotRequired;
         }
 
     private:
@@ -80,14 +101,27 @@ namespace zlp {
         juce::AudioProcessor& p_ref_;
         zlchore::thread::Notifier to_update_{false};
         // filter status
-        std::array<std::atomic<FilterStatus>, kBandNum> filter_status_{};
-        std::array<FilterStatus, kBandNum> c_filter_status_{};
+        std::array<std::atomic<FilterStatus>, kBandNum> a_filter_status_{};
+        std::array<FilterStatus, kBandNum> filter_status_{};
         std::vector<size_t> not_off_total_{};
         zlchore::thread::Notifier to_update_status_{false};
+        // filter l/r/m/s
+        std::array<std::atomic<FilterStereo>, kBandNum> a_lrms_{};
+        std::array<FilterStereo, kBandNum> lrms_{};
+        zlchore::thread::Notifier to_update_lrms_{false};
         // empty filters for holding atomic parameters
         std::array<zldsp::filter::Empty, kBandNum> emptys_{};
         std::array<zlchore::thread::Notifier, kBandNum> empty_update_flags_{};
         std::array<zldsp::filter::FilterParameters, kBandNum> filter_paras_{};
+        // filter dynamic flags
+        std::array<std::atomic<bool>, kBandNum> a_dynamic_on_{};
+        std::array<std::atomic<bool>, kBandNum> a_dynamic_bypass_{};
+        std::array<bool, kBandNum> dynamic_on_{};
+        std::array<bool, kBandNum> dynamic_bypass_{};
+        zlchore::thread::Notifier to_update_dynamic_{false};
+
+        // filters for calculating prototype response and biquad response
+        std::array<zldsp::filter::Ideal<float, kFilterSize>, kBandNum> ideals_{};
         // spectrum processing
         std::array<zldsp::filter::SpecResponse<float>, kBandNum> spec_response_
             = make_array_of<zldsp::filter::SpecResponse<float>, kBandNum>();
@@ -119,10 +153,6 @@ namespace zlp {
         ChannelData stereo_data_, l_data_, r_data_, m_data_, s_data_;
 
         SideStatus side_status_{SideStatus::kNotRequired};
-
-        bool isSideRequired() const {
-            return side_status_ != SideStatus::kNotRequired;
-        }
 
         void processFrame(bool is_bypass);
 
