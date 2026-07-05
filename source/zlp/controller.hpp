@@ -43,6 +43,8 @@ namespace zlp {
 
         void prepare(double sample_rate, size_t max_num_samples);
 
+        void prepareBuffer();
+
         void process(const std::array<float*, 4>& buffer, size_t num_samples, bool is_bypass);
 
         template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
@@ -50,7 +52,7 @@ namespace zlp {
 
         void setFilterStatus(const size_t idx, const FilterStatus filter_status) {
             a_filter_status_[idx].store(filter_status, std::memory_order::relaxed);
-            to_update_status_.signal();
+            to_update_filter_status_.signal();
             to_update_.signal();
         }
 
@@ -70,7 +72,7 @@ namespace zlp {
         }
 
         auto& getEmptyUpdateFlags() {
-            return empty_update_flags_;
+            return to_update_empty_bases_;
         }
 
         auto& getUpdateFlag() {
@@ -90,8 +92,6 @@ namespace zlp {
         static constexpr size_t lanes = hn::MaxLanes(d);
 
         struct ChannelData {
-            bool is_active{false};
-
             std::vector<size_t> bands{};
             zldsp::vector::aligned_vector<float> static_response;
 
@@ -107,29 +107,33 @@ namespace zlp {
         zlchore::thread::Notifier to_update_{false};
         // fft resolution
         std::atomic<FFTResolution> a_fft_resolution_{FFTResolution::kMedium};
-        zlchore::thread::Notifier resolution_{false};
+        zlchore::thread::Notifier to_update_fft_resolution_{false};
+        std::atomic<int> latency_{0};
         // filter status
         std::array<std::atomic<FilterStatus>, kBandNum> a_filter_status_{};
-        std::array<FilterStatus, kBandNum> filter_status_{};
-        std::vector<size_t> not_off_total_{};
-        zlchore::thread::Notifier to_update_status_{false};
+        std::array<FilterStatus, kBandNum> filter_status_{FilterStatus::kOff};
+        zlchore::thread::Notifier to_update_filter_status_{false};
+        std::vector<size_t> on_bands_{};
         // filter l/r/m/s
         std::array<std::atomic<FilterStereo>, kBandNum> a_lrms_{};
         std::array<FilterStereo, kBandNum> lrms_{};
         zlchore::thread::Notifier to_update_lrms_{false};
         // empty filters for holding atomic parameters
         std::array<zldsp::filter::Empty, kBandNum> emptys_{};
-        std::array<zlchore::thread::Notifier, kBandNum> empty_update_flags_{};
-        std::array<zldsp::filter::FilterParameters, kBandNum> filter_paras_{};
+        std::array<zlchore::thread::Notifier, kBandNum> to_update_empty_bases_{};
+        std::array<std::atomic<float>, kBandNum> empty_target_gains_{};
+        std::array<zlchore::thread::Notifier, kBandNum> to_update_empty_targets_{};
         // filter dynamic flags
         std::array<std::atomic<bool>, kBandNum> a_dynamic_on_{};
         std::array<std::atomic<bool>, kBandNum> a_dynamic_bypass_{};
         std::array<bool, kBandNum> dynamic_on_{};
         std::array<bool, kBandNum> dynamic_bypass_{};
-        zlchore::thread::Notifier to_update_dynamic_{false};
+        zlchore::thread::Notifier to_update_dynamic_status_{false};
 
         // filters for calculating prototype response and biquad response
-        std::array<zldsp::filter::Ideal<float, kFilterSize>, kBandNum> ideals_{};
+        zldsp::vector::aligned_vector<float> ws_;
+        zldsp::filter::Ideal<float, kFilterSize> ideal_{};
+        std::array<bool, kBandNum> to_update_bases_{false};
         // spectrum processing
         std::array<zldsp::filter::SpecResponse<float>, kBandNum> spec_response_
             = make_array_of<zldsp::filter::SpecResponse<float>, kBandNum>();
@@ -139,6 +143,7 @@ namespace zlp {
             = make_array_of<zldsp::filter::SpecDynamic<float>, kBandNum>();
         zldsp::filter::SpecSmoother<float> spec_smoother_;
         // fft working space
+        double sample_rate_{48000.0};
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_low_;
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_medium_;
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_high_;
@@ -158,12 +163,23 @@ namespace zlp {
         std::array<zldsp::vector::aligned_vector<float>, 2> fft_out_reals_, fft_out_imags_;
 
         size_t dispatch_mask_{0};
-        ChannelData stereo_data_, l_data_, r_data_, m_data_, s_data_;
+        std::array<ChannelData, 5> channel_datas_{};
+        std::array<bool, 5> to_update_channel_static_{false};
+        std::array<bool, 5> to_update_channel_smooth_bounds_{false};
+        ChannelData& stereo_data_{channel_datas_[0]};
+        ChannelData& l_data_{channel_datas_[1]};
+        ChannelData& r_data_{channel_datas_[2]};
+        ChannelData& m_data_{channel_datas_[3]};
+        ChannelData& s_data_{channel_datas_[4]};
 
         SideStatus side_status_{SideStatus::kNotRequired};
 
         std::atomic<bool> a_is_ext_side_{false};
         bool is_ext_side_{false};
+
+        void prepareFFTPlans();
+
+        void resizeWorkingSpace();
 
         void processFrame(bool is_bypass);
 
@@ -185,6 +201,18 @@ namespace zlp {
 
         void multiplyWithWindow(float* HWY_RESTRICT in1_ptr, float* HWY_RESTRICT in2_ptr,
                                 const float* HWY_RESTRICT window_ptr) const;
+
+        void updateFFTResolution();
+
+        void updateFilterStatus();
+
+        void updateDynamicStatus();
+
+        void updateSpecResponse();
+
+        void updateLRMS();
+
+        void updateChannelData();
 
         void handleAsyncUpdate() override;
     };

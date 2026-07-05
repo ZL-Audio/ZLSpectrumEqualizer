@@ -20,6 +20,8 @@ namespace zldsp::filter {
 
         static std::array<double, 3> get1TiltShelf(double w0, double g);
 
+        static std::array<double, 3> get1AllPass(double w0);
+
         static std::array<double, 3> get1LowShelf(double w0, double g);
 
         static std::array<double, 3> get1HighShelf(double w0, double g);
@@ -27,6 +29,8 @@ namespace zldsp::filter {
         static std::array<double, 5> get2LowPass(double w0, double q);
 
         static std::array<double, 5> get2HighPass(double w0, double q);
+
+        static std::array<double, 5> get2AllPass(double w0, double q);
 
         static std::array<double, 5> get2BandPass(double w0, double q);
 
@@ -39,5 +43,9 @@ namespace zldsp::filter {
         static std::array<double, 5> get2LowShelf(double w0, double g, double q);
 
         static std::array<double, 5> get2HighShelf(double w0, double g, double q);
+
+        static std::array<double, 5> pack1stOrder(const std::array<double, 3>& coeff, const double makeup_gain = 1.0) {
+            return {coeff[0], 0.0, coeff[1] * makeup_gain, coeff[2] * makeup_gain, 0.0};
+        }
     };
 }

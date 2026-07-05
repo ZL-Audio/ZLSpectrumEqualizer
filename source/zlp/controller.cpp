@@ -35,8 +35,36 @@ namespace zlp {
         p_ref_(p) {
     }
 
-    void Controller::prepare(const double sample_rate, const size_t max_num_samples) {
+    void Controller::prepare(const double sample_rate, const size_t) {
+        on_bands_.reserve(kBandNum);
+        sample_rate_ = sample_rate;
+        prepareFFTPlans();
+        fft_order_ = fft_extreme_->get_order();
+        resizeWorkingSpace();
 
+        ideal_.prepare(sample_rate);
+
+        to_update_.signal();
+        to_update_fft_resolution_.signal();
+    }
+
+    void Controller::prepareBuffer() {
+        if (!to_update_.check()) {
+            return;
+        }
+        if (to_update_fft_resolution_.check()) {
+            updateFFTResolution();
+        }
+        if (to_update_filter_status_.check()) {
+            updateFilterStatus();
+        }
+        if (to_update_dynamic_status_.check()) {
+            updateDynamicStatus();
+        }
+        updateSpecResponse();
+        if (to_update_lrms_.check()) {
+            updateLRMS();
+        }
     }
 
     void Controller::process(const std::array<float*, 4>& buffer, const size_t num_samples, const bool is_bypass) {
@@ -354,7 +382,7 @@ namespace zlp {
             }
         }
         // convert dynamic response from db to linear
-        auto* HWY_RESTRICT static_ptr = data.static_response.data();
+        const auto* HWY_RESTRICT static_ptr = data.static_response.data();
         for (size_t i = start_idx; i < end_idx; i += lanes) {
             const auto v_dynamic = hn::Load(d, dynamic_ptr + i);
             const auto v_static = hn::Load(d, static_ptr + i);
@@ -462,7 +490,172 @@ namespace zlp {
         }
     }
 
-    void Controller::handleAsyncUpdate() {
+    void Controller::prepareFFTPlans() {
+        size_t fft_low_order;
+        if (sample_rate_ < 50000.0) {
+            fft_low_order = 12;
+        } else if (sample_rate_ < 100000.0) {
+            fft_low_order = 13;
+        } else if (sample_rate_ < 200000.0) {
+            fft_low_order = 14;
+        } else if (sample_rate_ < 400000.0) {
+            fft_low_order = 15;
+        } else {
+            fft_low_order = 16;
+        }
+        fft_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order);
+        fft_medium_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order + 1);
+        fft_high_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order + 2);
+        fft_extreme_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order + 3);
+    }
 
+    void Controller::resizeWorkingSpace() {
+        fft_size_ = static_cast<size_t>(1) << fft_order_;
+        num_bin_ = fft_size_ / 2 + 1;
+        num_bin_effective_ = fft_size_ / 2;
+        ws_.resize(num_bin_effective_);
+
+        window1_.resize(fft_size_);
+        window2_.resize(fft_size_);
+        window_bypass_.resize(fft_size_);
+
+        for (auto& response : spec_response_) {
+            response.prepare(fft_size_);
+        }
+        for (auto& follower : spec_follower_) {
+            follower.prepare(sample_rate_, fft_size_);
+        }
+        for (auto& dynamic : spec_dynamic_) {
+            dynamic.prepare(fft_size_);
+        }
+        spec_smoother_.prepare(fft_size_);
+
+        for (auto& channel_data : channel_datas_) {
+            channel_data.bands.resize(kBandNum);
+            channel_data.dynamic_bands.resize(kBandNum);
+
+            channel_data.static_response.resize(num_bin_effective_);
+            channel_data.fft_side_abs_sqr.resize(num_bin_effective_);
+            channel_data.dynamic_response.resize(num_bin_effective_);
+        }
+    }
+
+    void Controller::updateFFTResolution() {
+        const auto fft_resolution = a_fft_resolution_.load(std::memory_order_relaxed);
+        switch (fft_resolution) {
+        case FFTResolution::kLow: {
+            fft_ = fft_low_.get();
+            break;
+        }
+        case FFTResolution::kMedium: {
+            fft_ = fft_medium_.get();
+            break;
+        }
+        case FFTResolution::kHigh: {
+            fft_ = fft_high_.get();
+            break;
+        }
+        case FFTResolution::kExtreme: {
+            fft_ = fft_extreme_.get();
+            break;
+        }
+        }
+
+        fft_order_ = fft_->get_order();
+        resizeWorkingSpace();
+
+        fft_pos_ = 0;
+        fft_count_ = 0;
+
+        latency_.store(static_cast<int>(fft_->get_size()), std::memory_order::seq_cst);
+        triggerAsyncUpdate();
+
+        std::ranges::fill(to_update_bases_, true);
+    }
+
+    void Controller::updateFilterStatus() {
+        on_bands_.clear();
+        for (size_t band = 0; band < kBandNum; band++) {
+            const auto filter_status = a_filter_status_[band].load(std::memory_order::relaxed);
+            if (filter_status != filter_status_[band]) {
+                filter_status_[band] = filter_status_[band];
+                to_update_bases_[band] = true;
+            }
+            if (filter_status == FilterStatus::kOn) {
+                on_bands_.emplace_back(band);
+            }
+        }
+        to_update_dynamic_status_.signal();
+        to_update_lrms_.signal();
+    }
+
+    void Controller::updateDynamicStatus() {
+        for (const auto& band : on_bands_) {
+            dynamic_bypass_[band] = a_dynamic_bypass_[band].load(std::memory_order::relaxed);
+            const auto dynamic_on = a_dynamic_on_[band].load(std::memory_order::relaxed);
+            if (dynamic_on != dynamic_on_[band]) {
+                dynamic_on_[band] = dynamic_on;
+                to_update_empty_targets_[band].signal();
+                const auto lrms = static_cast<size_t>(lrms_[band]);
+                to_update_channel_smooth_bounds_[lrms] = true;
+            }
+        }
+    }
+
+    void Controller::updateSpecResponse() {
+        for (const auto& band : on_bands_) {
+           const auto to_update_base = to_update_bases_[band] || to_update_empty_bases_[band].check();
+            if (to_update_base) {
+                const auto paras = emptys_[band].getParas();
+                spec_response_[band].updateBaseResponse(paras, ideal_, ws_);
+                const auto lrms = static_cast<size_t>(lrms_[band]);
+                to_update_channel_static_[lrms] = true;
+            }
+            if (to_update_base || to_update_empty_targets_[band].check()) {
+                if (dynamic_on_[band]) {
+                    auto paras = emptys_[band].getParas();
+                    paras.gain = static_cast<double>(empty_target_gains_[band].load(std::memory_order::relaxed));
+                    spec_response_[band].updateDiffResponse(paras, ideal_, ws_);
+                    const auto lrms = static_cast<size_t>(lrms_[band]);
+                    to_update_channel_smooth_bounds_[lrms] = true;
+                }
+            }
+            to_update_bases_[band] = false;
+        }
+    }
+
+    void Controller::updateLRMS() {
+        for (auto& data: channel_datas_) {
+            data.bands.clear();
+            data.dynamic_bands.clear();
+        }
+
+        for (const auto& band : on_bands_) {
+            auto update_channel = [&](const size_t lrms) {
+                to_update_channel_static_[lrms] = true;
+                if (dynamic_on_[band]) {
+                    to_update_channel_smooth_bounds_[lrms] = true;
+                }
+            };
+            const auto lrms = a_lrms_[band].load(std::memory_order::relaxed);
+            if (lrms != lrms_[band]) {
+                update_channel(static_cast<size_t>(lrms_[band]));
+                update_channel(static_cast<size_t>(lrms));
+                lrms_[band] = lrms;
+            }
+            channel_datas_[static_cast<size_t>(lrms)].bands.emplace_back(band);
+            if (dynamic_on_[band]) {
+                channel_datas_[static_cast<size_t>(lrms)].dynamic_bands.emplace_back(band);
+            }
+        }
+    }
+
+    void Controller::updateChannelData() {
+
+    }
+
+    void Controller::handleAsyncUpdate() {
+        const auto latency = latency_.load(std::memory_order::seq_cst);
+        p_ref_.setLatencySamples(latency);
     }
 }

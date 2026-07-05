@@ -27,7 +27,7 @@ namespace zldsp::filter::FilterDesign {
 
     template <class Coeff>
     size_t updateFlatShelfCoeffs(const double freq, const double fs, const double g_dB,
-                                std::span<std::array<double, 5>> coeffs) {
+                                 std::span<std::array<double, 5>> coeffs) {
         size_t num_filters;
         if (fs < 50000.0) {
             num_filters = 6;
@@ -55,13 +55,13 @@ namespace zldsp::filter::FilterDesign {
         for (size_t i = 0; i < num_filters - 1; ++i) {
             const double w_i = flat_freq[i] * inv_fs;
             const auto coeff = Coeff::get1HighShelf(w_i, g_shelf_dB);
-            coeffs[i] = {coeff[0], 0.0, coeff[1], coeff[2], 0.0};
+            coeffs[i] = Coeff::pack1stOrder(coeff);
         }
         {
             const auto i = num_filters - 1;
             const double w_i = flat_freq[i] * inv_fs;
             const auto coeff = Coeff::get1HighShelf(w_i, g_shelf_dB);
-            coeffs[i] = {coeff[0], 0.0, coeff[1] * makeup_gain, coeff[2] * makeup_gain, 0.0};
+            coeffs[i] = Coeff::pack1stOrder(coeff, makeup_gain);
         }
 
         return num_filters;
@@ -100,11 +100,15 @@ namespace zldsp::filter::FilterDesign {
         if (n == 1) {
             if constexpr (filter_type == kLowPass) {
                 const auto coeff = Coeff::get1LowPass(w0);
-                coeffs[start_idx] = {coeff[0], 0.0, coeff[1], coeff[2], 0.0};
+                coeffs[start_idx] = Coeff::pack1stOrder(coeff);
             }
             if constexpr (filter_type == kHighPass) {
                 const auto coeff = Coeff::get1HighPass(w0);
-                coeffs[start_idx] = {coeff[0], 0.0, coeff[1], coeff[2], 0.0};
+                coeffs[start_idx] = Coeff::pack1stOrder(coeff);
+            }
+            if constexpr (filter_type == kAllPass) {
+                const auto coeff = Coeff::get1AllPass(w0);
+                coeffs[start_idx] = Coeff::pack1stOrder(coeff);
             }
             return 1;
         }
@@ -123,6 +127,9 @@ namespace zldsp::filter::FilterDesign {
             if constexpr (filter_type == kHighPass) {
                 coeffs[i + start_idx] = Coeff::get2HighPass(w0, qs);
             }
+            if constexpr (filter_type == kAllPass) {
+                coeffs[i + start_idx] = Coeff::get2AllPass(w0, qs);
+            }
         }
         return number;
     }
@@ -134,15 +141,15 @@ namespace zldsp::filter::FilterDesign {
         if (n == 1) {
             if constexpr (filter_type == kLowShelf) {
                 const auto coeff = Coeff::get1LowShelf(w0, g_dB);
-                coeffs[start_idx] = {coeff[0], 0.0, coeff[1], coeff[2], 0.0};
+                coeffs[start_idx] = Coeff::pack1stOrder(coeff);
             }
             if constexpr (filter_type == kHighShelf) {
                 const auto coeff = Coeff::get1HighShelf(w0, g_dB);
-                coeffs[start_idx] = {coeff[0], 0.0, coeff[1], coeff[2], 0.0};
+                coeffs[start_idx] = Coeff::pack1stOrder(coeff);
             }
             if constexpr (filter_type == kTiltShelf) {
                 const auto coeff = Coeff::get1TiltShelf(w0, g_dB);
-                coeffs[start_idx] = {coeff[0], 0.0, coeff[1], coeff[2], 0.0};
+                coeffs[start_idx] = Coeff::pack1stOrder(coeff);
             }
             return 1;
         } else if (n == 2) {
@@ -240,7 +247,7 @@ namespace zldsp::filter::FilterDesign {
         const auto scale = std::pow(2, halfbw);
         const auto w1 = w0 / scale;
         const auto w2 = w0 * scale;
-        const auto f1 = w1 > 10.0 / 48000.0, f2 = w2 < 22000.0 / 48000.0;
+        const auto f1 = w1 > (1.0 / 48000.0), f2 = w2 < 0.99;
         size_t n1 = 1;
         size_t n2 = 0;
         if (f1 && f2) {
@@ -323,6 +330,8 @@ namespace zldsp::filter::FilterDesign {
             return updateNotchCoeffs<Coeff>(n, 0, w0, q0, coeffs);
         case kBandPass:
             return updateBandPassCoeffs<Coeff>(n, 0, w0, q0, coeffs);
+        case kAllPass:
+            return updatePassCoeffs<Coeff, kAllPass>(n, 0, w0, q0, coeffs);
         default:
             return 0;
         }
@@ -363,6 +372,7 @@ namespace zldsp::filter::FilterDesign {
         case kHighPass:
         case kNotch:
         case kBandPass:
+        case kAllPass:
         default:
             return;
         }
@@ -374,15 +384,15 @@ namespace zldsp::filter::FilterDesign {
         if (n == 1) {
             if constexpr (filter_type == kLowShelf) {
                 const auto coeff = Coeff::get1LowShelfWithCache(g_linear_sqrt, cache);
-                coeffs[start_idx] = {coeff[0], 0.0, coeff[1], coeff[2], 0.0};
+                coeffs[start_idx] = Coeff::pack1stOrder(coeff);
             }
             if constexpr (filter_type == kHighShelf) {
                 const auto coeff = Coeff::get1HighShelfWithCache(g_linear_sqrt, cache);
-                coeffs[start_idx] = {coeff[0], 0.0, coeff[1], coeff[2], 0.0};
+                coeffs[start_idx] = Coeff::pack1stOrder(coeff);
             }
             if constexpr (filter_type == kTiltShelf) {
                 const auto coeff = Coeff::get1TiltShelfWithCache(g_linear_sqrt, cache);
-                coeffs[start_idx] = {coeff[0], 0.0, coeff[1], coeff[2], 0.0};
+                coeffs[start_idx] = Coeff::pack1stOrder(coeff);
             }
         } else if (n == 2) {
             if constexpr (filter_type == kLowShelf) {
@@ -430,7 +440,7 @@ namespace zldsp::filter::FilterDesign {
 
     template <class Coeff>
     void updateFlatShelfGainLinear(const double g_linear_sqrt, const double* cache,
-                                  std::span<std::array<double, 5>> coeffs) {
+                                   std::span<std::array<double, 5>> coeffs) {
         const auto num_filters = static_cast<size_t>(cache[0]);
         const auto g_shelf_linear = g_linear_sqrt;
         const auto g_shelf_linear_sq = g_shelf_linear * g_shelf_linear;
@@ -445,12 +455,12 @@ namespace zldsp::filter::FilterDesign {
         const auto g_shelf_linear_sqrt = std::sqrt(g_shelf_linear);
         for (size_t i = 0; i < num_filters - 1; ++i) {
             const auto coeff = Coeff::get1HighShelfWithCache(g_shelf_linear_sqrt, cache_shift + i);
-            coeffs[i] = {coeff[0], 0.0, coeff[1], coeff[2], 0.0};
+            coeffs[i] = Coeff::pack1stOrder(coeff);
         }
         {
             const size_t i = num_filters - 1;
             const auto coeff = Coeff::get1HighShelfWithCache(g_shelf_linear_sqrt, cache_shift + i);
-            coeffs[i] = {coeff[0], 0.0, coeff[1] * makeup_gain, coeff[2] * makeup_gain, 0.0};
+            coeffs[i] = Coeff::pack1stOrder(coeff, makeup_gain);
         }
     }
 
@@ -486,6 +496,7 @@ namespace zldsp::filter::FilterDesign {
         case kHighPass:
         case kNotch:
         case kBandPass:
+        case kAllPass:
         default:
             break;
         }
