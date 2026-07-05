@@ -62,9 +62,13 @@ namespace zlp {
             to_update_.signal();
         }
 
-        void setExtSide(bool is_ext_side) {
+        void setExtSide(const bool is_ext_side) {
             a_is_ext_side_.store(is_ext_side, std::memory_order::relaxed);
             to_update_.signal();
+        }
+
+        bool getExtSide() const {
+            return is_ext_side_;
         }
 
         auto& getEmptyFilters() {
@@ -79,8 +83,12 @@ namespace zlp {
             return to_update_;
         }
 
-        bool isSideRequired() const {
-            return side_status_ != SideStatus::kNotRequired;
+        auto& getSpecResponseUpdateFlag() {
+            return to_update_spec_response_;
+        }
+
+        auto& getChannelDataUpdateFlag() {
+            return to_update_channel_data_;
         }
 
     private:
@@ -134,6 +142,7 @@ namespace zlp {
         zldsp::vector::aligned_vector<float> ws_;
         zldsp::filter::Ideal<float, kFilterSize> ideal_{};
         std::array<bool, kBandNum> to_update_bases_{false};
+        zlchore::thread::Notifier to_update_spec_response_{false};
         // spectrum processing
         std::array<zldsp::filter::SpecResponse<float>, kBandNum> spec_response_
             = make_array_of<zldsp::filter::SpecResponse<float>, kBandNum>();
@@ -166,6 +175,7 @@ namespace zlp {
         std::array<ChannelData, 5> channel_datas_{};
         std::array<bool, 5> to_update_channel_static_{false};
         std::array<bool, 5> to_update_channel_smooth_bounds_{false};
+        zlchore::thread::Notifier to_update_channel_data_{false};
         ChannelData& stereo_data_{channel_datas_[0]};
         ChannelData& l_data_{channel_datas_[1]};
         ChannelData& r_data_{channel_datas_[2]};

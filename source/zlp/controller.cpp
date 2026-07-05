@@ -61,17 +61,23 @@ namespace zlp {
         if (to_update_dynamic_status_.check()) {
             updateDynamicStatus();
         }
-        updateSpecResponse();
+        if (to_update_spec_response_.check()) {
+            updateSpecResponse();
+        }
         if (to_update_lrms_.check()) {
             updateLRMS();
         }
+        if (to_update_channel_data_.check()) {
+            updateChannelData();
+        }
+
+        is_ext_side_ = a_is_ext_side_.load(std::memory_order::relaxed);
     }
 
     void Controller::process(const std::array<float*, 4>& buffer, const size_t num_samples, const bool is_bypass) {
         if (fft_ == nullptr) {
             return;
         }
-        is_ext_side_ = a_is_ext_side_.load(std::memory_order::relaxed);
         size_t samples_processed = 0;
         while (samples_processed < num_samples) {
             // copy data to FIFO until reach a hop size or buffer size
@@ -96,7 +102,7 @@ namespace zlp {
                     std::fill_n(output_fifos_[chan].data(), chunk2, 0.0f);
                 }
             }
-            if (isSideRequired() && is_ext_side_) {
+            if (side_status_ != SideStatus::kNotRequired && is_ext_side_) {
                 for (size_t chan = 2; chan < 4; ++chan) {
                     std::copy_n(buffer[chan] + samples_processed, chunk1,
                                 input_fifos_[chan].data() + fft_pos_);
@@ -124,7 +130,7 @@ namespace zlp {
                                     fft_ins_[chan].data() + fft_size_ - fft_pos_);
                     }
                 }
-                if (isSideRequired() && is_ext_side_) {
+                if (side_status_ != SideStatus::kNotRequired && is_ext_side_) {
                     for (size_t chan = 2; chan < 4; ++chan) {
                         std::copy_n(input_fifos_[chan].data() + fft_pos_, fft_size_ - fft_pos_,
                                     fft_ins_[chan].data());
@@ -164,7 +170,7 @@ namespace zlp {
 
     void Controller::processFrame(const bool is_bypass) {
         bool main_fft_done = false;
-        if (isSideRequired()) {
+        if (side_status_ != SideStatus::kNotRequired) {
             if (is_ext_side_) {
                 processSide();
             } else {
@@ -350,6 +356,10 @@ namespace zlp {
         }
         const auto start_idx = data.dynamic_start_idx;
         const auto end_idx = data.dynamic_end_idx;
+        if (start_idx >= end_idx) {
+            return;
+        }
+        
         auto* HWY_RESTRICT side_ptr = data.fft_side_abs_sqr.data();
         auto* HWY_RESTRICT dynamic_ptr = data.dynamic_response.data();
         // convert side from abs sqr to log
@@ -571,6 +581,10 @@ namespace zlp {
         triggerAsyncUpdate();
 
         std::ranges::fill(to_update_bases_, true);
+        std::ranges::fill(to_update_channel_static_, true);
+        std::ranges::fill(to_update_channel_smooth_bounds_, true);
+        to_update_spec_response_.signal();
+        to_update_channel_data_.signal();
     }
 
     void Controller::updateFilterStatus() {
@@ -578,8 +592,13 @@ namespace zlp {
         for (size_t band = 0; band < kBandNum; band++) {
             const auto filter_status = a_filter_status_[band].load(std::memory_order::relaxed);
             if (filter_status != filter_status_[band]) {
-                filter_status_[band] = filter_status_[band];
+                filter_status_[band] = filter_status;
                 to_update_bases_[band] = true;
+                const auto lrms = static_cast<size_t>(lrms_[band]);
+                to_update_channel_static_[lrms] = true;
+                if (dynamic_on_[band]) {
+                    to_update_channel_smooth_bounds_[lrms] = true;
+                }
             }
             if (filter_status == FilterStatus::kOn) {
                 on_bands_.emplace_back(band);
@@ -587,6 +606,8 @@ namespace zlp {
         }
         to_update_dynamic_status_.signal();
         to_update_lrms_.signal();
+        to_update_spec_response_.signal();
+        to_update_channel_data_.signal();
     }
 
     void Controller::updateDynamicStatus() {
@@ -598,11 +619,15 @@ namespace zlp {
                 to_update_empty_targets_[band].signal();
                 const auto lrms = static_cast<size_t>(lrms_[band]);
                 to_update_channel_smooth_bounds_[lrms] = true;
+                to_update_lrms_.signal();
+                to_update_spec_response_.signal();
+                to_update_channel_data_.signal();
             }
         }
     }
 
     void Controller::updateSpecResponse() {
+        bool channel_needs_update = false;
         for (const auto& band : on_bands_) {
            const auto to_update_base = to_update_bases_[band] || to_update_empty_bases_[band].check();
             if (to_update_base) {
@@ -610,6 +635,7 @@ namespace zlp {
                 spec_response_[band].updateBaseResponse(paras, ideal_, ws_);
                 const auto lrms = static_cast<size_t>(lrms_[band]);
                 to_update_channel_static_[lrms] = true;
+                channel_needs_update = true;
             }
             if (to_update_base || to_update_empty_targets_[band].check()) {
                 if (dynamic_on_[band]) {
@@ -618,9 +644,13 @@ namespace zlp {
                     spec_response_[band].updateDiffResponse(paras, ideal_, ws_);
                     const auto lrms = static_cast<size_t>(lrms_[band]);
                     to_update_channel_smooth_bounds_[lrms] = true;
+                    channel_needs_update = true;
                 }
             }
             to_update_bases_[band] = false;
+        }
+        if (channel_needs_update) {
+            to_update_channel_data_.signal();
         }
     }
 
@@ -642,6 +672,7 @@ namespace zlp {
                 update_channel(static_cast<size_t>(lrms_[band]));
                 update_channel(static_cast<size_t>(lrms));
                 lrms_[band] = lrms;
+                to_update_channel_data_.signal();
             }
             channel_datas_[static_cast<size_t>(lrms)].bands.emplace_back(band);
             if (dynamic_on_[band]) {
@@ -651,7 +682,77 @@ namespace zlp {
     }
 
     void Controller::updateChannelData() {
+        for (size_t chan = 0; chan < 5; ++chan) {
+            auto& data = channel_datas_[chan];
+            bool channel_changed = false;
+            if (to_update_channel_static_[chan]) {
+                to_update_channel_static_[chan] = false;
+                channel_changed = true;
+                auto* HWY_RESTRICT static_ptr = data.static_response.data();
+                if (data.bands.empty()) {
+                    std::fill_n(static_ptr, num_bin_effective_, 1.0f);
+                } else {
+                    const auto v_half = hn::Set(d, 0.5f);
+                    for (size_t i = 0; i < num_bin_effective_; i += lanes) {
+                        auto v = hn::Load(d, spec_response_[data.bands[0]].getBaseResponse().data() + i);
+                        for (size_t b = 1; b < data.bands.size(); ++b) {
+                            const auto* HWY_RESTRICT base_ptr = spec_response_[data.bands[b]].getBaseResponse().data();
+                            v = hn::Add(v, hn::Load(d, base_ptr + i));
+                        }
+                        hn::Store(hn::Exp(d, hn::Mul(v, v_half)), d, static_ptr + i);
+                    }
+                }
+            }
+            if (to_update_channel_smooth_bounds_[chan]) {
+                to_update_channel_smooth_bounds_[chan] = false;
+                channel_changed = true;
+                if (data.dynamic_bands.empty()) {
+                    data.dynamic_start_idx = 0;
+                    data.dynamic_end_idx = 0;
+                } else {
+                    size_t min_idx = num_bin_effective_;
+                    size_t max_idx = 0;
+                    for (const auto band : data.dynamic_bands) {
+                        const auto start_idx = spec_response_[band].getDiffStartIdx();
+                        const auto size = spec_response_[band].getDiffSize();
+                        min_idx = std::min(min_idx, start_idx);
+                        max_idx = std::max(max_idx, start_idx + size);
+                    }
+                    min_idx = min_idx / lanes * lanes;
+                    max_idx = (max_idx + lanes - 1) / lanes * lanes;
+                    max_idx = std::min(max_idx, num_bin_effective_);
+                    data.dynamic_start_idx = min_idx;
+                    data.dynamic_end_idx = max_idx;
+                    if (max_idx > min_idx) {
+                        data.smooth_bounds = spec_smoother_.cacheRange(min_idx, max_idx - min_idx);
+                    }
+                }
+            }
+            if (channel_changed) {
+                std::copy_n(data.static_response.data(), num_bin_effective_, data.dynamic_response.data());
+            }
+        }
 
+        dispatch_mask_ = 0;
+        if (!stereo_data_.bands.empty()) {dispatch_mask_ |= 1;}
+        if (!l_data_.bands.empty()) {dispatch_mask_ |= 2;}
+        if (!r_data_.bands.empty()) {dispatch_mask_ |= 4;}
+        if (!m_data_.bands.empty()) {dispatch_mask_ |= 8;}
+        if (!s_data_.bands.empty()) {dispatch_mask_ |= 16;}
+
+        const bool dynamic_lr_on = !l_data_.dynamic_bands.empty() || !r_data_.dynamic_bands.empty();
+        const bool dynamic_ms_on = !m_data_.dynamic_bands.empty() || !s_data_.dynamic_bands.empty();
+        if (dynamic_lr_on && dynamic_ms_on) {
+            side_status_ = SideStatus::kLRMS;
+        } else if (dynamic_lr_on) {
+            side_status_ = SideStatus::kLR;
+        } else if (dynamic_ms_on) {
+            side_status_ = SideStatus::kMS;
+        } else if (!stereo_data_.dynamic_bands.empty()) {
+            side_status_ = SideStatus::kLR;
+        } else {
+            side_status_ = SideStatus::kNotRequired;
+        }
     }
 
     void Controller::handleAsyncUpdate() {
