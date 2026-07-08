@@ -11,19 +11,28 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "zlp/zlp.hpp"
+#include "state/state.hpp"
+
 class PluginProcessor final : public juce::AudioProcessor {
 public:
+    zlstate::DummyProcessor dummy_processor_;
+    juce::AudioProcessorValueTreeState parameters_;
+    juce::AudioProcessorValueTreeState parameters_NA_;
+
     PluginProcessor();
 
     ~PluginProcessor() override;
 
-    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+    void prepareToPlay(double sample_rate, int samples_per_block) override;
 
     void releaseResources() override;
 
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+
+    void processBlockBypassed(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
 
     juce::AudioProcessorEditor* createEditor() override;
 
@@ -47,15 +56,44 @@ public:
 
     const juce::String getProgramName(int index) override;
 
-    void changeProgramName(int index, const juce::String& newName) override;
+    void changeProgramName(int index, const juce::String& new_name) override;
 
-    void getStateInformation(juce::MemoryBlock& destData) override;
+    void getStateInformation(juce::MemoryBlock& dest_data) override;
 
-    void setStateInformation(const void* data, int sizeInBytes) override;
+    void setStateInformation(const void* data, int size_in_bytes) override;
+
+    bool supportsDoublePrecisionProcessing() const override { return false; }
+
+    zlp::Controller& getController() {
+        return controller_;
+    }
+
+    double getAtomicSampleRate() const {
+        return sample_rate_.load(std::memory_order::relaxed);
+    }
 
 private:
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
+    zlp::Controller controller_;
+    std::atomic<double> sample_rate_{48000.0};
+    std::atomic<float>& a_bypass_;
 
-    float high_pass_coeff_{0.9999f};
-    std::vector<float> s1_, s2_;
+    std::vector<float> dummy_main_;
+    std::vector<float> dummy_side_;
+    std::array<float*, 4> pointers_{nullptr};
+
+    enum ChannelLayout {
+        kMain1Aux0, kMain1Aux1, kMain1Aux2,
+        kMain2Aux0, kMain2Aux1, kMain2Aux2,
+        kInvalid
+    };
+
+    ChannelLayout channel_layout_{kInvalid};
+
+    bool update_channel_layout_per_call_{false};
+
+    void updateChannelLayout();
+
+    void processBlockInternal(juce::AudioBuffer<float>& buffer, bool bypass);
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };
