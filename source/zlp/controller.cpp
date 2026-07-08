@@ -365,9 +365,11 @@ namespace zlp {
         // convert side from abs sqr to log
         {
             const auto v_min = hn::Set(d, 1e-24f);
+            const auto* HWY_RESTRICT tilt_ptr = spec_tilter_.getTilt().data();
             for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto v = hn::Load(d, side_ptr + i);
-                hn::Store(hn::Log(d, hn::Max(v, v_min)), d, side_ptr + i);
+                const auto v_tilt = hn::Load(d, tilt_ptr + i);
+                hn::Store(hn::Add(hn::Log(d, hn::Max(v, v_min)), v_tilt), d, side_ptr + i);
             }
         }
         // process each dynamic band
@@ -539,6 +541,7 @@ namespace zlp {
             dynamic.prepare(fft_size_);
         }
         spec_smoother_.prepare(fft_size_);
+        spec_tilter_.prepare(fft_size_);
 
         for (auto& channel_data : channel_datas_) {
             channel_data.bands.resize(kBandNum);

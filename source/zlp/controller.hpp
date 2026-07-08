@@ -18,6 +18,7 @@
 #include "../dsp/filter/spec_dynamic/spec_follower.hpp"
 #include "../dsp/filter/spec_dynamic/spec_dynamic.hpp"
 #include "../dsp/filter/spec_dynamic/spec_smoother.hpp"
+#include "../dsp/filter/spec_dynamic/spec_tilter.hpp"
 #include "../dsp/fft/zldsp_fft_include.hpp"
 
 #include "../chore/thread/notifier.hpp"
@@ -151,6 +152,7 @@ namespace zlp {
         std::array<zldsp::filter::SpecDynamic<float>, kBandNum> spec_dynamic_
             = make_array_of<zldsp::filter::SpecDynamic<float>, kBandNum>();
         zldsp::filter::SpecSmoother<float> spec_smoother_;
+        zldsp::filter::SpecTilter<float> spec_tilter_;
         // fft working space
         double sample_rate_{48000.0};
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_low_;
