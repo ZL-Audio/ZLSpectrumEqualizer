@@ -72,6 +72,54 @@ namespace zlp {
             return is_ext_side_;
         }
 
+        void setSpecSmoothValue(const float smooth) {
+            a_spec_smooth_value_.store(smooth, std::memory_order::relaxed);
+            to_update_spec_smooth_.signal();
+            to_update_.signal();
+        }
+
+        void setSpecSmoothType(const zldsp::filter::SpecSmoother<float>::SmoothMethod method) {
+            a_spec_smooth_type_.store(method, std::memory_order::relaxed);
+            to_update_spec_smooth_.signal();
+            to_update_.signal();
+        }
+
+        void setSpecTiltSlope(const float slope) {
+            a_spec_tilt_slope_.store(slope, std::memory_order::relaxed);
+            to_update_spec_tilt_.signal();
+            to_update_.signal();
+        }
+
+        void setSpecAttack(const size_t idx, const float attack) {
+            a_spec_attack_[idx].store(attack, std::memory_order::relaxed);
+            to_update_spec_attack_[idx].signal();
+            to_update_.signal();
+        }
+
+        void setSpecRelease(const size_t idx, const float release) {
+            a_spec_release_[idx].store(release, std::memory_order::relaxed);
+            to_update_spec_release_[idx].signal();
+            to_update_.signal();
+        }
+
+        void setSpecFollowerSkew(const float skew) {
+            a_spec_skew_.store(skew, std::memory_order::relaxed);
+            to_update_spec_skew_.signal();
+            to_update_.signal();
+        }
+
+        void setSpecThreshold(const size_t idx, const float threshold) {
+            a_spec_threshold_[idx].store(threshold, std::memory_order::relaxed);
+            to_update_spec_threshold_[idx].signal();
+            to_update_.signal();
+        }
+
+        void setSpecKnee(const size_t idx, const float knee) {
+            a_spec_knee_[idx].store(knee, std::memory_order::relaxed);
+            to_update_spec_knee_[idx].signal();
+            to_update_.signal();
+        }
+
         auto& getEmptyFilters() {
             return emptys_;
         }
@@ -139,6 +187,26 @@ namespace zlp {
         std::array<bool, kBandNum> dynamic_bypass_{};
         zlchore::thread::Notifier to_update_dynamic_status_{false};
 
+        // filter dynamic parameters
+        std::atomic<float> a_spec_smooth_value_{0.0f};
+        std::atomic<zldsp::filter::SpecSmoother<float>::SmoothMethod> a_spec_smooth_type_{zldsp::filter::SpecSmoother<float>::SmoothMethod::kOCT};
+        zlchore::thread::Notifier to_update_spec_smooth_{false};
+
+        std::atomic<float> a_spec_tilt_slope_{0.0f};
+        zlchore::thread::Notifier to_update_spec_tilt_{false};
+
+        std::array<std::atomic<float>, kBandNum> a_spec_attack_{};
+        std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_attack_{};
+        std::array<std::atomic<float>, kBandNum> a_spec_release_{};
+        std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_release_{};
+        std::atomic<float> a_spec_skew_{0.0f};
+        zlchore::thread::Notifier to_update_spec_skew_{false};
+
+        std::array<std::atomic<float>, kBandNum> a_spec_threshold_{};
+        std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_threshold_{};
+        std::array<std::atomic<float>, kBandNum> a_spec_knee_{};
+        std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_knee_{};
+
         // filters for calculating prototype response and biquad response
         zldsp::vector::aligned_vector<float> ws_;
         zldsp::filter::Ideal<float, kFilterSize> ideal_{};
@@ -153,6 +221,7 @@ namespace zlp {
             = make_array_of<zldsp::filter::SpecDynamic<float>, kBandNum>();
         zldsp::filter::SpecSmoother<float> spec_smoother_;
         zldsp::filter::SpecTilter<float> spec_tilter_;
+        std::vector<double> spec_follower_scaling_{};
         // fft working space
         double sample_rate_{48000.0};
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_low_;
@@ -219,6 +288,14 @@ namespace zlp {
         void updateFilterStatus();
 
         void updateDynamicStatus();
+
+        void updateSpecSmooth();
+
+        void updateSpecTilt();
+
+        void updateSpecFollower();
+
+        void updateSpecDynamic();
 
         void updateSpecResponse();
 

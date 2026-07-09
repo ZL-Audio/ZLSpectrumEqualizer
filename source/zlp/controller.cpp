@@ -61,6 +61,14 @@ namespace zlp {
         if (to_update_dynamic_status_.check()) {
             updateDynamicStatus();
         }
+        if (to_update_spec_smooth_.check()) {
+            updateSpecSmooth();
+        }
+        if (to_update_spec_tilt_.check()) {
+            updateSpecTilt();
+        }
+        updateSpecFollower();
+        updateSpecDynamic();
         if (to_update_spec_response_.check()) {
             updateSpecResponse();
         }
@@ -543,6 +551,9 @@ namespace zlp {
         spec_smoother_.prepare(fft_size_);
         spec_tilter_.prepare(fft_size_);
 
+        spec_follower_scaling_.resize(num_bin_effective_);
+        zldsp::filter::SpecFollower<float>::fillScaling(sample_rate_, fft_size_, spec_follower_scaling_);
+
         for (auto& channel_data : channel_datas_) {
             channel_data.bands.resize(kBandNum);
             channel_data.dynamic_bands.resize(kBandNum);
@@ -588,6 +599,15 @@ namespace zlp {
         std::ranges::fill(to_update_channel_smooth_bounds_, true);
         to_update_spec_response_.signal();
         to_update_channel_data_.signal();
+        to_update_spec_smooth_.signal();
+        to_update_spec_tilt_.signal();
+        to_update_spec_skew_.signal();
+        for (size_t band = 0; band < kBandNum; ++band) {
+            to_update_spec_attack_[band].signal();
+            to_update_spec_release_[band].signal();
+            to_update_spec_threshold_[band].signal();
+            to_update_spec_knee_[band].signal();
+        }
     }
 
     void Controller::updateFilterStatus() {
@@ -625,6 +645,47 @@ namespace zlp {
                 to_update_lrms_.signal();
                 to_update_spec_response_.signal();
                 to_update_channel_data_.signal();
+            }
+        }
+    }
+
+    void Controller::updateSpecSmooth() {
+        const auto smooth = a_spec_smooth_value_.load(std::memory_order::relaxed);
+        const auto type = a_spec_smooth_type_.load(std::memory_order::relaxed);
+        spec_smoother_.setSmooth(smooth, sample_rate_, type);
+
+        std::ranges::fill(to_update_channel_smooth_bounds_, true);
+        to_update_channel_data_.signal();
+    }
+
+    void Controller::updateSpecTilt() {
+        const auto slope = a_spec_tilt_slope_.load(std::memory_order::relaxed);
+        spec_tilter_.setTiltSlope(sample_rate_, slope);
+    }
+
+    void Controller::updateSpecFollower() {
+        const bool skew_changed = to_update_spec_skew_.check();
+        const auto skew = a_spec_skew_.load(std::memory_order::relaxed);
+        for (const auto& band : on_bands_) {
+            if (skew_changed || to_update_spec_attack_[band].check()) {
+                const auto attack = a_spec_attack_[band].load(std::memory_order::relaxed);
+                spec_follower_[band].updateAttack(attack, skew, spec_follower_scaling_);
+            }
+            if (skew_changed || to_update_spec_release_[band].check()) {
+                const auto release = a_spec_release_[band].load(std::memory_order::relaxed);
+                spec_follower_[band].updateRelease(release, skew, spec_follower_scaling_);
+            }
+        }
+    }
+
+    void Controller::updateSpecDynamic() {
+        for (const auto& band : on_bands_) {
+            const bool threshold_changed = to_update_spec_threshold_[band].check();
+            const bool knee_changed = to_update_spec_knee_[band].check();
+            if (threshold_changed || knee_changed) {
+                const auto threshold = a_spec_threshold_[band].load(std::memory_order::relaxed);
+                const auto knee = a_spec_knee_[band].load(std::memory_order::relaxed);
+                spec_dynamic_[band].updateTK(threshold, knee);
             }
         }
     }
