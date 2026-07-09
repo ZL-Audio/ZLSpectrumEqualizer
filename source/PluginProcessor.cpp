@@ -205,6 +205,7 @@ void PluginProcessor::processBlockInternal(juce::AudioBuffer<float>& buffer, con
     if (buffer.getNumSamples() == 0) {
         return; // ignore empty blocks
     }
+    controller_.prepareBuffer();
     const auto ext_side = controller_.getExtSide();
     const auto num_samples = static_cast<size_t>(buffer.getNumSamples());
     switch (channel_layout_) {
