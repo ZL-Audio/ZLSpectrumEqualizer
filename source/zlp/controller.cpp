@@ -215,6 +215,28 @@ namespace zlp {
         }
     }
 
+    void Controller::processSideLR() {
+        processDualChannelSide(l_data_, r_data_);
+    }
+
+    void Controller::processSideMS() {
+        zldsp::splitter::InplaceMSSplitter<float>::split(fft_ins_[2].data(), fft_ins_[3].data(), fft_size_);
+        processDualChannelSide(m_data_, s_data_);
+    }
+
+    void Controller::processSideLRMS() {
+        auto* HWY_RESTRICT l_real_ptr = fft_out_reals_[0].data();
+        auto* HWY_RESTRICT l_imag_ptr = fft_out_imags_[0].data();
+        auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
+        auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
+
+        multiplyWithWindow(fft_ins_[2].data(), fft_ins_[3].data(), window1_.data());
+        fft_->forward(fft_ins_[2].data(), {l_real_ptr, l_imag_ptr}); // NOLINT
+        fft_->forward(fft_ins_[3].data(), {r_real_ptr, r_imag_ptr}); // NOLINT
+
+        computeSideAbsSqrFromMain();
+    }
+
     void Controller::processDualChannelSide(ChannelData& ch1, ChannelData& ch2) {
         if (!ch1.dynamic_bands.empty() || !stereo_data_.dynamic_bands.empty()) {
             zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
@@ -244,28 +266,6 @@ namespace zlp {
         if (!ch2.dynamic_bands.empty()) {
             spec_smoother_.smoothRange(ch2.fft_side_abs_sqr, ch2.smooth_bounds);
         }
-    }
-
-    void Controller::processSideLR() {
-        processDualChannelSide(l_data_, r_data_);
-    }
-
-    void Controller::processSideMS() {
-        zldsp::splitter::InplaceMSSplitter<float>::split(fft_ins_[2].data(), fft_ins_[3].data(), fft_size_);
-        processDualChannelSide(m_data_, s_data_);
-    }
-
-    void Controller::processSideLRMS() {
-        auto* HWY_RESTRICT l_real_ptr = fft_out_reals_[0].data();
-        auto* HWY_RESTRICT l_imag_ptr = fft_out_imags_[0].data();
-        auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
-        auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
-
-        multiplyWithWindow(fft_ins_[2].data(), fft_ins_[3].data(), window1_.data());
-        fft_->forward(fft_ins_[2].data(), {l_real_ptr, l_imag_ptr}); // NOLINT
-        fft_->forward(fft_ins_[3].data(), {r_real_ptr, r_imag_ptr}); // NOLINT
-
-        computeSideAbsSqrFromMain();
     }
 
     void Controller::computeSideAbsSqrFromMain() {
@@ -362,48 +362,104 @@ namespace zlp {
         if (data.dynamic_bands.empty()) {
             return;
         }
-        const auto start_idx = data.dynamic_start_idx;
-        const auto end_idx = data.dynamic_end_idx;
+        const auto dyn_start = data.dynamic_start_idx;
+        const auto dyn_end = data.dynamic_end_idx;
+        if (dyn_start >= dyn_end) {
+            return;
+        }
+
+        const auto start_idx = data.require_relative ? 0 : dyn_start;
+        const auto end_idx = data.require_relative ? num_bin_effective_ : dyn_end;
         if (start_idx >= end_idx) {
             return;
         }
         
         auto* HWY_RESTRICT side_ptr = data.fft_side_abs_sqr.data();
         auto* HWY_RESTRICT dynamic_ptr = data.dynamic_response.data();
-        // convert side from abs sqr to log
+        
+        // apply tilt to side-chain (in linear)
         {
-            const auto v_min = hn::Set(d, 1e-24f);
             const auto* HWY_RESTRICT tilt_ptr = spec_tilter_.getTilt().data();
             for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto v = hn::Load(d, side_ptr + i);
                 const auto v_tilt = hn::Load(d, tilt_ptr + i);
-                hn::Store(hn::Add(hn::Log(d, hn::Max(v, v_min)), v_tilt), d, side_ptr + i);
+                hn::Store(hn::Mul(v, v_tilt), d, side_ptr + i);
             }
         }
-        // process each dynamic band
+        
+        // calculate relative_avg if required (in linear, convert to log)
+        float relative_avg = 0.0f;
+        if (data.require_relative) {
+            auto v_sum = hn::Zero(d);
+            for (size_t i = start_idx; i < end_idx; i += lanes) {
+                v_sum = hn::Add(v_sum, hn::Load(d, side_ptr + i));
+            }
+            const float sum = hn::ReduceSum(d, v_sum);
+            relative_avg = std::log(std::max(sum / static_cast<float>(end_idx - start_idx), 1e-24f));
+        }
+
+        // calculate band_avg of each dynamic band if required (in linear, convert to log)
+        for (const auto band: data.dynamic_bands) {
+            switch (dynamic_mode_[band]) {
+            case DynamicMode::kAbsolute: {
+                band_avgs_[band] = 0.f;
+                break;
+            }
+            case DynamicMode::kBand: {
+                const auto b_start = spec_response_[band].getDiffStartIdx();
+                const auto b_end = spec_response_[band].getDiffEndIdx();
+                if (b_end > b_start) {
+                    auto v_sum = hn::Zero(d);
+                    for (size_t j = b_start; j < b_end; j += lanes) {
+                        v_sum = hn::Add(v_sum, hn::Load(d, side_ptr + j));
+                    }
+                    const float sum = hn::ReduceSum(d, v_sum);
+                    band_avgs_[band] = std::log(std::max(sum / static_cast<float>(b_end - b_start), 1e-24f));
+                } else {
+                    band_avgs_[band] = 0.f;
+                }
+                break;
+            }
+            case DynamicMode::kRelative: {
+                band_avgs_[band] = relative_avg;
+            }
+            }
+        }
+
+        // convert side-chain from abs sqr to log
         {
-            const auto band = data.dynamic_bands[0];
-            if (dynamic_bypass_[band]) {
-                spec_dynamic_[band].process<false, true>(side_ptr, dynamic_ptr,
-                                                         spec_response_[band], spec_follower_[band]);
-            } else {
-                spec_dynamic_[band].process<false, false>(side_ptr, dynamic_ptr,
-                                                          spec_response_[band], spec_follower_[band]);
+            const auto v_min = hn::Set(d, 1e-24f);
+            for (size_t i = dyn_start; i < dyn_end; i += lanes) {
+                const auto v = hn::Load(d, side_ptr + i);
+                hn::Store(hn::Log(d, hn::Max(v, v_min)), d, side_ptr + i);
             }
         }
-        for (size_t i = 1; i < data.dynamic_bands.size(); ++i) {
+
+        // process each dynamic band
+        for (size_t i = 0; i < data.dynamic_bands.size(); ++i) {
             const auto band = data.dynamic_bands[i];
-            if (dynamic_bypass_[band]) {
-                spec_dynamic_[band].process<true, true>(side_ptr, dynamic_ptr,
-                                                        spec_response_[band], spec_follower_[band]);
+            if (i == 0) {
+                if (dynamic_bypass_[band]) {
+                    spec_dynamic_[band].process<false, true>(side_ptr, dynamic_ptr,
+                                                             spec_response_[band], spec_follower_[band], band_avgs_[band]);
+                } else {
+                    spec_dynamic_[band].process<false, false>(side_ptr, dynamic_ptr,
+                                                              spec_response_[band], spec_follower_[band], band_avgs_[band]);
+                }
             } else {
-                spec_dynamic_[band].process<true, false>(side_ptr, dynamic_ptr,
-                                                         spec_response_[band], spec_follower_[band]);
+                if (dynamic_bypass_[band]) {
+                    spec_dynamic_[band].process<true, true>(side_ptr, dynamic_ptr,
+                                                            spec_response_[band], spec_follower_[band], band_avgs_[band]);
+                } else {
+                    spec_dynamic_[band].process<true, false>(side_ptr, dynamic_ptr,
+                                                             spec_response_[band], spec_follower_[band], band_avgs_[band]);
+                }
             }
         }
+        
         // convert dynamic response from db to linear
         const auto* HWY_RESTRICT static_ptr = data.static_response.data();
-        for (size_t i = start_idx; i < end_idx; i += lanes) {
+        for (size_t i = dyn_start; i < dyn_end; i += lanes) {
             const auto v_dynamic = hn::Load(d, dynamic_ptr + i);
             const auto v_static = hn::Load(d, static_ptr + i);
             hn::Store(hn::Mul(hn::Exp(d, v_dynamic), v_static), d, dynamic_ptr + i);
@@ -664,6 +720,13 @@ namespace zlp {
     void Controller::updateDynamicStatus() {
         for (const auto& band : on_bands_) {
             dynamic_bypass_[band] = a_dynamic_bypass_[band].load(std::memory_order::relaxed);
+            const auto dynamic_mode = a_dynamic_mode_[band].load(std::memory_order::relaxed);
+            if (dynamic_mode != dynamic_mode_[band]) {
+                dynamic_mode_[band] = dynamic_mode;
+                to_update_channel_data_.signal();
+                to_update_spec_threshold_[band].signal();
+            }
+
             const auto dynamic_on = a_dynamic_on_[band].load(std::memory_order::relaxed);
             if (dynamic_on != dynamic_on_[band]) {
                 dynamic_on_[band] = dynamic_on;
@@ -711,7 +774,14 @@ namespace zlp {
             const bool threshold_changed = to_update_spec_threshold_[band].check();
             const bool knee_changed = to_update_spec_knee_[band].check();
             if (threshold_changed || knee_changed) {
-                const auto threshold = a_spec_threshold_[band].load(std::memory_order::relaxed);
+                float threshold = 0.0f;
+                if (dynamic_mode_[band] == DynamicMode::kAbsolute) {
+                    threshold = a_spec_threshold_abs_[band].load(std::memory_order::relaxed);
+                } else if (dynamic_mode_[band] == DynamicMode::kBand) {
+                    threshold = a_spec_threshold_band_[band].load(std::memory_order::relaxed);
+                } else if (dynamic_mode_[band] == DynamicMode::kRelative) {
+                    threshold = a_spec_threshold_rel_[band].load(std::memory_order::relaxed);
+                }
                 const auto knee = a_spec_knee_[band].load(std::memory_order::relaxed);
                 spec_dynamic_[band].updateTK(threshold, knee);
             }
@@ -810,11 +880,25 @@ namespace zlp {
                         min_idx = std::min(min_idx, start_idx);
                         max_idx = std::max(max_idx, start_idx + size);
                     }
+                    data.require_relative = false;
+                    for (const auto band : data.dynamic_bands) {
+                        if (dynamic_mode_[band] == DynamicMode::kRelative) {
+                            data.require_relative = true;
+                            break;
+                        }
+                    }
+
                     min_idx = min_idx / lanes * lanes;
                     max_idx = (max_idx + lanes - 1) / lanes * lanes;
                     max_idx = std::min(max_idx, num_bin_effective_);
+                    
                     data.dynamic_start_idx = min_idx;
                     data.dynamic_end_idx = max_idx;
+
+                    if (data.require_relative) {
+                        min_idx = 0;
+                        max_idx = num_bin_effective_;
+                    }
                     if (max_idx > min_idx) {
                         data.smooth_bounds = spec_smoother_.cacheRange(min_idx, max_idx - min_idx);
                     }

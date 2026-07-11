@@ -32,6 +32,10 @@ namespace zlp {
         kLow, kMedium, kHigh, kExtreme
     };
 
+    enum class DynamicMode {
+        kAbsolute, kBand, kRelative
+    };
+
     template <typename FloatType>
     inline juce::NormalisableRange<FloatType> getLogMidRange(
         const FloatType x_min, const FloatType x_max, const FloatType x_mid, const FloatType x_interval) {
@@ -398,12 +402,38 @@ namespace zlp {
         static constexpr auto kDefaultV = false;
     };
 
-    class PThreshold : public FloatParameters<PThreshold> {
+    class PDynamicMode : public ChoiceParameters<PDynamicMode> {
     public:
-        static constexpr auto kID = "threshold";
-        static constexpr auto kName = "Threshold (dB)";
+        static constexpr auto kID = "dynamic_mode";
+        static constexpr auto kName = "Dynamic Mode";
+        inline static const auto kChoices = juce::StringArray{
+            "Absolute", "Band", "Relative"
+        };
+        static constexpr int kDefaultI = 0;
+    };
+
+    class PThresholdAbs : public FloatParameters<PThresholdAbs> {
+    public:
+        static constexpr auto kID = "threshold_abs";
+        static constexpr auto kName = "Threshold Abs (dB)";
         inline static const auto kRange = juce::NormalisableRange<float>(-80.f, 0.f, 0.1f);
         static constexpr auto kDefaultV = -40.f;
+    };
+
+    class PThresholdBand : public FloatParameters<PThresholdBand> {
+    public:
+        static constexpr auto kID = "threshold_band";
+        static constexpr auto kName = "Threshold Band (dB)";
+        inline static const auto kRange = juce::NormalisableRange<float>(-40.f, 40.f, 0.1f);
+        static constexpr auto kDefaultV = 0.f;
+    };
+
+    class PThresholdRel : public FloatParameters<PThresholdRel> {
+    public:
+        static constexpr auto kID = "threshold_rel";
+        static constexpr auto kName = "Threshold Rel (dB)";
+        inline static const auto kRange = juce::NormalisableRange<float>(-40.f, 40.f, 0.1f);
+        static constexpr auto kDefaultV = 0.f;
     };
 
     class PKneeW : public FloatParameters<PKneeW> {
@@ -443,9 +473,10 @@ namespace zlp {
                        PFreq::get(suffix, true, true),
                        PGain::get(suffix), PTargetGain::get(suffix),
                        PQ::get(suffix, true, true),
-                       PDynamicON::get(suffix), PDynamicBypass::get(suffix),
+                       PDynamicON::get(suffix), PDynamicBypass::get(suffix), PDynamicMode::get(suffix),
                        PSideSwap::get(suffix),
-                       PThreshold::get(suffix), PKneeW::get(suffix), PAttack::get(suffix), PRelease::get(suffix));
+                       PThresholdAbs::get(suffix), PThresholdBand::get(suffix), PThresholdRel::get(suffix), 
+                       PKneeW::get(suffix), PAttack::get(suffix), PRelease::get(suffix));
         }
         return layout;
     }

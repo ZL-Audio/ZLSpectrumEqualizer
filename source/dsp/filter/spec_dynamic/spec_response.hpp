@@ -77,8 +77,10 @@ namespace zldsp::filter {
                 hn::Store(diff, d, diff_response_.data() + i);
             }
             diff_size_ = i - diff_start_idx_;
+            diff_end_idx_ = i;
             if (diff_size_ == 0) {
                 diff_start_idx_ = 0;
+                diff_end_idx_ = 0;
             }
         }
 

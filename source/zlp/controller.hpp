@@ -108,8 +108,26 @@ namespace zlp {
             to_update_.signal();
         }
 
-        void setSpecThreshold(const size_t idx, const float threshold) {
-            a_spec_threshold_[idx].store(threshold, std::memory_order::relaxed);
+        void setDynamicMode(const size_t idx, const DynamicMode mode) {
+            a_dynamic_mode_[idx].store(mode, std::memory_order::relaxed);
+            to_update_dynamic_status_.signal();
+            to_update_.signal();
+        }
+
+        void setSpecThresholdAbs(const size_t idx, const float threshold) {
+            a_spec_threshold_abs_[idx].store(threshold, std::memory_order::relaxed);
+            to_update_spec_threshold_[idx].signal();
+            to_update_.signal();
+        }
+
+        void setSpecThresholdBand(const size_t idx, const float threshold) {
+            a_spec_threshold_band_[idx].store(threshold, std::memory_order::relaxed);
+            to_update_spec_threshold_[idx].signal();
+            to_update_.signal();
+        }
+
+        void setSpecThresholdRel(const size_t idx, const float threshold) {
+            a_spec_threshold_rel_[idx].store(threshold, std::memory_order::relaxed);
             to_update_spec_threshold_[idx].signal();
             to_update_.signal();
         }
@@ -158,6 +176,7 @@ namespace zlp {
             size_t dynamic_start_idx{0}, dynamic_end_idx{0};
             std::vector<size_t> dynamic_bands{};
             zldsp::vector::aligned_vector<float> dynamic_response;
+            bool require_relative{false};
         };
 
         juce::AudioProcessor& p_ref_;
@@ -181,6 +200,8 @@ namespace zlp {
         std::array<std::atomic<float>, kBandNum> empty_target_gains_{};
         std::array<zlchore::thread::Notifier, kBandNum> to_update_empty_targets_{};
         // filter dynamic flags
+        std::array<std::atomic<DynamicMode>, kBandNum> a_dynamic_mode_{};
+        std::array<DynamicMode, kBandNum> dynamic_mode_{};
         std::array<std::atomic<bool>, kBandNum> a_dynamic_on_{};
         std::array<std::atomic<bool>, kBandNum> a_dynamic_bypass_{};
         std::array<bool, kBandNum> dynamic_on_{};
@@ -202,7 +223,9 @@ namespace zlp {
         std::atomic<float> a_spec_skew_{0.0f};
         zlchore::thread::Notifier to_update_spec_skew_{false};
 
-        std::array<std::atomic<float>, kBandNum> a_spec_threshold_{};
+        std::array<std::atomic<float>, kBandNum> a_spec_threshold_abs_{};
+        std::array<std::atomic<float>, kBandNum> a_spec_threshold_band_{};
+        std::array<std::atomic<float>, kBandNum> a_spec_threshold_rel_{};
         std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_threshold_{};
         std::array<std::atomic<float>, kBandNum> a_spec_knee_{};
         std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_knee_{};
@@ -212,6 +235,7 @@ namespace zlp {
         zldsp::filter::Ideal<float, kFilterSize> ideal_{};
         std::array<bool, kBandNum> to_update_bases_{false};
         zlchore::thread::Notifier to_update_spec_response_{false};
+
         // spectrum processing
         std::array<zldsp::filter::SpecResponse<float>, kBandNum> spec_response_
             = make_array_of<zldsp::filter::SpecResponse<float>, kBandNum>();
@@ -222,6 +246,8 @@ namespace zlp {
         zldsp::filter::SpecSmoother<float> spec_smoother_;
         zldsp::filter::SpecTilter<float> spec_tilter_;
         std::vector<double> spec_follower_scaling_{};
+        std::array<float, kBandNum> band_avgs_{};
+
         // fft working space
         double sample_rate_{48000.0};
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_low_;
@@ -268,13 +294,13 @@ namespace zlp {
 
         void computeSideAbsSqrFromMain();
 
-        void processDualChannelSide(ChannelData& ch1, ChannelData& ch2);
-
         void processSideLR();
 
         void processSideMS();
 
         void processSideLRMS();
+
+        void processDualChannelSide(ChannelData& ch1, ChannelData& ch2);
 
         void processDynamicBands(ChannelData& data);
 

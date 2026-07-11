@@ -28,7 +28,8 @@ namespace zldsp::filter {
         void process(FloatType* HWY_RESTRICT side_log_sqr,
                      FloatType* HWY_RESTRICT dynamic_db,
                      SpecResponse<FloatType>& response,
-                     SpecFollower<FloatType>& follower) {
+                     SpecFollower<FloatType>& follower,
+                     const FloatType side_average = 0.0f) {
             FloatType* HWY_RESTRICT diffs{response.getDiffResponse().data()};
             FloatType* HWY_RESTRICT attacks{follower.getAttack().data()};
             FloatType* HWY_RESTRICT releases{follower.getRelease().data()};
@@ -37,7 +38,7 @@ namespace zldsp::filter {
             static constexpr size_t lanes = hn::MaxLanes(d);
 
             const auto v_coeffa = hn::Set(d, coeff_a_);
-            const auto v_coeffb = hn::Set(d, coeff_b_);
+            const auto v_coeffb = hn::Set(d, coeff_b_ - side_average * coeff_a_);
             const auto v_zero = hn::Set(d, static_cast<FloatType>(0));
             const auto v_one = hn::Set(d, static_cast<FloatType>(1));
             const auto i_start = response.getDiffStartIdx();

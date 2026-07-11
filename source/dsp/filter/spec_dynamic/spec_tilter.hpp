@@ -28,10 +28,11 @@ namespace zldsp::filter {
         void setTiltSlope(const double sample_rate, const double slope_per_oct) {
             const size_t num_bins = tilt_shift_.size();
             const double delta = sample_rate * 0.5 / static_cast<double>(num_bins - 1);
-            const double ln10_over_10 = std::log(10.0) / 10.0;
+            const double power = slope_per_oct * std::log2(10.0) / 10.0;
+            const double delta_khz = delta / 1000.0;
             for (size_t i = 1; i < num_bins; ++i) {
-                const double freq = static_cast<double>(i) * delta;
-                tilt_shift_[i] = static_cast<FloatType>(std::log2(freq / 1000.0) * slope_per_oct * ln10_over_10);
+                const double freq_khz = static_cast<double>(i) * delta_khz;
+                tilt_shift_[i] = static_cast<FloatType>(std::pow(freq_khz, power));
             }
             if (num_bins > 1) {
                 tilt_shift_[0] = tilt_shift_[1];
