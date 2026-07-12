@@ -395,13 +395,6 @@ namespace zlp {
         static constexpr auto kDefaultV = false;
     };
 
-    class PSideSwap : public BoolParameters<PSideSwap> {
-    public:
-        static constexpr auto kID = "side_swap";
-        static constexpr auto kName = "Side Swap";
-        static constexpr auto kDefaultV = false;
-    };
-
     class PDynamicMode : public ChoiceParameters<PDynamicMode> {
     public:
         static constexpr auto kID = "dynamic_mode";
@@ -474,7 +467,6 @@ namespace zlp {
                        PGain::get(suffix), PTargetGain::get(suffix),
                        PQ::get(suffix, true, true),
                        PDynamicON::get(suffix), PDynamicBypass::get(suffix), PDynamicMode::get(suffix),
-                       PSideSwap::get(suffix),
                        PThresholdAbs::get(suffix), PThresholdBand::get(suffix), PThresholdRel::get(suffix), 
                        PKneeW::get(suffix), PAttack::get(suffix), PRelease::get(suffix));
         }

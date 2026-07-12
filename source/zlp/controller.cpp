@@ -590,7 +590,8 @@ namespace zlp {
         fft_hop_size_ = fft_size_ / 4;
         num_bin_ = fft_size_ / 2 + 1;
         num_bin_effective_ = fft_size_ / 2;
-        ws_.resize(num_bin_effective_);
+        ws_.resize(num_bin_);
+        zldsp::filter::IdealBase<float>::calculateWs(ws_);
 
         window1_.resize(fft_size_);
         window2_.resize(fft_size_);
@@ -598,7 +599,7 @@ namespace zlp {
 
         zldsp::fft::createPeriodicHanning(std::span{window1_.data(), window1_.size()}, 2.f / static_cast<float>(fft_size_));
         const auto v_window2_scale = hn::Set(d, static_cast<float>(fft_size_) / 3.f);
-        const auto v_bypass_scale = hn::Set(d, 4.f / 3.f);
+        const auto v_bypass_scale = hn::Set(d, static_cast<float>(fft_size_ * fft_size_) / 6.f);
         for (size_t i = 0; i < fft_size_; i += lanes) {
             const auto v_window1 = hn::Load(d, window1_.data() + i);
             const auto v_window2 = hn::Mul(v_window1, v_window2_scale);
@@ -681,6 +682,10 @@ namespace zlp {
         std::ranges::fill(to_update_bases_, true);
         std::ranges::fill(to_update_channel_static_, true);
         std::ranges::fill(to_update_channel_smooth_bounds_, true);
+        to_update_.signal();
+        to_update_filter_status_.signal();
+        to_update_dynamic_status_.signal();
+        to_update_lrms_.signal();
         to_update_spec_response_.signal();
         to_update_channel_data_.signal();
         to_update_spec_smooth_.signal();
