@@ -29,6 +29,9 @@ PluginProcessor::PluginProcessor() :
                    zlstate::getNAParameterLayout()),
     controller_(*this),
     a_bypass_(*parameters_.getRawParameterValue(zlp::PBypass::kID)) {
+    for (size_t i = 0; i < zlp::kBandNum; ++i) {
+        filter_attachments_[i] = std::make_unique<zlp::FilterAttach>(*this, parameters_, controller_, i);
+    }
 }
 
 PluginProcessor::~PluginProcessor() = default;
