@@ -19,6 +19,7 @@ namespace zlp {
         empty_(controller.getEmptyFilters()[idx]),
         scale_(*parameters.getRawParameterValue(PGainScale::kID)),
         gain_(*parameters.getRawParameterValue(PGain::kID + std::to_string(idx))),
+        target_gain_(*parameters.getRawParameterValue(PTargetGain::kID + std::to_string(idx))),
         empty_update_flag_(controller.getEmptyUpdateFlags()[idx]),
         spec_update_flag_(controller.getSpecResponseUpdateFlag()),
         whole_update_flag_(controller.getUpdateFlag()) {
@@ -52,14 +53,22 @@ namespace zlp {
             empty_.setFreq(value);
             signal();
         } else if (parameter_ID.startsWith(PGain::kID)) {
-            empty_.setGain(std::clamp(value * (scale_.load(std::memory_order::relaxed) / 100.f), -30.f, 30.f));
+            const auto scale = scale_.load(std::memory_order::relaxed) * 0.01f;
+            empty_.setGain(std::clamp(value * scale, -30.f, 30.f));
             signal();
         } else if (parameter_ID.startsWith(PQ::kID)) {
             empty_.setQ(value);
             signal();
+        } else if (parameter_ID.startsWith(PTargetGain::kID)) {
+            const auto scale = scale_.load(std::memory_order::relaxed) * 0.01f;
+            controller_.setTargetGain(idx_, std::clamp(value * scale, -30.f,30.f));
         } else if (parameter_ID.startsWith(PGainScale::kID)) {
-            empty_.setGain(std::clamp(gain_.load(std::memory_order::relaxed) * (value / 100.f), -30.f, 30.f));
+            const auto scale = value * 0.01f;
+            const auto gain = gain_.load(std::memory_order::relaxed);
+            empty_.setGain(std::clamp(gain * scale, -30.f, 30.f));
             signal();
+            const auto target_gain = target_gain_.load(std::memory_order::relaxed);
+            controller_.setTargetGain(idx_, std::clamp(target_gain * scale, -30.f,30.f));
         }
     }
 

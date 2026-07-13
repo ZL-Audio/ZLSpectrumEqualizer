@@ -13,34 +13,26 @@
 #include "juce_helper/para_updater.hpp"
 
 namespace zlp {
-    class FilterAttach final : private juce::AudioProcessorValueTreeState::Listener {
+    class FilterDynamicAttach final : private juce::AudioProcessorValueTreeState::Listener {
     public:
-        explicit FilterAttach(juce::AudioProcessor& processor,
+        explicit FilterDynamicAttach(juce::AudioProcessor& processor,
                               juce::AudioProcessorValueTreeState& parameters,
                               Controller& controller,
                               size_t idx);
 
-        ~FilterAttach() override;
+        ~FilterDynamicAttach() override;
 
     private:
         juce::AudioProcessorValueTreeState& parameters_;
         Controller& controller_;
         size_t idx_;
-        zldsp::filter::Empty& empty_;
-        std::atomic<float>& scale_;
-        std::atomic<float>& gain_;
-        std::atomic<float>& target_gain_;
-        zlchore::thread::Notifier& empty_update_flag_;
-        zlchore::thread::Notifier& spec_update_flag_;
-        zlchore::thread::Notifier& whole_update_flag_;
 
         static constexpr std::array kIDs{
-            PFilterStatus::kID, PFilterType::kID, POrder::kID, PLRMode::kID,
-            PFreq::kID, PGain::kID, PQ::kID, PTargetGain::kID
+            PDynamicON::kID, PDynamicBypass::kID, PDynamicMode::kID,
+            PThresholdAbs::kID, PThresholdBand::kID, PThresholdRel::kID, PKneeW::kID,
+            PAttack::kID, PRelease::kID
         };
 
         void parameterChanged(const juce::String& parameter_ID, float value) override;
-
-        void signal();
     };
 }

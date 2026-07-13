@@ -72,6 +72,13 @@ namespace zlp {
             return is_ext_side_;
         }
 
+        void setTargetGain(const size_t band, const float gain) {
+            empty_target_gains_[band].store(gain, std::memory_order::relaxed);
+            to_update_empty_targets_[band].signal();
+            to_update_spec_response_.signal();
+            to_update_.signal();
+        }
+
         void setSpecSmoothValue(const float smooth) {
             a_spec_smooth_value_.store(smooth, std::memory_order::relaxed);
             to_update_spec_smooth_.signal();
@@ -105,6 +112,18 @@ namespace zlp {
         void setSpecFollowerSkew(const float skew) {
             a_spec_skew_.store(skew, std::memory_order::relaxed);
             to_update_spec_skew_.signal();
+            to_update_.signal();
+        }
+
+        void setDynamicON(const size_t idx, const bool dynamic_on) {
+            a_dynamic_on_[idx].store(dynamic_on, std::memory_order::relaxed);
+            to_update_dynamic_status_.signal();
+            to_update_.signal();
+        }
+
+        void setDynamicBypass(const size_t idx, const bool dynamic_bypass) {
+            a_dynamic_bypass_[idx].store(dynamic_bypass, std::memory_order::relaxed);
+            to_update_dynamic_status_.signal();
             to_update_.signal();
         }
 

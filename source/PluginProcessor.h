@@ -75,6 +75,7 @@ public:
 private:
     zlp::Controller controller_;
     std::array<std::unique_ptr<zlp::FilterAttach>, zlp::kBandNum> filter_attachments_;
+    std::array<std::unique_ptr<zlp::FilterDynamicAttach>, zlp::kBandNum> filter_dynamic_attachments_;
 
     std::atomic<double> sample_rate_{48000.0};
     std::atomic<float>& a_bypass_;

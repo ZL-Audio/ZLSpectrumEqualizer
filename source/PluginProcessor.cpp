@@ -31,6 +31,7 @@ PluginProcessor::PluginProcessor() :
     a_bypass_(*parameters_.getRawParameterValue(zlp::PBypass::kID)) {
     for (size_t i = 0; i < zlp::kBandNum; ++i) {
         filter_attachments_[i] = std::make_unique<zlp::FilterAttach>(*this, parameters_, controller_, i);
+        filter_dynamic_attachments_[i] = std::make_unique<zlp::FilterDynamicAttach>(*this, parameters_, controller_, i);
     }
 }
 
