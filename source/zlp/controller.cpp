@@ -435,25 +435,16 @@ namespace zlp {
             }
         }
 
+        std::fill(dynamic_ptr + dyn_start, dynamic_ptr + dyn_end, 0.0f);
         // process each dynamic band
         for (size_t i = 0; i < data.dynamic_bands.size(); ++i) {
             const auto band = data.dynamic_bands[i];
-            if (i == 0) {
-                if (dynamic_bypass_[band]) {
-                    spec_dynamic_[band].process<false, true>(side_ptr, dynamic_ptr,
-                                                             spec_response_[band], spec_follower_[band], band_avgs_[band]);
-                } else {
-                    spec_dynamic_[band].process<false, false>(side_ptr, dynamic_ptr,
-                                                              spec_response_[band], spec_follower_[band], band_avgs_[band]);
-                }
+            if (dynamic_bypass_[band]) {
+                spec_dynamic_[band].process<true, true>(side_ptr, dynamic_ptr,
+                                                        spec_response_[band], spec_follower_[band], band_avgs_[band]);
             } else {
-                if (dynamic_bypass_[band]) {
-                    spec_dynamic_[band].process<true, true>(side_ptr, dynamic_ptr,
-                                                            spec_response_[band], spec_follower_[band], band_avgs_[band]);
-                } else {
-                    spec_dynamic_[band].process<true, false>(side_ptr, dynamic_ptr,
-                                                             spec_response_[band], spec_follower_[band], band_avgs_[band]);
-                }
+                spec_dynamic_[band].process<true, false>(side_ptr, dynamic_ptr,
+                                                         spec_response_[band], spec_follower_[band], band_avgs_[band]);
             }
         }
         

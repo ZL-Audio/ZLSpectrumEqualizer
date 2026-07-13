@@ -10,7 +10,7 @@
 #include "filter_dynamic_attach.hpp"
 
 namespace zlp {
-    FilterDynamicAttach::FilterDynamicAttach(juce::AudioProcessor& processor,
+    FilterDynamicAttach::FilterDynamicAttach(juce::AudioProcessor&,
                                              juce::AudioProcessorValueTreeState& parameters,
                                              Controller& controller, size_t idx) :
         parameters_(parameters),

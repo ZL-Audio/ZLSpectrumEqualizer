@@ -66,6 +66,7 @@ namespace zldsp::filter {
                 }
             }
             diff_start_idx_ = i;
+            const auto v_half = hn::Set(d, 0.5f);
             for (; i < base_response_.size(); i += lanes) {
                 const auto v = hn::Load(d, diff_response_.data() + i);
                 const auto v_log = hn::Log(d, hn::Max(v, v_min));
@@ -74,7 +75,7 @@ namespace zldsp::filter {
                 if (hn::ReduceMax(d, hn::Abs(diff)) < kDiffMin) {
                     break;
                 }
-                hn::Store(diff, d, diff_response_.data() + i);
+                hn::Store(hn::Mul(diff, v_half), d, diff_response_.data() + i);
             }
             diff_size_ = i - diff_start_idx_;
             diff_end_idx_ = i;

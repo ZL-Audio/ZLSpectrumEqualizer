@@ -22,6 +22,7 @@ namespace zldsp::filter {
 
         void prepare(const size_t fft_size) {
             states_.resize(fft_size);
+            std::ranges::fill(states_, static_cast<FloatType>(0));
         }
 
         template <bool to_add = true, bool bypass = false>
@@ -69,7 +70,7 @@ namespace zldsp::filter {
                     }
                 }
             }
-            if constexpr (to_add && bypass) {
+            if constexpr (!to_add && bypass) {
                 std::fill(dynamic_db + i_start, dynamic_db + i_stop, static_cast<FloatType>(0));
             }
         }
