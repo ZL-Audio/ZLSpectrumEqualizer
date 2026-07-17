@@ -232,7 +232,7 @@ namespace zlp {
         inline static const auto kChoices = juce::StringArray{
             "Low", "Medium", "High", "Extreme"
         };
-        static constexpr int kDefaultI = 0;
+        static constexpr int kDefaultI = 1;
     };
 
     class PExtSide : public BoolParameters<PExtSide> {
@@ -258,6 +258,40 @@ namespace zlp {
         static constexpr auto kName = "Spectrum Smooth";
         inline static const auto kRange = juce::NormalisableRange<float>(0.f, 1.f, .01f);
         static constexpr auto kDefaultV = .5f;
+    };
+
+    class PSpecSmoothType : public ChoiceParameters<PSpecSmoothType> {
+    public:
+        static constexpr auto kID = "spectrum_smooth_type";
+        static constexpr auto kName = "Spectrum Smooth Type";
+        inline static const auto kChoices = juce::StringArray{
+            "OCT", "ERB"
+        };
+        static constexpr int kDefaultI = 0;
+    };
+
+    class PSpecTilt : public FloatParameters<PSpecTilt> {
+    public:
+        static constexpr auto kID = "spectrum_tilt";
+        static constexpr auto kName = "Spectrum Tilt";
+        inline static const auto kRange = juce::NormalisableRange<float>(-6.0f, 6.0f, 0.01f);
+        static constexpr auto kDefaultV = 0.0f;
+    };
+
+    class PSpecSkewAttack : public FloatParameters<PSpecSkewAttack> {
+    public:
+        static constexpr auto kID = "spectrum_skew_attack";
+        static constexpr auto kName = "Spectrum Skew Attack";
+        inline static const auto kRange = juce::NormalisableRange<float>(-2.0f, 2.0f, 0.01f);
+        static constexpr auto kDefaultV = 0.9f;
+    };
+
+    class PSpecSkewRelease : public FloatParameters<PSpecSkewRelease> {
+    public:
+        static constexpr auto kID = "spectrum_skew_release";
+        static constexpr auto kName = "Spectrum Skew Release";
+        inline static const auto kRange = juce::NormalisableRange<float>(-2.0f, 2.0f, 0.01f);
+        static constexpr auto kDefaultV = 0.2f;
     };
 
     class POutputGain : public FloatParameters<POutputGain> {
@@ -455,7 +489,8 @@ namespace zlp {
 
     inline juce::AudioProcessorValueTreeState::ParameterLayout getParameterLayout() {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
-        layout.add(PExtSide::get(), PBypass::get(), PSpecSmooth::get(),
+        layout.add(PExtSide::get(), PBypass::get(), PFFTResolution::get(), PSpecSmooth::get(),
+                   PSpecSmoothType::get(), PSpecTilt::get(), PSpecSkewAttack::get(), PSpecSkewRelease::get(),
                    POutputGain::get(), PGainScale::get(),
                    PStaticGain::get());
         for (size_t i = 0; i < kBandNum; ++i) {

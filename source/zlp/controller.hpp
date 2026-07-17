@@ -109,9 +109,21 @@ namespace zlp {
             to_update_.signal();
         }
 
-        void setSpecFollowerSkew(const float skew) {
-            a_spec_skew_.store(skew, std::memory_order::relaxed);
+        void setSpecFollowerSkewAttack(const float skew) {
+            a_spec_skew_attack_.store(skew, std::memory_order::relaxed);
             to_update_spec_skew_.signal();
+            to_update_.signal();
+        }
+
+        void setSpecFollowerSkewRelease(const float skew) {
+            a_spec_skew_release_.store(skew, std::memory_order::relaxed);
+            to_update_spec_skew_.signal();
+            to_update_.signal();
+        }
+
+        void setFFTResolution(const FFTResolution resolution) {
+            a_fft_resolution_.store(resolution, std::memory_order::relaxed);
+            to_update_fft_resolution_.signal();
             to_update_.signal();
         }
 
@@ -239,7 +251,8 @@ namespace zlp {
         std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_attack_{};
         std::array<std::atomic<float>, kBandNum> a_spec_release_{};
         std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_release_{};
-        std::atomic<float> a_spec_skew_{0.0f};
+        std::atomic<float> a_spec_skew_attack_{0.9f};
+        std::atomic<float> a_spec_skew_release_{0.2f};
         zlchore::thread::Notifier to_update_spec_skew_{false};
 
         std::array<std::atomic<float>, kBandNum> a_spec_threshold_abs_{};

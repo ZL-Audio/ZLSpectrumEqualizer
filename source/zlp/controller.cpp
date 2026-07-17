@@ -752,15 +752,16 @@ namespace zlp {
 
     void Controller::updateSpecFollower() {
         const bool skew_changed = to_update_spec_skew_.check();
-        const auto skew = a_spec_skew_.load(std::memory_order::relaxed);
+        const auto skew_attack = a_spec_skew_attack_.load(std::memory_order::relaxed);
+        const auto skew_release = a_spec_skew_release_.load(std::memory_order::relaxed);
         for (const auto& band : on_bands_) {
             if (skew_changed || to_update_spec_attack_[band].check()) {
                 const auto attack = a_spec_attack_[band].load(std::memory_order::relaxed);
-                spec_follower_[band].updateAttack(attack, skew, spec_follower_scaling_);
+                spec_follower_[band].updateAttack(attack, skew_attack, spec_follower_scaling_);
             }
             if (skew_changed || to_update_spec_release_[band].check()) {
                 const auto release = a_spec_release_[band].load(std::memory_order::relaxed);
-                spec_follower_[band].updateRelease(release, skew, spec_follower_scaling_);
+                spec_follower_[band].updateRelease(release, skew_release, spec_follower_scaling_);
             }
         }
     }

@@ -13,3 +13,4 @@
 #include "controller.hpp"
 #include "filter_attach.hpp"
 #include "filter_dynamic_attach.hpp"
+#include "chore_attach.hpp"

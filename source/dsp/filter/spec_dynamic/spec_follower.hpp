@@ -68,7 +68,7 @@ namespace zldsp::filter {
         void updateAR(const double ar_time, vector::aligned_vector<FloatType>& ar,
                       const double skew, const std::span<double>& scaling) {
             for (size_t i = 0; i < ar.size(); ++i) {
-                const auto final_scale = 1.0 + skew * (scaling[i] - 1.0);
+                const auto final_scale = std::pow(scaling[i], skew);
                 const double scaled_time = ar_time * final_scale;
                 if (scaled_time < static_cast<FloatType>(0.001)) {
                     ar[i] = static_cast<FloatType>(0);

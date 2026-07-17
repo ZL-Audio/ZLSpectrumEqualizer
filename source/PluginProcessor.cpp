@@ -33,6 +33,7 @@ PluginProcessor::PluginProcessor() :
         filter_attachments_[i] = std::make_unique<zlp::FilterAttach>(*this, parameters_, controller_, i);
         filter_dynamic_attachments_[i] = std::make_unique<zlp::FilterDynamicAttach>(*this, parameters_, controller_, i);
     }
+    chore_attach_ = std::make_unique<zlp::ChoreAttach>(*this, parameters_, controller_);
 }
 
 PluginProcessor::~PluginProcessor() = default;
