@@ -539,6 +539,65 @@ namespace zlp {
             hn::Store(vr_imag, d, r_imag_ptr + i);
         }
 
+        {
+            const size_t i = num_bin_effective_;
+            const size_t res_i = num_bin_effective_ - 1;
+
+            auto vl_real = l_real_ptr[i];
+            auto vl_imag = l_imag_ptr[i];
+            auto vr_real = r_real_ptr[i];
+            auto vr_imag = r_imag_ptr[i];
+
+            if constexpr (has_stereo) {
+                const auto v_res = stereo_res_ptr[res_i];
+                vl_real *= v_res;
+                vl_imag *= v_res;
+                vr_real *= v_res;
+                vr_imag *= v_res;
+            }
+
+            if constexpr (has_l) {
+                const auto vl_res = l_res_ptr[res_i];
+                vl_real *= vl_res;
+                vl_imag *= vl_res;
+            }
+
+            if constexpr (has_r) {
+                const auto vr_res = r_res_ptr[res_i];
+                vr_real *= vr_res;
+                vr_imag *= vr_res;
+            }
+
+            if constexpr (has_m || has_s) {
+                auto vm_real = (vl_real + vr_real) * 0.5f;
+                auto vs_real = (vl_real - vr_real) * 0.5f;
+                auto vm_imag = (vl_imag + vr_imag) * 0.5f;
+                auto vs_imag = (vl_imag - vr_imag) * 0.5f;
+
+                if constexpr (has_m) {
+                    const auto vm_res = m_res_ptr[res_i];
+                    vm_real *= vm_res;
+                    vm_imag *= vm_res;
+                }
+
+                if constexpr (has_s) {
+                    const auto vs_res = s_res_ptr[res_i];
+                    vs_real *= vs_res;
+                    vs_imag *= vs_res;
+                }
+
+                vl_real = vm_real + vs_real;
+                vr_real = vm_real - vs_real;
+                vl_imag = vm_imag + vs_imag;
+                vr_imag = vm_imag - vs_imag;
+            }
+
+            l_real_ptr[i] = vl_real;
+            l_imag_ptr[i] = vl_imag;
+            r_real_ptr[i] = vr_real;
+            r_imag_ptr[i] = vr_imag;
+        }
+
         fft_->backward({fft_out_reals_[0].data(), fft_out_imags_[0].data()}, fft_ins_[0].data()); // NOLINT
         fft_->backward({fft_out_reals_[1].data(), fft_out_imags_[1].data()}, fft_ins_[1].data()); // NOLINT
 
