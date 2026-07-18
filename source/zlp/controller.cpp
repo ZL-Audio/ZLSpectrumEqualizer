@@ -642,6 +642,7 @@ namespace zlp {
         num_bin_effective_ = fft_size_ / 2;
         ws_.resize(num_bin_);
         zldsp::filter::IdealBase<float>::calculateWs(ws_);
+        ws_.resize(num_bin_effective_);
 
         window1_.resize(fft_size_);
         window2_.resize(fft_size_);
