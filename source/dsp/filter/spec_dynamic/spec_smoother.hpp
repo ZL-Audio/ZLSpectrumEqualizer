@@ -34,7 +34,7 @@ namespace zldsp::filter {
         explicit SpecSmoother() = default;
 
         void prepare(const size_t fft_size) {
-            const size_t num_bins = fft_size / 2 + 1;
+            const size_t num_bins = fft_size / 2;
             low_idx_.resize(num_bins);
             high_idx_.resize(num_bins);
             count_req_.resize(num_bins);
@@ -63,7 +63,7 @@ namespace zldsp::filter {
             case SmoothMethod::kERB: {
                 const auto factor = smooth * 0.5;
                 const auto num_bins = low_idx_.size();
-                const auto fft_size = (num_bins - 1) * 2;
+                const auto fft_size = num_bins * 2;
                 const auto delta_f = sample_rate / static_cast<double>(fft_size);
                 const auto const_term = 24.7 / delta_f;
                 const auto max_idx_dbl = static_cast<double>(num_bins - 1);
