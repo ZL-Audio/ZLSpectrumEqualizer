@@ -112,11 +112,18 @@ namespace zlp {
             }
             if (side_status_ != SideStatus::kNotRequired && is_ext_side_) {
                 for (size_t chan = 2; chan < 4; ++chan) {
-                    std::copy_n(buffer[chan] + samples_processed, chunk1,
-                                input_fifos_[chan].data() + fft_pos_);
-                    if (chunk2 > 0) {
-                        std::copy_n(buffer[chan] + samples_processed + chunk1, chunk2,
-                                    input_fifos_[chan].data());
+                    if (buffer[chan] != nullptr) {
+                        std::copy_n(buffer[chan] + samples_processed, chunk1,
+                                    input_fifos_[chan].data() + fft_pos_);
+                        if (chunk2 > 0) {
+                            std::copy_n(buffer[chan] + samples_processed + chunk1, chunk2,
+                                        input_fifos_[chan].data());
+                        }
+                    } else {
+                        std::fill_n(input_fifos_[chan].data() + fft_pos_, chunk1, 0.0f);
+                        if (chunk2 > 0) {
+                            std::fill_n(input_fifos_[chan].data(), chunk2, 0.0f);
+                        }
                     }
                 }
             }
