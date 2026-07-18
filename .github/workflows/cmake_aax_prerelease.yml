@@ -27,17 +27,17 @@ jobs:
       matrix:
         include:
           - name: macOS-x86-64
-            os: macos-latest
+            os: macos-26
             cmake_extra_flags: -DCMAKE_OSX_ARCHITECTURES="x86_64" -DZL_JUCE_FORMATS="AAX" -DZL_HWY_STATIC_TARGET="SSE4"
           - name: macOS-arm64
-            os: macos-latest
+            os: macos-26
             cmake_extra_flags: -DCMAKE_OSX_ARCHITECTURES="arm64" -DZL_JUCE_FORMATS="AAX" -DZL_HWY_STATIC_TARGET="NEON"
           - name: Windows-x86-64
-            os: windows-latest
+            os: windows-2025
             vcvars_script: vcvars64.bat
             cmake_extra_flags: -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DZL_JUCE_FORMATS="AAX" -DZL_HWY_STATIC_TARGET="SSE2"
           - name: Windows-x86-64-AVX2
-            os: windows-latest
+            os: windows-2025
             vcvars_script: vcvars64.bat
             cmake_extra_flags: -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DZL_JUCE_FORMATS="AAX" -DZL_HWY_STATIC_TARGET="AVX2"
 
@@ -99,25 +99,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_and_test
     steps:
-    - name: Get artifacts
-      uses: actions/download-artifact@v8
-      with:
-        path: artifacts
+      - name: Get artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
 
-    - name: Zip Artifacts
-      run: |
-        mkdir -p upload_ready
-        cd artifacts
-        for dir in */; do
-            name=${dir%/}
-            echo "Zipping folder $name..."
-            zip -r "../upload_ready/$name.zip" "$name"
-        done
-        cd ..
-        ls -l upload_ready
+      - name: Zip Artifacts
+        run: |
+          mkdir -p upload_ready
+          cd artifacts
+          for dir in */; do
+              name=${dir%/}
+              echo "Zipping folder $name..."
+              zip -r "../upload_ready/$name.zip" "$name"
+          done
+          cd ..
+          ls -l upload_ready
 
-    - name: Upload to ZLAAX Release
-      env:
-        GH_TOKEN: ${{ secrets.AAX_RELEASE_PAT }} 
-      run: |
-        gh release upload ZLEqualizer upload_ready/*.zip --repo "ZL-Audio/ZLAAX" --clobber
+      - name: Upload to ZLAAX Release
+        env:
+          GH_TOKEN: ${{ secrets.AAX_RELEASE_PAT }}
+        run: |
+          gh release upload ZLEqualizer upload_ready/*.zip --repo "ZL-Audio/ZLAAX" --clobber

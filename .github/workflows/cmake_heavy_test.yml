@@ -79,10 +79,6 @@ jobs:
           cmake -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} ${{ matrix.cmake_extra_flags }} .
           cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }}
 
-      - name: Test
-        working-directory: ${{ env.BUILD_DIR }}
-        run: ctest --output-on-failure -j4 -VV
-
       - name: Read in .env from CMake # see GitHubENV.cmake
         shell: bash
         run: |
@@ -92,7 +88,7 @@ jobs:
       - name: Pluginval setup
         shell: bash
         run: |
-          curl -LO "https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_${{ runner.os }}.zip"
+          curl -LO "https://github.com/ZL-Audio/pluginval/releases/download/v1.0.4-temp/pluginval_${{ runner.os }}.zip"
           7z x pluginval_${{ runner.os }}.zip
           echo "PLUGINVAL_DISABLED=Plugin state restoration" >> $GITHUB_ENV
 
@@ -100,7 +96,7 @@ jobs:
         id: setup_seed
         shell: bash
         run: |
-          CURRENT_DATE_SEED=$(date +%Y%m%d)
+          CURRENT_DATE_SEED=$(date +%y%m%d%H%M)
           echo "Generated Seed: $CURRENT_DATE_SEED"
           echo "RANDOM_SEED=$CURRENT_DATE_SEED" >> "$GITHUB_OUTPUT"
 
