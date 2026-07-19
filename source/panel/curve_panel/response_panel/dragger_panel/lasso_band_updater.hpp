@@ -1,0 +1,80 @@
+// Copyright (C) 2026 - zsliu98
+// This file is part of ZLSpectrumEqualizer
+//
+// ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
+//
+// ZLSpectrumEqualizer is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
+
+#pragma once
+
+#include "../../../../PluginProcessor.h"
+#include "../../../../gui/gui.hpp"
+#include "../../../helper/helper.hpp"
+#include "../../../../chore/thread/notifier.hpp"
+
+namespace zlpanel {
+    class LassoBandUpdater final : private juce::AudioProcessorValueTreeState::Listener {
+    public:
+        explicit LassoBandUpdater(PluginProcessor& p, zlgui::UIBase& base);
+
+        ~LassoBandUpdater() override;
+
+        void updateBand();
+
+        void loadParas();
+
+        void repaintCallBack();
+
+    private:
+        static constexpr std::array kScaleIDs{
+            zlp::PFreq::kID,
+            zlp::PGain::kID, zlp::PTargetGain::kID,
+            zlp::PQ::kID,
+            zlp::PAttack::kID, zlp::PRelease::kID
+        };
+
+        static constexpr std::array kSyncIDs{
+            zlp::PFilterStatus::kID,
+            zlp::POrder::kID, zlp::PLRMode::kID,
+            zlp::PDynamicBypass::kID,
+            zlp::PKneeW::kID
+        };
+
+        static constexpr std::array kShiftIDs{
+            zlp::PThresholdAbs::kID, zlp::PThresholdBand::kID, zlp::PThresholdRel::kID, zlp::PKneeW::kID
+        };
+
+        zlchore::thread::Notifier whole_to_update_{};
+        zlchore::thread::Notifier whole_to_update_scale_{};
+        zlchore::thread::Notifier whole_to_update_sync_{};
+        zlchore::thread::Notifier whole_to_update_shift_{};
+        std::array<zlchore::thread::Notifier, kScaleIDs.size()> to_update_scale_{};
+        std::array<zlchore::thread::Notifier, kSyncIDs.size()> to_update_sync_{};
+        std::array<zlchore::thread::Notifier, kShiftIDs.size()> to_update_shift_{};
+
+        std::array<std::array<juce::RangedAudioParameter*, zlp::kBandNum>, kScaleIDs.size()> scale_paras_;
+        std::array<std::array<juce::RangedAudioParameter*, zlp::kBandNum>, kSyncIDs.size()> sync_paras_;
+        std::array<std::array<juce::RangedAudioParameter*, zlp::kBandNum>, kShiftIDs.size()> shift_paras_;
+
+        std::array<std::array<float, zlp::kBandNum>, kScaleIDs.size()> scale_values_when_selected_{};
+        std::array<std::array<float, zlp::kBandNum>, kShiftIDs.size()> shift_values_when_selected_{};
+
+        PluginProcessor& p_ref_;
+        zlgui::UIBase& base_;
+        juce::SelectedItemSet<size_t>& items_set_;
+        size_t previous_band_{zlp::kBandNum};
+
+        template <bool add>
+        void listenerAddRemove(size_t band);
+
+        void parameterChanged(const juce::String& parameter_ID, float value) override;
+
+        void updateScaleParas();
+
+        void updateSyncParas();
+
+        void updateShiftParas();
+    };
+}

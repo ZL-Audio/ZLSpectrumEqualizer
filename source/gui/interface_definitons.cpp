@@ -273,6 +273,18 @@ namespace zlgui {
         tooltip_lang_id_ = static_cast<size_t>(std::round(loadPara(zlstate::PTooltipLang::kID)));
         colour_map1_idx_ = static_cast<size_t>(std::round(loadPara(zlstate::PColourMap1Idx::kID)));
         colour_map2_idx_ = static_cast<size_t>(std::round(loadPara(zlstate::PColourMap2Idx::kID)));
+        enter_solo_mouse_ = static_cast<MouseActionType>(std::round(loadPara(zlstate::PEnterSoloMouse::kID)));
+        enter_solo_key_ = static_cast<KeyActionType>(std::round(loadPara(zlstate::PEnterSoloKey::kID)));
+        exit_solo_mouse_ = static_cast<MouseActionType>(std::round(loadPara(zlstate::PExitSoloMouse::kID)));
+        exit_solo_key_ = static_cast<KeyActionType>(std::round(loadPara(zlstate::PExitSoloKey::kID)));
+        right_click_menu_mouse_ = static_cast<MouseActionType>(std::round(loadPara(zlstate::PRightClickMenuMouse::kID)));
+        right_click_menu_key_ = static_cast<KeyActionType>(std::round(loadPara(zlstate::PRightClickMenuKey::kID)));
+        toggle_dynamic_mouse_ = static_cast<MouseActionType>(std::round(loadPara(zlstate::PToggleDynamicMouse::kID)));
+        toggle_dynamic_key_ = static_cast<KeyActionType>(std::round(loadPara(zlstate::PToggleDynamicKey::kID)));
+        toggle_bypass_mouse_ = static_cast<MouseActionType>(std::round(loadPara(zlstate::PToggleBypassMouse::kID)));
+        toggle_bypass_key_ = static_cast<KeyActionType>(std::round(loadPara(zlstate::PToggleBypassKey::kID)));
+        delete_band_mouse_ = static_cast<MouseActionType>(std::round(loadPara(zlstate::PDeleteBandMouse::kID)));
+        delete_band_key_ = static_cast<KeyActionType>(std::round(loadPara(zlstate::PDeleteBandKey::kID)));
     }
 
     void UIBase::saveToAPVTS() const {
@@ -315,5 +327,42 @@ namespace zlgui {
         savePara(zlstate::PTooltipLang::kID, static_cast<float>(tooltip_lang_id_));
         savePara(zlstate::PColourMap1Idx::kID, static_cast<float>(colour_map1_idx_));
         savePara(zlstate::PColourMap2Idx::kID, static_cast<float>(colour_map2_idx_));
+        savePara(zlstate::PEnterSoloMouse::kID, static_cast<float>(enter_solo_mouse_));
+        savePara(zlstate::PEnterSoloKey::kID, static_cast<float>(enter_solo_key_));
+        savePara(zlstate::PExitSoloMouse::kID, static_cast<float>(exit_solo_mouse_));
+        savePara(zlstate::PExitSoloKey::kID, static_cast<float>(exit_solo_key_));
+        savePara(zlstate::PRightClickMenuMouse::kID, static_cast<float>(right_click_menu_mouse_));
+        savePara(zlstate::PRightClickMenuKey::kID, static_cast<float>(right_click_menu_key_));
+        savePara(zlstate::PToggleDynamicMouse::kID, static_cast<float>(toggle_dynamic_mouse_));
+        savePara(zlstate::PToggleDynamicKey::kID, static_cast<float>(toggle_dynamic_key_));
+        savePara(zlstate::PToggleBypassMouse::kID, static_cast<float>(toggle_bypass_mouse_));
+        savePara(zlstate::PToggleBypassKey::kID, static_cast<float>(toggle_bypass_key_));
+        savePara(zlstate::PDeleteBandMouse::kID, static_cast<float>(delete_band_mouse_));
+        savePara(zlstate::PDeleteBandKey::kID, static_cast<float>(delete_band_key_));
+    }
+
+    bool UIBase::checkMouseKeyMatch(const MouseActionType action_type, const juce::ModifierKeys& mods,
+                                    const MouseActionType mouse_option, const KeyActionType key_option) const {
+        bool key_match{false};
+        switch (key_option) {
+        case KeyActionType::kNone: {
+            key_match = !mods.isCommandDown() && !mods.isShiftDown() && !mods.isAltDown();
+            break;
+        }
+        case KeyActionType::kCmdCtrl: {
+            key_match = mods.isCommandDown();
+            break;
+        }
+        case KeyActionType::kShift: {
+            key_match = mods.isShiftDown();
+            break;
+        }
+        case KeyActionType::kAlt: {
+            key_match = mods.isAltDown();
+            break;
+        }
+        default: break;
+        }
+        return action_type == mouse_option && key_match;
     }
 }

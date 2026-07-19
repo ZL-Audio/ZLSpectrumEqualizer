@@ -23,6 +23,8 @@
 
 #include "../chore/thread/notifier.hpp"
 
+#include "../dsp/analyzer/analyzer_base/analyzer_sender_base.hpp"
+
 namespace zlp {
     namespace hn = hwy::HWY_NAMESPACE;
 
@@ -70,6 +72,10 @@ namespace zlp {
 
         bool getExtSide() const {
             return is_ext_side_;
+        }
+
+        auto& getAnalyzerSender() {
+            return analyzer_sender_;
         }
 
         void setTargetGain(const size_t band, const float gain) {
@@ -315,6 +321,14 @@ namespace zlp {
 
         std::atomic<bool> a_is_ext_side_{false};
         bool is_ext_side_{false};
+
+        zldsp::analyzer::AnalyzerSenderBase<float, 3> analyzer_sender_{};
+        std::array<std::vector<float>, 2> pre_analyzer_temp_;
+        std::array<std::vector<float>, 2> post_analyzer_temp_;
+        std::array<std::vector<float>, 2> side_analyzer_temp_;
+        std::array<float*, 2> pre_analyzer_ptrs_{};
+        std::array<float*, 2> post_analyzer_ptrs_{};
+        std::array<float*, 2> side_analyzer_ptrs_{};
 
         void prepareFFTPlans();
 

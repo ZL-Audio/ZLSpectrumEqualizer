@@ -1,0 +1,52 @@
+// Copyright (C) 2026 - zsliu98
+// This file is part of ZLSpectrumEqualizer
+//
+// ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
+//
+// ZLSpectrumEqualizer is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
+
+#pragma once
+
+#include "../../../PluginProcessor.h"
+#include "../../../gui/gui.hpp"
+#include "../../helper/helper.hpp"
+#include "../../multilingual/tooltip_helper.hpp"
+
+namespace zlpanel {
+    class SumPanel final : public juce::Component {
+    public:
+        explicit SumPanel(PluginProcessor& p, zlgui::UIBase& base);
+
+        void paintSameStereo(juce::Graphics& g);
+
+        void paintDifferentStereo(juce::Graphics& g);
+
+        void resized() override;
+
+        void updateDrawingParas(int lr, bool is_same_stereo);
+
+        void run(size_t lr, bool to_update, bool is_not_off,
+                 std::span<size_t> on_indices,
+                 std::span<float> xs, float k, float b,
+                 std::array<zldsp::vector::aligned_vector<float>, zlp::kBandNum>& dynamic_mags);
+
+    private:
+        static constexpr size_t kNumPoints = 400;
+        static constexpr float kDiffStereoAlphaMultiplier = .25f;
+
+        PluginProcessor& p_ref_;
+        zlgui::UIBase& base_;
+
+        std::array<TriBuffer<juce::Path>, 5> paths_{};
+
+        std::array<bool, zlp::kBandNum> is_same_stereo_{};
+
+        float curve_thickness_{0.f};
+
+        zldsp::vector::aligned_vector<float> temp_db_{};
+
+        void lookAndFeelChanged() override;
+    };
+}

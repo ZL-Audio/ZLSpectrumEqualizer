@@ -15,6 +15,20 @@
 #include "../state/state_definitions.hpp"
 
 namespace zlgui {
+    enum class MouseActionType {
+        kLeftClick,
+        kRightClick,
+        kLeftDoubleClick,
+        kRightDoubleClick,
+    };
+
+    enum class KeyActionType {
+        kNone,
+        kCmdCtrl,
+        kShift,
+        kAlt,
+    };
+
     enum ColourIdx {
         kTextColour,
         kBackgroundColour,
@@ -33,6 +47,7 @@ namespace zlgui {
         kMouseWheelFine,
         kMouseDrag,
         kMouseDragFine,
+        kMouseWheelCombobox,
         kSensitivityNum
     };
 
@@ -439,6 +454,76 @@ namespace zlgui {
 
         juce::SelectedItemSet<size_t>& getSelectedBandSet() { return selected_band_set_; }
 
+        bool checkMouseKeyMatch(MouseActionType action_type, const juce::ModifierKeys& mods,
+                                MouseActionType mouse_option, KeyActionType key_option) const;
+
+        bool isEnterSoloTriggered(const MouseActionType type, const juce::ModifierKeys& mods) const {
+            return checkMouseKeyMatch(type, mods, enter_solo_mouse_, enter_solo_key_);
+        }
+
+        bool isExitSoloTriggered(const MouseActionType type, const juce::ModifierKeys& mods) const {
+            return checkMouseKeyMatch(type, mods, exit_solo_mouse_, exit_solo_key_);
+        }
+
+        bool isRightClickTriggered(const MouseActionType type, const juce::ModifierKeys& mods) const {
+            return checkMouseKeyMatch(type, mods, right_click_menu_mouse_, right_click_menu_key_);
+        }
+
+        bool isToggleDynamicTriggered(const MouseActionType type, const juce::ModifierKeys& mods) const {
+            return checkMouseKeyMatch(type, mods, toggle_dynamic_mouse_, toggle_dynamic_key_);
+        }
+
+        bool isToggleBypassTriggered(const MouseActionType type, const juce::ModifierKeys& mods) const {
+            return checkMouseKeyMatch(type, mods, toggle_bypass_mouse_, toggle_bypass_key_);
+        }
+
+        bool isDeleteBandTriggered(const MouseActionType type, const juce::ModifierKeys& mods) const {
+            return checkMouseKeyMatch(type, mods, delete_band_mouse_, delete_band_key_);
+        }
+
+        float getCurveDBScale(const size_t max_idx) const {
+            if (max_idx == 0) return loadPara(zlstate::PCurveDBScale0::kID);
+            if (max_idx == 1) return loadPara(zlstate::PCurveDBScale1::kID);
+            return loadPara(zlstate::PCurveDBScale2::kID);
+        }
+
+        void setCurveDBScales(const std::array<float, 3>& scales) {
+            savePara(zlstate::PCurveDBScale0::kID, scales[0]);
+            savePara(zlstate::PCurveDBScale1::kID, scales[1]);
+            savePara(zlstate::PCurveDBScale2::kID, scales[2]);
+        }
+
+        MouseActionType getEnterSoloMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PEnterSoloMouse::kID))); }
+        KeyActionType getEnterSoloKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PEnterSoloKey::kID))); }
+        void setEnterSoloMouse(MouseActionType type) { savePara(zlstate::PEnterSoloMouse::kID, static_cast<float>(type)); }
+        void setEnterSoloKey(KeyActionType type) { savePara(zlstate::PEnterSoloKey::kID, static_cast<float>(type)); }
+
+        MouseActionType getExitSoloMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PExitSoloMouse::kID))); }
+        KeyActionType getExitSoloKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PExitSoloKey::kID))); }
+        void setExitSoloMouse(MouseActionType type) { savePara(zlstate::PExitSoloMouse::kID, static_cast<float>(type)); }
+        void setExitSoloKey(KeyActionType type) { savePara(zlstate::PExitSoloKey::kID, static_cast<float>(type)); }
+
+        MouseActionType getContextMenuMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PRightClickMenuMouse::kID))); }
+        KeyActionType getContextMenuKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PRightClickMenuKey::kID))); }
+        void setContextMenuMouse(MouseActionType type) { savePara(zlstate::PRightClickMenuMouse::kID, static_cast<float>(type)); }
+        void setContextMenuKey(KeyActionType type) { savePara(zlstate::PRightClickMenuKey::kID, static_cast<float>(type)); }
+
+        MouseActionType getToggleDynamicMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PToggleDynamicMouse::kID))); }
+        KeyActionType getToggleDynamicKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PToggleDynamicKey::kID))); }
+        void setToggleDynamicMouse(MouseActionType type) { savePara(zlstate::PToggleDynamicMouse::kID, static_cast<float>(type)); }
+        void setToggleDynamicKey(KeyActionType type) { savePara(zlstate::PToggleDynamicKey::kID, static_cast<float>(type)); }
+
+        MouseActionType getToggleBypassMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PToggleBypassMouse::kID))); }
+        KeyActionType getToggleBypassKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PToggleBypassKey::kID))); }
+        void setToggleBypassMouse(MouseActionType type) { savePara(zlstate::PToggleBypassMouse::kID, static_cast<float>(type)); }
+        void setToggleBypassKey(KeyActionType type) { savePara(zlstate::PToggleBypassKey::kID, static_cast<float>(type)); }
+
+        MouseActionType getDeleteBandMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PDeleteBandMouse::kID))); }
+        KeyActionType getDeleteBandKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PDeleteBandKey::kID))); }
+        void setDeleteBandMouse(MouseActionType type) { savePara(zlstate::PDeleteBandMouse::kID, static_cast<float>(type)); }
+        void setDeleteBandKey(KeyActionType type) { savePara(zlstate::PDeleteBandKey::kID, static_cast<float>(type)); }
+
+
     private:
         juce::AudioProcessorValueTreeState& state;
         juce::ValueTree panel_value_tree_{"panel_setting_tree"};
@@ -467,6 +552,19 @@ namespace zlgui {
 
         size_t selected_band_{zlstate::kBandNum};
         juce::SelectedItemSet<size_t> selected_band_set_;
+
+        MouseActionType enter_solo_mouse_{MouseActionType::kRightClick};
+        KeyActionType enter_solo_key_{KeyActionType::kNone};
+        MouseActionType exit_solo_mouse_{MouseActionType::kRightClick};
+        KeyActionType exit_solo_key_{KeyActionType::kNone};
+        MouseActionType right_click_menu_mouse_{MouseActionType::kRightClick};
+        KeyActionType right_click_menu_key_{KeyActionType::kAlt};
+        MouseActionType toggle_dynamic_mouse_{MouseActionType::kLeftDoubleClick};
+        KeyActionType toggle_dynamic_key_{KeyActionType::kCmdCtrl};
+        MouseActionType toggle_bypass_mouse_{MouseActionType::kLeftClick};
+        KeyActionType toggle_bypass_key_{KeyActionType::kAlt};
+        MouseActionType delete_band_mouse_{MouseActionType::kRightDoubleClick};
+        KeyActionType delete_band_key_{KeyActionType::kAlt};
 
         float loadPara(const std::string& id) const {
             return state.getRawParameterValue(id)->load(std::memory_order::relaxed);

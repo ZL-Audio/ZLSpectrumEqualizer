@@ -1,0 +1,67 @@
+// Copyright (C) 2026 - zsliu98
+// This file is part of ZLSpectrumEqualizer
+//
+// ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
+//
+// ZLSpectrumEqualizer is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
+
+#include "solo_panel.hpp"
+
+namespace zlpanel {
+    SoloPanel::SoloPanel(PluginProcessor& p, zlgui::UIBase& base) :
+        base_(base),
+        solo_whole_button_(base) {
+        juce::ignoreUnused(p);
+        base_.setSoloWholeIdx(2 * zlp::kBandNum);
+        base_.getSoloWholeIdxTree().addListener(this);
+        setInterceptsMouseClicks(false, false);
+    }
+
+    SoloPanel::~SoloPanel() {
+        base_.setSoloWholeIdx(2 * zlp::kBandNum);
+        base_.getSoloWholeIdxTree().removeListener(this);
+    }
+
+    void SoloPanel::paint(juce::Graphics& g) {
+        const auto bound = getLocalBounds().toFloat();
+        g.setColour(base_.getBackgroundColour().withAlpha(.625f));
+        if (x_left_ > 0.f) {
+            g.fillRect(juce::Rectangle<float>{0.f, 0.f, x_left_, bound.getHeight()});
+        }
+        if (x_right_ < bound.getWidth()) {
+            g.fillRect(juce::Rectangle<float>{x_right_, 0.f, bound.getWidth() - x_right_, bound.getHeight()});
+        }
+    }
+
+    bool SoloPanel::isSoloSide() const {
+        return c_solo_side_;
+    }
+
+    void SoloPanel::updateX(const float x_left, const float x_right) {
+        x_left_ = x_left;
+        x_right_ = x_right;
+    }
+
+    void SoloPanel::updateBand() const {
+        base_.setSoloWholeIdx(2 * zlp::kBandNum);
+    }
+
+    void SoloPanel::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) {
+        const auto solo_whole_idx = base_.getSoloWholeIdx();
+        base_.setSoloWholeIdx(solo_whole_idx);
+        if (solo_whole_idx == 2 * zlp::kBandNum) {
+            setVisible(false);
+            x_left_ = 0.f;
+            x_right_ = 1e15f;
+        } else {
+            setVisible(true);
+            if (solo_whole_idx < zlp::kBandNum) {
+                c_solo_side_ = false;
+            } else {
+                c_solo_side_ = true;
+            }
+        }
+    }
+}

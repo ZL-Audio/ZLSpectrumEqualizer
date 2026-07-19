@@ -1,0 +1,150 @@
+// Copyright (C) 2026 - zsliu98
+// This file is part of ZLSpectrumEqualizer
+//
+// ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
+//
+// ZLSpectrumEqualizer is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
+
+#pragma once
+
+#include "single_panel.hpp"
+#include "sum_panel.hpp"
+#include "dragger_panel/dragger_panel.hpp"
+#include "solo_panel.hpp"
+#include "../../../chore/thread/notifier.hpp"
+
+namespace zlpanel {
+    class ResponsePanel final : public juce::Component,
+                                public juce::Thread,
+                                private juce::AudioProcessorValueTreeState::Listener {
+    public:
+        explicit ResponsePanel(PluginProcessor& p, zlgui::UIBase& base,
+                               const multilingual::TooltipHelper& tooltip_helper);
+
+        ~ResponsePanel() override;
+
+        void paint(juce::Graphics& g) override;
+
+        void resized() override;
+
+        void repaintCallBack();
+
+        void repaintCallBackSlow();
+
+        void updateBand();
+
+        void updateSampleRate(double sample_rate);
+
+        void run() override;
+
+
+
+    private:
+        static constexpr std::array kIDs{
+            zlp::PFilterStatus::kID, zlp::PLRMode::kID,
+            zlp::PFilterType::kID, zlp::POrder::kID, zlp::PFreq::kID, zlp::PGain::kID, zlp::PQ::kID,
+            zlp::PDynamicON::kID,
+            zlp::PTargetGain::kID
+        };
+
+        static constexpr size_t kNumPoints = 400;
+
+        PluginProcessor& p_ref_;
+        zlgui::UIBase& base_;
+
+        std::array<std::atomic<float>, zlp::kBandNum> original_base_gains_{};
+        std::array<std::atomic<float>, zlp::kBandNum> original_target_gains_{};
+        std::atomic<float>& gain_scale_;
+
+        std::vector<size_t> message_not_off_indices_;
+        zlchore::thread::Notifier message_to_update_panels_{};
+
+        std::array<zlchore::thread::Notifier, zlp::kBandNum> message_to_update_draggers_{};
+        zlchore::thread::Notifier message_to_update_draggers_total_{};
+        zlchore::thread::Notifier message_to_update_target_dragger_{};
+        zlchore::thread::Notifier message_to_update_side_dragger_{};
+
+        SinglePanel single_panel_;
+        SumPanel sum_panel_;
+        DraggerPanel dragger_panel_;
+        SoloPanel solo_panel_;
+
+        float side_y_{0.f};
+        std::atomic<float> width_{0.f}, height_{0.f}, font_size_{1.f};
+        float c_width_{0.f}, c_height_{0.f}, c_font_size_{1.f};
+        zlchore::thread::Notifier to_update_bound_{};
+
+        std::atomic<float>& eq_max_db_idx_ref_;
+        float c_eq_max_db_idx_{-1.f};
+        float c_k_{}, c_b_{};
+
+        std::atomic<double> sample_rate_{0.};
+        double c_sample_rate_{0.}, c_slider_max_{0.};
+        double fft_max_{0.};
+
+        std::vector<float> ws_;
+        std::vector<float> xs_;
+
+        std::array<zldsp::filter::Ideal<float, zlp::Controller::kFilterSize>, zlp::kBandNum> ideal_{};
+        std::array<zldsp::filter::Ideal<float, zlp::Controller::kFilterSize / 2>, zlp::kBandNum> side_ideal_{};
+
+        std::array<zldsp::vector::aligned_vector<float>, zlp::kBandNum> base_mags_;
+        std::array<zldsp::vector::aligned_vector<float>, zlp::kBandNum> target_mags_;
+        std::array<zldsp::vector::aligned_vector<float>, zlp::kBandNum> dynamic_mags_;
+        std::array<zldsp::vector::aligned_vector<float>, 5> sum_mags_;
+
+        std::array<zldsp::filter::Empty, zlp::kBandNum> empty_{};
+        std::array<zlchore::thread::Notifier, zlp::kBandNum> to_update_empty_flags_{};
+        std::array<std::atomic<float>, zlp::kBandNum> target_gains_{};
+        std::array<zlchore::thread::Notifier, zlp::kBandNum> to_update_target_gain_flags_{};
+        std::array<zldsp::filter::Empty, zlp::kBandNum> side_empty_{};
+        std::array<zlchore::thread::Notifier, zlp::kBandNum> to_update_side_empty_flags_{};
+
+        std::array<std::atomic<bool>, zlp::kBandNum> dynamic_ons_{};
+        std::array<bool, zlp::kBandNum> c_dynamic_ons_{};
+        zlchore::thread::Notifier to_update_dynamic_ons_{};
+
+        std::array<std::atomic<zlp::FilterStatus>, zlp::kBandNum> filter_status_{};
+        std::array<zlp::FilterStatus, zlp::kBandNum> c_filter_status_{};
+        zlchore::thread::Notifier to_update_filter_status_{};
+
+        std::array<std::atomic<int>, zlp::kBandNum> lr_modes_{};
+        std::array<int, zlp::kBandNum> c_lr_modes_{};
+        zlchore::thread::Notifier to_update_lr_modes_{};
+        std::array<std::vector<size_t>, 5> on_lr_indices_{};
+        std::array<bool, 5> to_update_lr_flags_{};
+        std::array<bool, 5> is_lr_not_off_flags_{};
+
+        std::array<bool, zlp::kBandNum> to_update_base_y_flags_{};
+        std::array<bool, zlp::kBandNum> to_update_target_y_flags_{};
+
+        // center x, left x, right x, center y, base button y, target button y
+        std::array<std::array<std::atomic<float>, 6>, zlp::kBandNum> points_{};
+        // side button x, side left x, side right x
+        std::array<std::array<std::atomic<float>, 3>, zlp::kBandNum> side_points_{};
+
+        void parameterChanged(const juce::String& parameter_ID, float value) override;
+
+        void updateCurveParas();
+
+        bool updateCurveMags();
+
+        static float getButtonMag(const zldsp::filter::FilterParameters& para);
+
+        void updateDraggerPositions();
+
+        void updateSoloPosition();
+
+        void updateDrawingParas();
+
+        void updateTargetPosition();
+
+        void updateSidePosition();
+
+        void updateFloatingPosition();
+
+        std::tuple<float, float, float> getLeftCenterRightX(const zldsp::filter::FilterParameters para) const;
+    };
+}

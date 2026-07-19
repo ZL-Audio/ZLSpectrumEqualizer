@@ -10,10 +10,16 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "BinaryData.h"
+
+#include "panel/main_panel.hpp"
+#include "gui/gui.hpp"
+#include "state/state.hpp"
 
 //==============================================================================
-class PluginEditor : public juce::AudioProcessorEditor {
+class PluginEditor final : public juce::AudioProcessorEditor,
+                           private juce::Timer,
+                           private juce::ValueTree::Listener,
+                           private juce::AsyncUpdater {
 public:
     explicit PluginEditor(PluginProcessor& p);
 
@@ -24,8 +30,37 @@ public:
 
     void resized() override;
 
+    void visibilityChanged() override;
+
+    void parentHierarchyChanged() override;
+
+    void minimisationStateChanged(bool isNowMinimised) override;
+
+    int getControlParameterIndex(Component& c) override;
+
+    void mouseDown(const juce::MouseEvent& event) override;
+
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
+    PluginProcessor& p_ref_;
+    zlstate::DummyProcessor dummy_processor_;
+    juce::AudioProcessorValueTreeState state_;
+    zlstate::Property property_;
+    juce::Value last_ui_width_, last_ui_height_;
+
+    zlgui::UIBase base_;
+    zlpanel::MainPanel main_panel_;
+
+    std::unique_ptr<juce::VBlankAttachment> vblank_;
+
+    void timerCallback() override;
+
+    void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property) override;
+
+    void handleAsyncUpdate() override;
+
+    void updateIsShowing();
+
+    static zlstate::Property& initProperty(PluginProcessor& p);
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

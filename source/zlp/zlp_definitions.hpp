@@ -436,7 +436,7 @@ namespace zlp {
         inline static const auto kChoices = juce::StringArray{
             "Absolute", "Band", "Relative"
         };
-        static constexpr int kDefaultI = 0;
+        static constexpr int kDefaultI = 1;
     };
 
     class PThresholdAbs : public FloatParameters<PThresholdAbs> {

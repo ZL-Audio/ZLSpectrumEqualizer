@@ -13,7 +13,7 @@
 namespace zlp {
     namespace {
         template <size_t Mask>
-        void dispatchMask(Controller* instance, bool perform_fft) {
+        void dispatchMask(Controller* instance, const bool perform_fft) {
             instance->processMainImpl<
                 (Mask & 1) != 0,
                 (Mask & 2) != 0,
@@ -43,6 +43,17 @@ namespace zlp {
         resizeWorkingSpace();
 
         ideal_.prepare(sample_rate);
+        
+        const size_t max_analyzer_hop = ((size_t)1 << fft_order_) / 4;
+        for (size_t chan = 0; chan < 2; ++chan) {
+            pre_analyzer_temp_[chan].resize(max_analyzer_hop);
+            post_analyzer_temp_[chan].resize(max_analyzer_hop);
+            side_analyzer_temp_[chan].resize(max_analyzer_hop);
+        }
+        analyzer_sender_.prepare(sample_rate_, max_analyzer_hop, {2, 2, 2}, 0.1);
+        analyzer_sender_.setON(0, true);
+        analyzer_sender_.setON(1, true);
+        analyzer_sender_.setON(2, true);
 
         to_update_.signal();
         to_update_fft_resolution_.signal();
@@ -92,6 +103,35 @@ namespace zlp {
             const size_t chunk = std::min(num_samples - samples_processed, fft_hop_size_ - fft_count_);
             const size_t chunk1 = std::min(chunk, fft_size_ - fft_pos_);
             const size_t chunk2 = chunk - chunk1;
+
+            // save pre-EQ analyzer samples (delayed to match post-EQ latency)
+            for (size_t chan = 0; chan < 2; ++chan) {
+                std::copy_n(input_fifos_[chan].data() + fft_pos_, chunk1,
+                            pre_analyzer_temp_[chan].data());
+                if (chunk2 > 0) {
+                    std::copy_n(input_fifos_[chan].data(), chunk2,
+                                pre_analyzer_temp_[chan].data() + chunk1);
+                }
+                pre_analyzer_ptrs_[chan] = pre_analyzer_temp_[chan].data();
+            }
+
+            if (side_status_ != SideStatus::kNotRequired && is_ext_side_) {
+                for (size_t chan = 2; chan < 4; ++chan) {
+                    std::copy_n(input_fifos_[chan].data() + fft_pos_, chunk1,
+                                side_analyzer_temp_[chan - 2].data());
+                    if (chunk2 > 0) {
+                        std::copy_n(input_fifos_[chan].data(), chunk2,
+                                    side_analyzer_temp_[chan - 2].data() + chunk1);
+                    }
+                    side_analyzer_ptrs_[chan - 2] = side_analyzer_temp_[chan - 2].data();
+                }
+            } else {
+                std::fill_n(side_analyzer_temp_[0].data(), chunk, 0.0f);
+                std::fill_n(side_analyzer_temp_[1].data(), chunk, 0.0f);
+                side_analyzer_ptrs_[0] = side_analyzer_temp_[0].data();
+                side_analyzer_ptrs_[1] = side_analyzer_temp_[1].data();
+            }
+
             for (size_t chan = 0; chan < 2; ++chan) {
                 std::copy_n(buffer[chan] + samples_processed, chunk1,
                             input_fifos_[chan].data() + fft_pos_);
@@ -179,6 +219,17 @@ namespace zlp {
                     }
                 }
             }
+            // setup POST analyzer pointers and process
+            for (size_t chan = 0; chan < 2; ++chan) {
+                post_analyzer_ptrs_[chan] = buffer[chan] + samples_processed;
+            }
+
+            analyzer_sender_.process({
+                std::span<float*>(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
+                std::span<float*>(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()),
+                std::span<float*>(side_analyzer_ptrs_.data(), side_analyzer_ptrs_.size())
+            }, chunk);
+
             samples_processed += chunk;
         }
     }

@@ -9,17 +9,147 @@
 
 #include "PluginEditor.h"
 
+#include "BinaryData.h"
+
 PluginEditor::PluginEditor(PluginProcessor& p) :
-    AudioProcessorEditor(&p) {
-    setSize(400, 300);
+    AudioProcessorEditor(&p),
+    p_ref_(p),
+    state_(dummy_processor_, nullptr,
+           juce::Identifier("ZLSpectrumEqualizerState"),
+           zlstate::getStateParameterLayout()),
+    property_(state_),
+    base_(state_),
+    main_panel_(p, base_, static_cast<zlpanel::multilingual::TooltipLanguage>(std::round(
+                    zlpanel::getValue(state_, zlstate::PTooltipLang::kID)))) {
+    // set font
+#if defined(JUCE_WINDOWS)
+    base_.font_ = juce::Typeface::createSystemTypefaceFor(
+        BinaryData::InterSubsetMediumNoHinting_ttf, BinaryData::InterSubsetMediumNoHinting_ttfSize);
+#else
+    base_.font_ = juce::Typeface::createSystemTypefaceFor(
+        BinaryData::InterSubsetMedium_ttf, BinaryData::InterSubsetMedium_ttfSize);
+#endif
+    juce::LookAndFeel::getDefaultLookAndFeel().setDefaultSansSerifTypeface(base_.font_);
+    // add the main panel
+    addAndMakeVisible(main_panel_);
+    main_panel_.getControlPanel().addMouseListener(this, true);
+    main_panel_.getOutputPanel().addMouseListener(this, true);
+
+    // set size & size listener
+    setResizeLimits(static_cast<int>(zlstate::PWindowW::kMinV - 1),
+                    static_cast<int>(zlstate::PWindowH::kMinV - 1),
+                    static_cast<int>(zlstate::PWindowW::kMaxV + 1),
+                    static_cast<int>(zlstate::PWindowH::kMaxV + 1));
+    setResizable(true, p.wrapperType != PluginProcessor::wrapperType_AudioUnitv3);
+
+    this->resizableCorner = std::make_unique<zlgui::ResizeCorner>(base_, this, getConstrainer(),
+                                                                  zlgui::ResizeCorner::kScaleWithFontSize, 1.25f);
+    addChildComponent(this->resizableCorner.get());
+    this->resizableCorner->setAlwaysOnTop(true);
+    this->resizableCorner->resized();
+
+    last_ui_width_.referTo(state_.getParameterAsValue(zlstate::PWindowW::kID));
+    last_ui_height_.referTo(state_.getParameterAsValue(zlstate::PWindowH::kID));
+    setSize(last_ui_width_.getValue(), last_ui_height_.getValue());
+
+    startTimerHz(1);
+    updateIsShowing();
+
+    base_.setPanelProperty(zlgui::kUISettingChanged, true);
+    base_.getPanelValueTree().addListener(this);
+
+    sendLookAndFeelChange();
 }
 
-PluginEditor::~PluginEditor() = default;
+PluginEditor::~PluginEditor() {
+    base_.getPanelValueTree().removeListener(this);
+    vblank_.reset();
+    stopTimer();
+}
 
 void PluginEditor::paint(juce::Graphics& g) {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+    juce::ignoreUnused(g);
 }
 
 void PluginEditor::resized() {
+    main_panel_.setBounds(getLocalBounds());
+    if (!base_.getWindowSizeFix()) {
+        last_ui_width_ = std::clamp(getWidth(),
+                                    static_cast<int>(zlstate::PWindowW::kMinV),
+                                    static_cast<int>(zlstate::PWindowW::kMaxV));
+        last_ui_height_ = std::clamp(getHeight(),
+                                     static_cast<int>(zlstate::PWindowH::kMinV),
+                                     static_cast<int>(zlstate::PWindowH::kMaxV));
+        triggerAsyncUpdate();
+    }
+}
+
+void PluginEditor::visibilityChanged() {
+    updateIsShowing();
+}
+
+void PluginEditor::parentHierarchyChanged() {
+    updateIsShowing();
+}
+
+void PluginEditor::minimisationStateChanged(bool) {
+    updateIsShowing();
+}
+
+void PluginEditor::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property) {
+    if (base_.isPanelIdentifier(zlgui::kUISettingChanged, property)) {
+        triggerAsyncUpdate();
+    }
+}
+
+void PluginEditor::handleAsyncUpdate() {
+    sendLookAndFeelChange();
+    property_.saveAPVTS(state_);
+}
+
+void PluginEditor::timerCallback() {
+    updateIsShowing();
+}
+
+void PluginEditor::updateIsShowing() {
+    const auto is_showing = isShowing();
+    if (is_showing != base_.getIsEditorShowing()) {
+        base_.setIsEditorShowing(is_showing);
+        if (is_showing) {
+            main_panel_.startThreads();
+            vblank_ = std::make_unique<juce::VBlankAttachment>(
+                &main_panel_, [this](const double x) { main_panel_.repaintCallBack(x); });
+        } else {
+            vblank_.reset();
+            main_panel_.stopThreads();
+        }
+    }
+}
+
+int PluginEditor::getControlParameterIndex(Component& c) {
+    const auto id = c.getComponentID();
+    if (id.isEmpty()) {
+        return -1;
+    }
+    if (const auto para = p_ref_.parameters_.getParameter(id); para == nullptr) {
+        return -1;
+    } else {
+        return para->getParameterIndex();
+    }
+}
+
+void PluginEditor::mouseDown(const juce::MouseEvent& event) {
+    if (event.mods.isRightButtonDown() && event.getNumberOfClicks() == 1) {
+        if (event.originalComponent != nullptr) {
+            if (const auto id = event.originalComponent->getComponentID(); !id.isEmpty()) {
+                if (const auto para = p_ref_.parameters_.getParameter(id); para != nullptr) {
+                    if (const auto* context = getHostContext(); context != nullptr) {
+                        if (auto menu = context->getContextMenuForParameter(para)) {
+                            menu->showNativeMenu(juce::Component::getMouseXYRelative());
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
