@@ -55,6 +55,9 @@ namespace zlp {
         analyzer_sender_.setON(1, true);
         analyzer_sender_.setON(2, true);
 
+        loudness_matcher_.prepare(sample_rate_, 2);
+        output_gain_dsp_.prepare(sample_rate_, 2, 0.05);
+
         to_update_.signal();
         to_update_fft_resolution_.signal();
     }
@@ -88,6 +91,9 @@ namespace zlp {
         }
         if (to_update_channel_data_.check()) {
             updateChannelData();
+        }
+        if (to_update_output_gain_.check()) {
+            updateOutputGain();
         }
 
         is_ext_side_ = a_is_ext_side_.load(std::memory_order::relaxed);
@@ -223,6 +229,23 @@ namespace zlp {
             for (size_t chan = 0; chan < 2; ++chan) {
                 post_analyzer_ptrs_[chan] = buffer[chan] + samples_processed;
             }
+
+            const auto loudness_matcher_on = loudness_matcher_on_.load(std::memory_order_relaxed);
+            if (loudness_matcher_on != c_loudness_matcher_on_) {
+                c_loudness_matcher_on_ = loudness_matcher_on;
+                if (c_loudness_matcher_on_) {
+                    loudness_matcher_.reset();
+                }
+            }
+
+            if (c_loudness_matcher_on_) {
+                loudness_matcher_.processPre(std::span<float*>(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()), chunk);
+            }
+            if (c_loudness_matcher_on_) {
+                loudness_matcher_.processPost(std::span<float*>(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+            }
+
+            output_gain_dsp_.process(std::span<float*>(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
 
             analyzer_sender_.process({
                 std::span<float*>(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
@@ -1044,6 +1067,11 @@ namespace zlp {
         } else {
             side_status_ = SideStatus::kNotRequired;
         }
+    }
+
+    void Controller::updateOutputGain() {
+        const auto gain = a_output_gain_.load(std::memory_order::relaxed);
+        output_gain_dsp_.setGainDecibels(gain);
     }
 
     void Controller::handleAsyncUpdate() {

@@ -28,7 +28,8 @@ namespace zlp {
         static constexpr std::array kIDs{
             PExtSide::kID, PFFTResolution::kID,
             PSpecSmooth::kID, PSpecSmoothType::kID, PSpecTilt::kID,
-            PSpecSkewAttack::kID, PSpecSkewRelease::kID
+            PSpecSkewAttack::kID, PSpecSkewRelease::kID,
+            POutputGain::kID
         };
 
         void parameterChanged(const juce::String& parameter_ID, float value) override;

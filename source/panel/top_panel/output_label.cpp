@@ -98,7 +98,7 @@ namespace zlpanel {
 
     void OutputLabel::checkUpdate() {
         const auto scale = scale_ref_.load(std::memory_order_relaxed);
-        auto gain_db = 0.0f; // zldsp::chore::gainToDecibels(p_ref_.getController().getDisplayedGain());
+        auto gain_db = gain_slider_.getValue();
         if (std::abs(scale - c_scale_) > 1e-3) {
             c_scale_ = scale;
             scale_label_.setText(floatToStringSnprintf(c_scale_, 0) + "%",

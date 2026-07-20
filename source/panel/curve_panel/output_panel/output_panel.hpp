@@ -54,6 +54,9 @@ namespace zlpanel {
         zlgui::button::ClickButton sgc_button_;
         zlgui::attachment::ButtonAttachment<true> sgc_attach_;
 
+        const std::unique_ptr<juce::Drawable> lm_drawable_;
+        zlgui::button::ClickButton lm_button_;
+
         void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property) override;
     };
 }

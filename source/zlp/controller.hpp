@@ -20,6 +20,8 @@
 #include "../dsp/filter/spec_dynamic/spec_smoother.hpp"
 #include "../dsp/filter/spec_dynamic/spec_tilter.hpp"
 #include "../dsp/fft/zldsp_fft_include.hpp"
+#include "../dsp/loudness/lufs_matcher.hpp"
+#include "../dsp/gain/gain.hpp"
 
 #include "../chore/thread/notifier.hpp"
 
@@ -78,6 +80,14 @@ namespace zlp {
             return analyzer_sender_;
         }
 
+        void setLoudnessMatchON(const bool f) {
+            loudness_matcher_on_.store(f, std::memory_order::relaxed);
+        }
+
+        double getLUFSMatcherDiff() const {
+            return loudness_matcher_.getDiff();
+        }
+
         void setTargetGain(const size_t band, const float gain) {
             empty_target_gains_[band].store(gain, std::memory_order::relaxed);
             to_update_empty_targets_[band].signal();
@@ -100,6 +110,12 @@ namespace zlp {
         void setSpecTiltSlope(const float slope) {
             a_spec_tilt_slope_.store(slope, std::memory_order::relaxed);
             to_update_spec_tilt_.signal();
+            to_update_.signal();
+        }
+
+        void setOutputGain(const float gain) {
+            a_output_gain_.store(gain, std::memory_order::relaxed);
+            to_update_output_gain_.signal();
             to_update_.signal();
         }
 
@@ -253,6 +269,9 @@ namespace zlp {
         std::atomic<float> a_spec_tilt_slope_{0.0f};
         zlchore::thread::Notifier to_update_spec_tilt_{false};
 
+        std::atomic<float> a_output_gain_{0.0f};
+        zlchore::thread::Notifier to_update_output_gain_{false};
+
         std::array<std::atomic<float>, kBandNum> a_spec_attack_{};
         std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_attack_{};
         std::array<std::atomic<float>, kBandNum> a_spec_release_{};
@@ -330,6 +349,14 @@ namespace zlp {
         std::array<float*, 2> post_analyzer_ptrs_{};
         std::array<float*, 2> side_analyzer_ptrs_{};
 
+        // loudness matcher
+        std::atomic<bool> loudness_matcher_on_{false};
+        bool c_loudness_matcher_on_{false};
+        zldsp::loudness::LUFSMatcher<float, true> loudness_matcher_;
+
+        // output gain
+        zldsp::gain::Gain<float> output_gain_dsp_{};
+
         void prepareFFTPlans();
 
         void resizeWorkingSpace();
@@ -374,6 +401,8 @@ namespace zlp {
         void updateLRMS();
 
         void updateChannelData();
+
+        void updateOutputGain();
 
         void handleAsyncUpdate() override;
     };

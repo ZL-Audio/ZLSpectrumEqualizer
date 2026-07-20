@@ -31,8 +31,23 @@ namespace zlpanel {
         sgc_button_(base, sgc_drawable_.get(), sgc_drawable_.get(),
                     tooltip_helper.getToolTipText(multilingual::kStaticGC)),
         sgc_attach_(sgc_button_.getButton(), p.parameters_,
-                    zlp::PStaticGain::kID, updater_) {
+                    zlp::PStaticGain::kID, updater_),
+        lm_drawable_(juce::Drawable::createFromImageData(BinaryData::dline_l_svg,
+                                                         BinaryData::dline_l_svgSize)),
+        lm_button_(base, lm_drawable_.get(), lm_drawable_.get(),
+                   tooltip_helper.getToolTipText(multilingual::kLoudnessGC)) {
         juce::ignoreUnused(p_ref_, base_, tooltip_helper);
+
+        lm_button_.getButton().onClick = [this]() {
+            if (lm_button_.getToggleState()) {
+                p_ref_.getController().setLoudnessMatchON(true);
+            } else {
+                p_ref_.getController().setLoudnessMatchON(false);
+                const auto c_diff = static_cast<float>(p_ref_.getController().getLUFSMatcherDiff());
+                auto* output_gain_para = p_ref_.parameters_.getParameter(zlp::POutputGain::kID);
+                updateValue(output_gain_para, output_gain_para->convertTo0to1(-c_diff));
+            }
+        };
 
         control_background_.setBufferedToImage(true);
         addAndMakeVisible(control_background_);
@@ -57,9 +72,11 @@ namespace zlpanel {
         scale_slider_.setBufferedToImage(true);
         addAndMakeVisible(scale_slider_);
 
-        sgc_button_.setImageAlpha(.5f, .75f, 1.f, 1.f);
-        sgc_button_.setBufferedToImage(true);
-        addAndMakeVisible(&sgc_button_);
+        for (auto& b : {&sgc_button_, &lm_button_}) {
+            b->setImageAlpha(.5f, .75f, 1.f, 1.f);
+            b->setBufferedToImage(true);
+            addAndMakeVisible(b);
+        }
 
         base_.setPanelProperty(zlgui::PanelSettingIdx::kOutputPanel, 0.);
         base_.getPanelValueTree().addListener(this);
@@ -108,7 +125,8 @@ namespace zlpanel {
         bound.removeFromTop(padding);
         {
             auto t_bound = bound.removeFromTop(button_height);
-            sgc_button_.setBounds(t_bound.withSizeKeepingCentre(button_height, button_height));
+            sgc_button_.setBounds(t_bound.removeFromLeft(button_height));
+            lm_button_.setBounds(t_bound.removeFromRight(button_height));
         }
 
         const auto dragging_distance = getSliderDraggingDistance(font_size);
