@@ -29,7 +29,7 @@ namespace zlpanel {
         addAndMakeVisible(response_panel_);
         response_panel_.addMouseListener(this, true);
         scale_panel_.setBufferedToImage(false);
-        addChildComponent(scale_panel_);
+        addAndMakeVisible(scale_panel_);
         addChildComponent(output_panel_);
         addChildComponent(analyzer_panel_);
         setInterceptsMouseClicks(false, true);
@@ -114,13 +114,6 @@ namespace zlpanel {
         }
     }
 
-    void CurvePanel::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property) {
-        if (base_.isPanelIdentifier(zlgui::PanelSettingIdx::kMatchPanel, property)) {
-            const auto f = static_cast<double>(base_.getPanelProperty(zlgui::PanelSettingIdx::kMatchPanel));
-            const auto idx = static_cast<int>(std::round(f));
-            scale_panel_.setVisible(idx > 0);
-            fft_panel_.setVisible(idx == 0);
-            response_panel_.setVisible(idx != 1 && idx != 2);
-        }
+    void CurvePanel::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) {
     }
 }

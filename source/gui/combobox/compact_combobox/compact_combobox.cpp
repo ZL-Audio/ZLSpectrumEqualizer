@@ -1,11 +1,11 @@
 // Copyright (C) 2026 - zsliu98
-// This file is part of ZLSpectrumEqualizer
+// This file is part of ZLEqualizer
 //
-// ZLSpectrumEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
+// ZLEqualizer is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License Version 3 as published by the Free Software Foundation.
 //
-// ZLSpectrumEqualizer is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+// ZLEqualizer is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
 //
-// You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
+// You should have received a copy of the GNU Affero General Public License along with ZLEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "compact_combobox.hpp"
 
@@ -126,5 +126,36 @@ namespace zlgui::combobox {
 
     void CompactCombobox::mouseMove(const juce::MouseEvent& event) {
         combo_box_.mouseMove(event);
+    }
+
+    void CompactCombobox::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& wheel) {
+        if (!is_scroll_enabled_) {
+            return;
+        }
+        if (wheel.deltaY * cumulative_y_ < 0.f) {
+            cumulative_y_ = 0.f;
+        }
+        cumulative_y_ += wheel.deltaY * base_.getSensitivity(kMouseWheelCombobox) * 4.f;
+        while (std::abs(cumulative_y_) > 1.f) {
+            const auto selected_index = combo_box_.getSelectedItemIndex();
+            const auto num_items = combo_box_.getNumItems();
+            if (cumulative_y_ > 0) {
+                for (int next_index = selected_index + 1; next_index < num_items; next_index++) {
+                    if (combo_box_.isItemEnabled(combo_box_.getItemId(next_index))) {
+                        combo_box_.setSelectedItemIndex(next_index, juce::sendNotificationSync);
+                        break;
+                    }
+                }
+                cumulative_y_ -= 1.f;
+            } else {
+                for (int next_index = selected_index - 1; next_index >= 0; next_index--) {
+                    if (combo_box_.isItemEnabled(combo_box_.getItemId(next_index))) {
+                        combo_box_.setSelectedItemIndex(next_index, juce::sendNotificationSync);
+                        break;
+                    }
+                }
+                cumulative_y_ += 1.f;
+            }
+        }
     }
 }
