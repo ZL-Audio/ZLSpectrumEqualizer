@@ -46,7 +46,7 @@ namespace zlp {
         } else if (parameter_ID == POutputGain::kID) {
             controller_.setOutputGain(value);
         } else if (parameter_ID == PStaticGain::kID) {
-            controller_.setSGCON(value);
+            controller_.setSGCON(value > .5f);
         }
     }
 }

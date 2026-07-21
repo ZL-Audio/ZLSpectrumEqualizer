@@ -29,6 +29,7 @@ namespace zlpanel {
         void updateBand() const;
 
     private:
+        PluginProcessor& p_ref_;
         zlgui::UIBase& base_;
         zlgui::button::ClickButton solo_whole_button_;
         std::atomic<bool> to_update_{true};

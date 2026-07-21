@@ -23,6 +23,9 @@
 #include "../dsp/loudness/lufs_matcher.hpp"
 #include "../dsp/gain/gain.hpp"
 
+#include "../dsp/filter/iir_filter/tdf/tdf.hpp"
+#include "../dsp/splitter/inplace_ms_splitter.hpp"
+
 #include "../chore/thread/notifier.hpp"
 
 #include "../dsp/analyzer/analyzer_base/analyzer_sender_base.hpp"
@@ -81,7 +84,8 @@ namespace zlp {
         }
 
         void setLoudnessMatchON(const bool f) {
-            loudness_matcher_on_.store(f, std::memory_order::relaxed);
+            a_loudness_matcher_on_.store(f, std::memory_order::relaxed);
+            to_update_.signal();
         }
 
         double getLUFSMatcherDiff() const {
@@ -211,14 +215,25 @@ namespace zlp {
             return to_update_channel_data_;
         }
 
-        void setSGCON(const float f) {
-            sgc_on_.store(f, std::memory_order::relaxed);
+        void setSGCON(const bool f) {
+            a_sgc_on_.store(f, std::memory_order::relaxed);
             to_update_sgc_on_.signal();
             to_update_.signal();
         }
 
         double getDisplayedGain() const {
             return displayed_gain_.load(std::memory_order::relaxed);
+        }
+
+        void setEditorON(const bool editor_on) {
+            a_editor_on_.store(editor_on, std::memory_order::relaxed);
+            to_update_.signal();
+        }
+
+        void setSoloWholeIdx(const size_t idx) {
+            a_solo_whole_idx_.store(idx, std::memory_order::relaxed);
+            to_update_solo_.signal();
+            to_update_.signal();
         }
 
     private:
@@ -279,9 +294,6 @@ namespace zlp {
 
         std::atomic<float> a_spec_tilt_slope_{0.0f};
         zlchore::thread::Notifier to_update_spec_tilt_{false};
-
-        std::atomic<float> a_output_gain_{0.0f};
-        zlchore::thread::Notifier to_update_output_gain_{false};
 
         std::array<std::atomic<float>, kBandNum> a_spec_attack_{};
         std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_attack_{};
@@ -361,20 +373,34 @@ namespace zlp {
         std::array<float*, 2> side_analyzer_ptrs_{};
 
         // loudness matcher
-        std::atomic<bool> loudness_matcher_on_{false};
-        bool c_loudness_matcher_on_{false};
+        std::atomic<bool> a_loudness_matcher_on_{false};
+        bool loudness_matcher_on_{false};
         zldsp::loudness::LUFSMatcher<float, true> loudness_matcher_{};
 
-        std::atomic<float> sgc_on_{false};
+        std::atomic<bool> a_sgc_on_{false};
         zlchore::thread::Notifier to_update_sgc_on_{false};
-        bool c_sgc_on_{false};
+        bool sgc_on_{false};
         std::array<double, kBandNum> sgc_values_{};
-        float c_sgc_gain_linear_{1.f};
-        zldsp::gain::Gain<float> sgc_gain_{};
+        float sgc_gain_linear_{1.f};
         std::atomic<double> displayed_gain_{1.};
 
+        std::atomic<bool> a_editor_on_{false};
+        bool editor_on_{false};
+
         // output gain
+        std::atomic<float> a_output_gain_{0.0f};
+        zlchore::thread::Notifier to_update_output_gain_{false};
+        float output_gain_linear_{1.f};
         zldsp::gain::Gain<float> output_gain_dsp_{};
+
+        // solo related
+        zldsp::filter::TDF<float, kFilterSize / 2> solo_filter_;
+        std::array<std::vector<float>, 2> solo_buffers_{};
+        std::array<float*, 2> solo_pointers_{};
+        zlchore::thread::Notifier to_update_solo_{false};
+        std::atomic<size_t> a_solo_whole_idx_{2 * kBandNum};
+        bool c_solo_on_{false};
+        size_t c_solo_idx_{0};
 
         void prepareFFTPlans();
 
@@ -424,6 +450,9 @@ namespace zlp {
         void updateOutputGain();
 
         void updateSGC();
+
+        template <bool force>
+        void updateSoloFilter(zldsp::filter::FilterParameters paras);
 
         void handleAsyncUpdate() override;
     };

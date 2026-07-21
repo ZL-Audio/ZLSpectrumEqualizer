@@ -11,16 +11,18 @@
 
 namespace zlpanel {
     SoloPanel::SoloPanel(PluginProcessor& p, zlgui::UIBase& base) :
+        p_ref_(p),
         base_(base),
         solo_whole_button_(base) {
-        juce::ignoreUnused(p);
         base_.setSoloWholeIdx(2 * zlp::kBandNum);
+        p_ref_.getController().setSoloWholeIdx(2 * zlp::kBandNum);
         base_.getSoloWholeIdxTree().addListener(this);
         setInterceptsMouseClicks(false, false);
     }
 
     SoloPanel::~SoloPanel() {
         base_.setSoloWholeIdx(2 * zlp::kBandNum);
+        p_ref_.getController().setSoloWholeIdx(2 * zlp::kBandNum);
         base_.getSoloWholeIdxTree().removeListener(this);
     }
 
@@ -46,11 +48,13 @@ namespace zlpanel {
 
     void SoloPanel::updateBand() const {
         base_.setSoloWholeIdx(2 * zlp::kBandNum);
+        p_ref_.getController().setSoloWholeIdx(2 * zlp::kBandNum);
     }
 
     void SoloPanel::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) {
         const auto solo_whole_idx = base_.getSoloWholeIdx();
         base_.setSoloWholeIdx(solo_whole_idx);
+        p_ref_.getController().setSoloWholeIdx(solo_whole_idx);
         if (solo_whole_idx == 2 * zlp::kBandNum) {
             setVisible(false);
             x_left_ = 0.f;

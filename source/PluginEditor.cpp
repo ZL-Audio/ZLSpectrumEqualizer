@@ -65,6 +65,7 @@ PluginEditor::~PluginEditor() {
     base_.getPanelValueTree().removeListener(this);
     vblank_.reset();
     stopTimer();
+    p_ref_.getController().setEditorON(false);
 }
 
 void PluginEditor::paint(juce::Graphics& g) {
@@ -115,6 +116,7 @@ void PluginEditor::updateIsShowing() {
     const auto is_showing = isShowing();
     if (is_showing != base_.getIsEditorShowing()) {
         base_.setIsEditorShowing(is_showing);
+        p_ref_.getController().setEditorON(is_showing);
         if (is_showing) {
             main_panel_.startThreads();
             vblank_ = std::make_unique<juce::VBlankAttachment>(

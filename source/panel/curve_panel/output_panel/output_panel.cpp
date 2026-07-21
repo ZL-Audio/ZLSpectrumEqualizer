@@ -83,6 +83,7 @@ namespace zlpanel {
     }
 
     OutputPanel::~OutputPanel() {
+        p_ref_.getController().setLoudnessMatchON(false);
         base_.getPanelValueTree().removeListener(this);
     }
 

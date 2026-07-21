@@ -56,9 +56,15 @@ namespace zlp {
         analyzer_sender_.setON(1, true);
         analyzer_sender_.setON(2, true);
 
+        for (size_t chan = 0; chan < 2; ++chan) {
+            solo_buffers_[chan].resize(max_analyzer_hop);
+            solo_pointers_[chan] = solo_buffers_[chan].data();
+        }
+        solo_filter_.prepare(sample_rate_, 2, max_analyzer_hop);
+        updateSoloFilter<true>(emptys_[c_solo_idx_].getParas());
+
         loudness_matcher_.prepare(sample_rate_, 2);
         output_gain_dsp_.prepare(sample_rate_, 2, 0.05);
-        sgc_gain_.prepare(sample_rate_, 2, 0.5);
 
         to_update_.signal();
         to_update_fft_resolution_.signal();
@@ -97,12 +103,38 @@ namespace zlp {
         if (to_update_output_gain_.check()) {
             updateOutputGain();
         }
-        c_sgc_on_ = sgc_on_.load(std::memory_order::relaxed) > 0.5f;
-        if (c_sgc_on_ && to_update_sgc_on_.check()) {
+        sgc_on_ = a_sgc_on_.load(std::memory_order::relaxed) > 0.5f;
+        if (sgc_on_ && to_update_sgc_on_.check()) {
             updateSGC();
+            output_gain_dsp_.setGainLinear(sgc_gain_linear_ * output_gain_linear_);
+        } else if (!sgc_on_) {
+            sgc_gain_linear_ = 1.f;
+            output_gain_dsp_.setGainLinear(output_gain_linear_);
+        }
+        if (to_update_solo_.check()) {
+            const auto solo_whole_idx = a_solo_whole_idx_.load(std::memory_order::relaxed);
+            if (solo_whole_idx == 2 * kBandNum) {
+                c_solo_on_ = false;
+            } else {
+                c_solo_on_ = true;
+                solo_filter_.reset();
+                c_solo_idx_ = solo_whole_idx % kBandNum;
+                updateSoloFilter<true>(emptys_[c_solo_idx_].getParas());
+            }
         }
         is_ext_side_ = a_is_ext_side_.load(std::memory_order::relaxed);
-        c_loudness_matcher_on_ = loudness_matcher_on_.load(std::memory_order::relaxed);
+        const auto loudness_matcher_on = a_loudness_matcher_on_.load(std::memory_order_relaxed);
+        if (loudness_matcher_on != loudness_matcher_on_) {
+            loudness_matcher_on_ = loudness_matcher_on;
+            if (loudness_matcher_on_) {
+                loudness_matcher_.reset();
+            }
+        }
+        editor_on_ = a_editor_on_.load(std::memory_order::relaxed);
+        if (!editor_on_) {
+            displayed_gain_.store(1.0, std::memory_order::relaxed);
+        }
+        sgc_on_ = a_sgc_on_.load(std::memory_order::relaxed);
     }
 
     void Controller::process(const std::array<float*, 4>& buffer, const size_t num_samples, const bool is_bypass) {
@@ -116,32 +148,34 @@ namespace zlp {
             const size_t chunk1 = std::min(chunk, fft_size_ - fft_pos_);
             const size_t chunk2 = chunk - chunk1;
 
-            // save pre-EQ analyzer samples (delayed to match post-EQ latency)
-            for (size_t chan = 0; chan < 2; ++chan) {
-                std::copy_n(input_fifos_[chan].data() + fft_pos_, chunk1,
-                            pre_analyzer_temp_[chan].data());
-                if (chunk2 > 0) {
-                    std::copy_n(input_fifos_[chan].data(), chunk2,
-                                pre_analyzer_temp_[chan].data() + chunk1);
-                }
-                pre_analyzer_ptrs_[chan] = pre_analyzer_temp_[chan].data();
-            }
-
-            if (side_status_ != SideStatus::kNotRequired && is_ext_side_) {
-                for (size_t chan = 2; chan < 4; ++chan) {
+            if (editor_on_) {
+                // pre analyzer pointers
+                for (size_t chan = 0; chan < 2; ++chan) {
                     std::copy_n(input_fifos_[chan].data() + fft_pos_, chunk1,
-                                side_analyzer_temp_[chan - 2].data());
+                                pre_analyzer_temp_[chan].data());
                     if (chunk2 > 0) {
                         std::copy_n(input_fifos_[chan].data(), chunk2,
-                                    side_analyzer_temp_[chan - 2].data() + chunk1);
+                                    pre_analyzer_temp_[chan].data() + chunk1);
                     }
-                    side_analyzer_ptrs_[chan - 2] = side_analyzer_temp_[chan - 2].data();
+                    pre_analyzer_ptrs_[chan] = pre_analyzer_temp_[chan].data();
                 }
-            } else {
-                std::fill_n(side_analyzer_temp_[0].data(), chunk, 0.0f);
-                std::fill_n(side_analyzer_temp_[1].data(), chunk, 0.0f);
-                side_analyzer_ptrs_[0] = side_analyzer_temp_[0].data();
-                side_analyzer_ptrs_[1] = side_analyzer_temp_[1].data();
+
+                if (side_status_ != SideStatus::kNotRequired && is_ext_side_) {
+                    for (size_t chan = 2; chan < 4; ++chan) {
+                        std::copy_n(input_fifos_[chan].data() + fft_pos_, chunk1,
+                                    side_analyzer_temp_[chan - 2].data());
+                        if (chunk2 > 0) {
+                            std::copy_n(input_fifos_[chan].data(), chunk2,
+                                        side_analyzer_temp_[chan - 2].data() + chunk1);
+                        }
+                        side_analyzer_ptrs_[chan - 2] = side_analyzer_temp_[chan - 2].data();
+                    }
+                } else {
+                    std::fill_n(side_analyzer_temp_[0].data(), chunk, 0.0f);
+                    std::fill_n(side_analyzer_temp_[1].data(), chunk, 0.0f);
+                    side_analyzer_ptrs_[0] = side_analyzer_temp_[0].data();
+                    side_analyzer_ptrs_[1] = side_analyzer_temp_[1].data();
+                }
             }
 
             for (size_t chan = 0; chan < 2; ++chan) {
@@ -207,7 +241,7 @@ namespace zlp {
                         }
                     }
                 }
-                processFrame(is_bypass);
+                processFrame(is_bypass || (c_solo_on_ && editor_on_));
                 // overlap-add
                 const size_t range1 = fft_size_ - fft_pos_;
                 for (size_t chan = 0; chan < 2; ++chan) {
@@ -231,39 +265,88 @@ namespace zlp {
                     }
                 }
             }
-            // setup POST analyzer pointers and process
+            // post analyzer pointers
             for (size_t chan = 0; chan < 2; ++chan) {
                 post_analyzer_ptrs_[chan] = buffer[chan] + samples_processed;
             }
-
-            const auto loudness_matcher_on = loudness_matcher_on_.load(std::memory_order_relaxed);
-            if (loudness_matcher_on != c_loudness_matcher_on_) {
-                c_loudness_matcher_on_ = loudness_matcher_on;
-                if (c_loudness_matcher_on_) {
-                    loudness_matcher_.reset();
+            if (editor_on_) {
+                if (!c_solo_on_) {
+                    if (loudness_matcher_on_) {
+                        loudness_matcher_.processPre(
+                            std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()), chunk);
+                    }
+                    if (loudness_matcher_on_) {
+                        loudness_matcher_.processPost(
+                            std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                    }
+                    output_gain_dsp_.process(
+                        std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
                 }
-            }
 
-            if (c_loudness_matcher_on_) {
-                loudness_matcher_.processPre(std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()), chunk);
-            }
-            if (c_sgc_on_) {
-                sgc_gain_.process(std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
-            }
-            if (c_loudness_matcher_on_) {
-                loudness_matcher_.processPost(std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
-            }
-            output_gain_dsp_.process(std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
-            const auto displayed_gain_linear = c_sgc_on_
-                ? c_sgc_gain_linear_ * output_gain_dsp_.getCurrentGainLinear()
-                : output_gain_dsp_.getCurrentGainLinear();
-            displayed_gain_.store(displayed_gain_linear, std::memory_order::relaxed);
+                displayed_gain_.store(output_gain_dsp_.getCurrentGainLinear(), std::memory_order::relaxed);
 
-            analyzer_sender_.process({
-                                         std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
-                                         std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()),
-                                         std::span(side_analyzer_ptrs_.data(), side_analyzer_ptrs_.size())
-                                     }, chunk);
+                if (c_solo_on_) {
+                    if (!dynamic_on_[c_solo_idx_]) {
+                        std::memset(solo_pointers_[0], 0, chunk * sizeof(float));
+                        std::memset(solo_pointers_[1], 0, chunk * sizeof(float));
+                    }
+                    switch (lrms_[c_solo_idx_]) {
+                    case FilterStereo::kStereo: {
+                        std::copy_n(post_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+                        std::copy_n(post_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+                        solo_filter_.process(solo_pointers_, chunk);
+                        break;
+                    }
+                    case FilterStereo::kLeft: {
+                        std::memset(solo_pointers_[1], 0, chunk * sizeof(float));
+                        std::copy_n(post_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+                        solo_filter_.process({&solo_pointers_[0], 1}, chunk);
+                        break;
+                    }
+                    case FilterStereo::kRight: {
+                        std::memset(solo_pointers_[0], 0, chunk * sizeof(float));
+                        std::copy_n(post_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+                        solo_filter_.process({&solo_pointers_[1], 1}, chunk);
+                        break;
+                    }
+                    case FilterStereo::kMid: {
+                        std::copy_n(post_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+                        std::copy_n(post_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+                        zldsp::splitter::InplaceMSSplitter<float>::split(
+                            solo_pointers_[0], solo_pointers_[1], chunk);
+                        solo_filter_.process({&solo_pointers_[0], 1}, chunk);
+                        std::memset(solo_pointers_[1], 0, chunk * sizeof(float));
+                        zldsp::splitter::InplaceMSSplitter<float>::combine(
+                            solo_pointers_[0], solo_pointers_[1], chunk);
+                        break;
+                    }
+                    case FilterStereo::kSide: {
+                        std::copy_n(post_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+                        std::copy_n(post_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+                        zldsp::splitter::InplaceMSSplitter<float>::split(
+                            solo_pointers_[0], solo_pointers_[1], chunk);
+                        solo_filter_.process({&solo_pointers_[1], 1}, chunk);
+                        std::memset(solo_pointers_[0], 0, chunk * sizeof(float));
+                        zldsp::splitter::InplaceMSSplitter<float>::combine(
+                            solo_pointers_[0], solo_pointers_[1], chunk);
+                        break;
+                    }
+                    }
+                    if (!is_bypass) {
+                        std::copy_n(solo_pointers_[0], chunk, post_analyzer_ptrs_[0]);
+                        std::copy_n(solo_pointers_[1], chunk, post_analyzer_ptrs_[1]);
+                    }
+                }
+
+                analyzer_sender_.process({
+                                             std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
+                                             std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()),
+                                             std::span(side_analyzer_ptrs_.data(), side_analyzer_ptrs_.size())
+                                         }, chunk);
+            } else {
+                output_gain_dsp_.process(
+                    std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+            }
 
             samples_processed += chunk;
         }
@@ -945,6 +1028,9 @@ namespace zlp {
             const auto to_update_base = to_update_bases_[band] || to_update_empty_bases_[band].check();
             if (to_update_base) {
                 const auto paras = emptys_[band].getParas();
+                if (c_solo_on_ && c_solo_idx_ == band) {
+                    updateSoloFilter<false>(paras);
+                }
                 spec_response_[band].updateBaseResponse(paras, ideal_, ws_);
                 sgc_values_[band] = zldsp::filter::getGainCompensation(paras);
                 const auto lrms = static_cast<size_t>(lrms_[band]);
@@ -1086,7 +1172,8 @@ namespace zlp {
 
     void Controller::updateOutputGain() {
         const auto gain = a_output_gain_.load(std::memory_order::relaxed);
-        output_gain_dsp_.setGainDecibels(gain);
+        output_gain_linear_ = zldsp::chore::decibelsToGain(gain);
+        output_gain_dsp_.setGainLinear(sgc_gain_linear_ * output_gain_linear_);
     }
 
     void Controller::handleAsyncUpdate() {
@@ -1119,7 +1206,50 @@ namespace zlp {
                 }
             }
         }
-        c_sgc_gain_linear_ = static_cast<float>(zldsp::filter::dbToGain(sgc_gain_db));
-        sgc_gain_.setGainLinear(c_sgc_gain_linear_);
+        sgc_gain_linear_ = static_cast<float>(zldsp::filter::dbToGain(sgc_gain_db));
+    }
+
+    template <bool force>
+    void Controller::updateSoloFilter(zldsp::filter::FilterParameters paras) {
+        switch (paras.filter_type) {
+        case zldsp::filter::kPeak:
+        case zldsp::filter::kNotch:
+        case zldsp::filter::kBandPass: {
+            paras.filter_type = zldsp::filter::kBandPass;
+            break;
+        }
+        case zldsp::filter::kAllPass: {
+            if (paras.order == 1) {
+                paras.q = std::sqrt(2.0f) * 0.5f;
+            }
+            paras.order = 2;
+            paras.filter_type = zldsp::filter::kBandPass;
+            break;
+        }
+        case zldsp::filter::kTiltShelf:
+        case zldsp::filter::kFlatTilt: {
+            paras.order = 2;
+            paras.q = std::sqrt(2.0f) * 0.03125f;
+            paras.filter_type = zldsp::filter::kBandPass;
+            break;
+        }
+        case zldsp::filter::kLowShelf:
+        case zldsp::filter::kHighPass: {
+            paras.q = std::sqrt(2.0f) * 0.5f;
+            paras.filter_type = zldsp::filter::kLowPass;
+            break;
+        }
+        case zldsp::filter::kHighShelf:
+        case zldsp::filter::kLowPass: {
+            paras.q = std::sqrt(2.0f) * 0.5f;
+            paras.filter_type = zldsp::filter::kHighPass;
+            break;
+        }
+        }
+        if constexpr (force) {
+            solo_filter_.forceUpdate(paras);
+        } else {
+            solo_filter_.updateParas(paras);
+        }
     }
 }
