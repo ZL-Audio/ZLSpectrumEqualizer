@@ -25,19 +25,15 @@ namespace zlpanel {
         zlgui::UIBase& base_;
 
         static constexpr auto kText =
-            "ZL Equalizer is Free and Open-source. ZL Equalizer is licensed under AGPLv3, except for the logo of ZL Audio and the logo of ZL Equalizer. You can obtain the corresponding source code at https://github.com/ZL-Audio/ZLEqualizer or https://gitee.com/ZL-Audio/ZLEqualizer.\n\n"
-            "Copyright (c) 2023-2026 [zsliu98](https://github.com/zsliu98)\n\n"
+            "ZL Spectrum Equalizer is Free and Open-source. ZL Spectrum Equalizer is licensed under AGPLv3, except for the logo of ZL Audio and the logo of ZL Spectrum Equalizer. You can obtain the corresponding source code at https://github.com/ZL-Audio/ZLSpectrumEqualizer or https://gitee.com/ZL-Audio/ZLSpectrumEqualizer.\n\n"
+            "Copyright (c) 2025-2026 [zsliu98](https://github.com/zsliu98)\n\n"
             "JUCE framework from [JUCE](https://github.com/juce-framework/JUCE)\n\n"
             "JUCE template from [pamplejuce](https://github.com/sudara/pamplejuce)\n\n"
-            "[nlopt](https://github.com/stevengj/nlopt) by [Steven G. Johnson](https://github.com/stevengj)\n\n"
             "[Highway](https://github.com/google/highway) by [Google](https://github.com/google)\n\n"
             "[Material Symbols](https://github.com/google/material-design-icons) by [Google](https://github.com/google)\n\n"
             "[inter](https://github.com/rsms/inter) by [The Inter Project Authors](https://github.com/rsms/inter)\n\n"
             "Yuriy Ivantsov. On the ideal bilinear and biquadratic digital filter. (2025).\n\n"
-            "Martin Vicanek. Matched One-Pole Digital Shelving Filters. (2019).\n\n"
-            "Martin Vicanek. Matched Second Order Digital Filters. (2016).\n\n"
             "Nigel Redmon. Cascading filters. (2016).\n\n"
-            "Aaron Wishnick. Time-Varying Filters for Musical Applications. DAFx. (2014).\n\n"
             "Cleve Moler. Makima Piecewise Cubic Interpolation. MathWorks Blogs. (2019).";
 
         [[nodiscard]] juce::TextLayout getTipTextLayout(const juce::String& text,

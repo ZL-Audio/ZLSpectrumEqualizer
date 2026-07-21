@@ -44,7 +44,7 @@ namespace zlp {
         resizeWorkingSpace();
 
         ideal_.prepare(sample_rate);
-        
+
         const size_t max_analyzer_hop = ((size_t)1 << fft_order_) / 4;
         for (size_t chan = 0; chan < 2; ++chan) {
             pre_analyzer_temp_[chan].resize(max_analyzer_hop);
@@ -254,14 +254,16 @@ namespace zlp {
                 loudness_matcher_.processPost(std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
             }
             output_gain_dsp_.process(std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
-            const auto displayed_gain_linear = c_sgc_on_ ? c_sgc_gain_linear_ * output_gain_dsp_.getCurrentGainLinear() : output_gain_dsp_.getCurrentGainLinear();
+            const auto displayed_gain_linear = c_sgc_on_
+                ? c_sgc_gain_linear_ * output_gain_dsp_.getCurrentGainLinear()
+                : output_gain_dsp_.getCurrentGainLinear();
             displayed_gain_.store(displayed_gain_linear, std::memory_order::relaxed);
 
             analyzer_sender_.process({
-                std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
-                std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()),
-                std::span(side_analyzer_ptrs_.data(), side_analyzer_ptrs_.size())
-            }, chunk);
+                                         std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
+                                         std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()),
+                                         std::span(side_analyzer_ptrs_.data(), side_analyzer_ptrs_.size())
+                                     }, chunk);
 
             samples_processed += chunk;
         }
@@ -464,10 +466,10 @@ namespace zlp {
         if (start_idx >= end_idx) {
             return;
         }
-        
+
         auto* HWY_RESTRICT side_ptr = data.fft_side_abs_sqr.data();
         auto* HWY_RESTRICT dynamic_ptr = data.dynamic_response.data();
-        
+
         // apply tilt to side-chain (in linear)
         {
             const auto* HWY_RESTRICT tilt_ptr = spec_tilter_.getTilt().data();
@@ -477,7 +479,7 @@ namespace zlp {
                 hn::Store(hn::Mul(v, v_tilt), d, side_ptr + i);
             }
         }
-        
+
         // calculate relative_avg if required (in linear, convert to log)
         float relative_avg = 0.0f;
         if (data.require_relative) {
@@ -490,7 +492,7 @@ namespace zlp {
         }
 
         // calculate band_avg of each dynamic band if required (in linear, convert to log)
-        for (const auto band: data.dynamic_bands) {
+        for (const auto band : data.dynamic_bands) {
             switch (dynamic_mode_[band]) {
             case DynamicMode::kAbsolute: {
                 band_avgs_[band] = 0.f;
@@ -538,7 +540,7 @@ namespace zlp {
                                                          spec_response_[band], spec_follower_[band], band_avgs_[band]);
             }
         }
-        
+
         // convert dynamic response from db to linear
         const auto* HWY_RESTRICT static_ptr = data.static_response.data();
         for (size_t i = dyn_start; i < dyn_end; i += lanes) {
@@ -739,7 +741,8 @@ namespace zlp {
         window2_.resize(fft_size_);
         window_bypass_.resize(fft_size_);
 
-        zldsp::fft::createPeriodicHanning(std::span{window1_.data(), window1_.size()}, 2.f / static_cast<float>(fft_size_));
+        zldsp::fft::createPeriodicHanning(std::span{window1_.data(), window1_.size()},
+                                          2.f / static_cast<float>(fft_size_));
         const auto v_window2_scale = hn::Set(d, static_cast<float>(fft_size_) / 3.f);
         const auto v_bypass_scale = hn::Set(d, static_cast<float>(fft_size_ * fft_size_) / 6.f);
         for (size_t i = 0; i < fft_size_; i += lanes) {
@@ -939,7 +942,7 @@ namespace zlp {
     void Controller::updateSpecResponse() {
         bool channel_needs_update = false;
         for (const auto& band : on_bands_) {
-           const auto to_update_base = to_update_bases_[band] || to_update_empty_bases_[band].check();
+            const auto to_update_base = to_update_bases_[band] || to_update_empty_bases_[band].check();
             if (to_update_base) {
                 const auto paras = emptys_[band].getParas();
                 spec_response_[band].updateBaseResponse(paras, ideal_, ws_);
@@ -967,7 +970,7 @@ namespace zlp {
     }
 
     void Controller::updateLRMS() {
-        for (auto& data: channel_datas_) {
+        for (auto& data : channel_datas_) {
             data.bands.clear();
             data.dynamic_bands.clear();
         }
@@ -1041,7 +1044,7 @@ namespace zlp {
                     min_idx = min_idx / lanes * lanes;
                     max_idx = (max_idx + lanes - 1) / lanes * lanes;
                     max_idx = std::min(max_idx, num_bin_effective_);
-                    
+
                     data.dynamic_start_idx = min_idx;
                     data.dynamic_end_idx = max_idx;
 
@@ -1060,11 +1063,11 @@ namespace zlp {
         }
 
         dispatch_mask_ = 0;
-        if (!stereo_data_.bands.empty()) {dispatch_mask_ |= 1;}
-        if (!l_data_.bands.empty()) {dispatch_mask_ |= 2;}
-        if (!r_data_.bands.empty()) {dispatch_mask_ |= 4;}
-        if (!m_data_.bands.empty()) {dispatch_mask_ |= 8;}
-        if (!s_data_.bands.empty()) {dispatch_mask_ |= 16;}
+        if (!stereo_data_.bands.empty()) { dispatch_mask_ |= 1; }
+        if (!l_data_.bands.empty()) { dispatch_mask_ |= 2; }
+        if (!r_data_.bands.empty()) { dispatch_mask_ |= 4; }
+        if (!m_data_.bands.empty()) { dispatch_mask_ |= 8; }
+        if (!s_data_.bands.empty()) { dispatch_mask_ |= 16; }
 
         const bool dynamic_lr_on = !l_data_.dynamic_bands.empty() || !r_data_.dynamic_bands.empty();
         const bool dynamic_ms_on = !m_data_.dynamic_bands.empty() || !s_data_.dynamic_bands.empty();

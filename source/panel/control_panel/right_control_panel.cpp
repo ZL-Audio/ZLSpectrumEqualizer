@@ -101,7 +101,7 @@ namespace zlpanel {
             th_slider_abs_.setBounds(temp_bound.withBottom(temp_bound.getBottom()));
             th_slider_band_.setBounds(temp_bound.withBottom(temp_bound.getBottom()));
             th_slider_rel_.setBounds(temp_bound.withBottom(temp_bound.getBottom()));
-            
+
             th_slider_abs_.setBounds(temp_bound.removeFromBottom(slider_height));
             th_slider_band_.setBounds(th_slider_abs_.getBounds());
             th_slider_rel_.setBounds(th_slider_abs_.getBounds());

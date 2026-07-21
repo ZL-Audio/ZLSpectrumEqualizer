@@ -56,13 +56,13 @@ namespace zlpanel {
 
     void LassoBandUpdater::loadParas() {
         for (size_t i = 0; i < kScaleIDs.size(); ++i) {
-            for (const auto& band: items_set_) {
+            for (const auto& band : items_set_) {
                 const auto* para = scale_paras_[i][band];
                 scale_values_when_selected_[i][band] = para->convertFrom0to1(para->getValue());
             }
         }
         for (size_t i = 0; i < kShiftIDs.size(); ++i) {
-            for (const auto& band: items_set_) {
+            for (const auto& band : items_set_) {
                 const auto* para = shift_paras_[i][band];
                 shift_values_when_selected_[i][band] = para->convertFrom0to1(para->getValue());
             }
@@ -154,7 +154,7 @@ namespace zlpanel {
                     continue;
                 }
                 const auto scale = target / source;
-                for (const auto& band: items_set_) {
+                for (const auto& band : items_set_) {
                     if (band == selected_band) {
                         continue;
                     }
@@ -170,7 +170,7 @@ namespace zlpanel {
         if (to_update_sync_[0].check()) {
             const auto* target_para = sync_paras_[0][selected_band];
             const auto value = target_para->getValue();
-            for (const auto& band: items_set_) {
+            for (const auto& band : items_set_) {
                 if (band == selected_band) {
                     continue;
                 }
@@ -184,7 +184,7 @@ namespace zlpanel {
             if (to_update_sync_[i].check()) {
                 const auto* target_para = sync_paras_[i][selected_band];
                 const auto value = target_para->getValue();
-                for (const auto& band: items_set_) {
+                for (const auto& band : items_set_) {
                     if (band == selected_band) {
                         continue;
                     }
@@ -203,7 +203,7 @@ namespace zlpanel {
                 const auto target = target_para->convertFrom0to1(target_para->getValue());
                 const auto source = shift_values_when_selected_[i][selected_band];
                 const auto shift = target - source;
-                for (const auto& band: items_set_) {
+                for (const auto& band : items_set_) {
                     if (band == selected_band) {
                         continue;
                     }

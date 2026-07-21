@@ -154,8 +154,8 @@ namespace zlp {
 
         static std::unique_ptr<juce::AudioParameterFloat> get(const std::string& suffix, const bool meta,
                                                               const bool automate) {
-            auto attributes = juce::AudioParameterFloatAttributes().withAutomatable(automate).withLabel(T::kName).
-                                                                    withMeta(meta);
+            auto attributes = juce::AudioParameterFloatAttributes(
+                ).withAutomatable(automate).withLabel(T::kName).withMeta(meta);
             return std::make_unique<juce::AudioParameterFloat>(juce::ParameterID(T::kID + suffix, kVersionHint),
                                                                T::kName + suffix, T::kRange, T::kDefaultV, attributes);
         }
@@ -183,8 +183,8 @@ namespace zlp {
 
         static std::unique_ptr<juce::AudioParameterBool> get(const std::string& suffix, const bool meta,
                                                              const bool automate) {
-            auto attributes = juce::AudioParameterBoolAttributes().withAutomatable(automate).withLabel(T::kName).
-                                                                   withMeta(meta);
+            auto attributes = juce::AudioParameterBoolAttributes(
+                ).withAutomatable(automate).withLabel(T::kName).withMeta(meta);
             return std::make_unique<juce::AudioParameterBool>(juce::ParameterID(T::kID + suffix, kVersionHint),
                                                               T::kName + suffix, T::kDefaultV, attributes);
         }
@@ -213,8 +213,8 @@ namespace zlp {
 
         static std::unique_ptr<juce::AudioParameterChoice> get(const std::string& suffix, const bool meta,
                                                                const bool automate) {
-            auto attributes = juce::AudioParameterChoiceAttributes().withAutomatable(automate).withLabel(T::kName).
-                                                                     withMeta(meta);
+            auto attributes = juce::AudioParameterChoiceAttributes(
+                ).withAutomatable(automate).withLabel(T::kName).withMeta(meta);
             return std::make_unique<juce::AudioParameterChoice>(juce::ParameterID(T::kID + suffix, kVersionHint),
                                                                 T::kName + suffix, T::kChoices, T::kDefaultI,
                                                                 attributes);
@@ -502,7 +502,7 @@ namespace zlp {
                        PGain::get(suffix), PTargetGain::get(suffix),
                        PQ::get(suffix, true, true),
                        PDynamicON::get(suffix), PDynamicBypass::get(suffix), PDynamicMode::get(suffix),
-                       PThresholdAbs::get(suffix), PThresholdBand::get(suffix), PThresholdRel::get(suffix), 
+                       PThresholdAbs::get(suffix), PThresholdBand::get(suffix), PThresholdRel::get(suffix),
                        PKneeW::get(suffix), PAttack::get(suffix), PRelease::get(suffix));
         }
         return layout;

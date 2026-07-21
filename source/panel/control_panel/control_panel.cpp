@@ -51,8 +51,6 @@ namespace zlpanel {
         auto bound = getLocalBounds();
         const auto padding = getPaddingSize(font_size);
 
-
-
         const auto left_width = left_control_panel_.getIdealWidth();
         center_bound_ = bound.withSizeKeepingCentre(left_width, bound.getHeight());
         mouse_center_bound_ = center_bound_.reduced(padding);

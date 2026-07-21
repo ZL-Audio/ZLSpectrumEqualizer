@@ -273,7 +273,8 @@ namespace zlp {
 
         // filter dynamic parameters
         std::atomic<float> a_spec_smooth_value_{0.0f};
-        std::atomic<zldsp::filter::SpecSmoother<float>::SmoothMethod> a_spec_smooth_type_{zldsp::filter::SpecSmoother<float>::SmoothMethod::kOCT};
+        std::atomic<zldsp::filter::SpecSmoother<float>::SmoothMethod> a_spec_smooth_type_{
+            zldsp::filter::SpecSmoother<float>::SmoothMethod::kOCT};
         zlchore::thread::Notifier to_update_spec_smooth_{false};
 
         std::atomic<float> a_spec_tilt_slope_{0.0f};
@@ -421,6 +422,7 @@ namespace zlp {
         void updateChannelData();
 
         void updateOutputGain();
+
         void updateSGC();
 
         void handleAsyncUpdate() override;

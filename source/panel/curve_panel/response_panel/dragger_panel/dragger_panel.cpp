@@ -94,7 +94,8 @@ namespace zlpanel {
     void DraggerPanel::repaintCallBackSlow() {
         mouse_event_panel_.repaintCallbackSlow();
         scale_panel_.repaintCallBackSlow();
-        const auto max_db_id = p_ref_.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)->load(std::memory_order::relaxed);
+        const auto max_db_id = p_ref_.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)->load(
+            std::memory_order::relaxed);
         if (std::abs(max_db_id - c_max_db_id_) > .1f) {
             c_max_db_id_ = max_db_id;
             const auto max_db = base_.getCurveDBScale(static_cast<size_t>(std::round(c_max_db_id_)));
@@ -340,7 +341,9 @@ namespace zlpanel {
                             p_ref_.parameters_, zlp::PDynamicON::kID + std::to_string(band)) > .5f;
                         updateValue(p_ref_.parameters_.getParameter(zlp::PDynamicON::kID + std::to_string(band)),
                                     dynamic_on ? 0.f : 1.f);
-                        const auto max_db_id = std::round(p_ref_.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)->load(std::memory_order::relaxed));
+                        const auto max_db_id = std::round(
+                            p_ref_.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)->load(
+                                std::memory_order::relaxed));
                         band_helper::turnOnOffDynamic(p_ref_, band, !dynamic_on,
                                                       base_.getCurveDBScale(static_cast<size_t>(max_db_id)));
                     }
@@ -351,11 +354,13 @@ namespace zlpanel {
                     const auto status = static_cast<int>(std::round(para->convertFrom0to1(para->getValue())));
                     if (status == static_cast<int>(zlp::FilterStatus::kOn)) {
                         para->beginChangeGesture();
-                        para->setValueNotifyingHost(para->convertTo0to1(static_cast<float>(zlp::FilterStatus::kBypass)));
+                        para->setValueNotifyingHost(
+                            para->convertTo0to1(static_cast<float>(zlp::FilterStatus::kBypass)));
                         para->endChangeGesture();
                     } else if (status == static_cast<int>(zlp::FilterStatus::kBypass)) {
                         para->beginChangeGesture();
-                        para->setValueNotifyingHost(para->convertTo0to1(static_cast<float>(zlp::FilterStatus::kOn)));
+                        para->setValueNotifyingHost(
+                            para->convertTo0to1(static_cast<float>(zlp::FilterStatus::kOn)));
                         para->endChangeGesture();
                     }
                 }
@@ -427,7 +432,9 @@ namespace zlpanel {
                             p_ref_.parameters_, zlp::PDynamicON::kID + std::to_string(band)) > .5f;
                         updateValue(p_ref_.parameters_.getParameter(zlp::PDynamicON::kID + std::to_string(band)),
                                     dynamic_on ? 0.f : 1.f);
-                        const auto max_db_id = std::round(p_ref_.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)->load(std::memory_order::relaxed));
+                        const auto max_db_id = std::round(
+                            p_ref_.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)->load(
+                                std::memory_order::relaxed));
                         band_helper::turnOnOffDynamic(p_ref_, band, !dynamic_on,
                                                       base_.getCurveDBScale(static_cast<size_t>(max_db_id)));
                     }

@@ -133,8 +133,8 @@ namespace zlpanel {
                                juce::roundToInt(bound.getWidth()),
                                other_panel_.getIdealHeight());
         credit_panel_.setBounds(0, 0,
-                               juce::roundToInt(bound.getWidth()),
-                               credit_panel_.getIdeatlHeight());
+                                juce::roundToInt(bound.getWidth()),
+                                credit_panel_.getIdeatlHeight());
         other_panel_.setParentWidth(getWidth());
 
         view_port_.setBounds(bound.removeFromTop(bound.getHeight() * .9125f).toNearestInt());

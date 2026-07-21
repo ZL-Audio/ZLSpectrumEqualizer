@@ -135,7 +135,7 @@ namespace zlpanel {
                 const auto max_idx = std::round(p_ref_.parameters_NA_.getRawParameterValue(
                     zlstate::PEQMaxDB::kID)->load(std::memory_order::relaxed));
                 band_helper::turnOnOffDynamic(p_ref_, c_band, dynamic_button_.getToggleState(),
-                    base_.getCurveDBScale(static_cast<size_t>(max_idx)));
+                                              base_.getCurveDBScale(static_cast<size_t>(max_idx)));
             }
             if (!dynamic_button_.getToggleState() && base_.getSoloWholeIdx() < 2 * zlp::kBandNum) {
                 base_.setSoloWholeIdx(2 * zlp::kBandNum);

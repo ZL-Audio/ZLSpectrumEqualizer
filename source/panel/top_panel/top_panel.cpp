@@ -36,8 +36,6 @@ namespace zlpanel {
         analyzer_label_.setBufferedToImage(true);
         addAndMakeVisible(analyzer_label_);
 
-
-
         bypass_button_.setImageAlpha(1.f, 1.f, .5f, .75f);
         bypass_button_.setBufferedToImage(true);
         addAndMakeVisible(bypass_button_);
@@ -51,8 +49,6 @@ namespace zlpanel {
         ext_button_.setImageAlpha(.5f, .75f, 1.f, 1.f);
         ext_button_.setBufferedToImage(true);
         addAndMakeVisible(ext_button_);
-
-
 
         setInterceptsMouseClicks(false, true);
     }
@@ -86,13 +82,11 @@ namespace zlpanel {
             analyzer_label_.setBounds(bound.getX(), 0, t_width, getHeight());
             bound.removeFromLeft(t_width);
         }
-
         {
             const auto right_pad = getWidth() - bound.getRight();
             const auto t_width = 5 * padding + 2 * slider_width - right_pad + 2 * padding;
             output_label_.setBounds(bound.getRight() - t_width, 0, t_width, getHeight());
         }
-        bound = getLocalBounds().reduced(0, padding / 2);
     }
 
     void TopPanel::repaintCallbackSlow() {

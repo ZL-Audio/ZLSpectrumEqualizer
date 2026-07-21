@@ -232,10 +232,12 @@ namespace zlpanel {
         if (update_smooth) {
             if (fft_smooth_type_idx == 0) {
                 smoother_.setSmooth(
-                    zlstate::PFFTSmoothOCTValue::kValues[static_cast<size_t>(fft_smooth_oct_value_idx)], sample_rate, zldsp::analyzer::SpectrumSmoother::SmoothMethod::kOCT);
+                    zlstate::PFFTSmoothOCTValue::kValues[static_cast<size_t>(fft_smooth_oct_value_idx)], sample_rate,
+                    zldsp::analyzer::SpectrumSmoother::SmoothMethod::kOCT);
             } else {
                 smoother_.setSmooth(
-                    zlstate::PFFTSmoothERBValue::kValues[static_cast<size_t>(fft_smooth_erb_value_idx)], sample_rate, zldsp::analyzer::SpectrumSmoother::SmoothMethod::kERB);
+                    zlstate::PFFTSmoothERBValue::kValues[static_cast<size_t>(fft_smooth_erb_value_idx)], sample_rate,
+                    zldsp::analyzer::SpectrumSmoother::SmoothMethod::kERB);
             }
         }
         // update xs para

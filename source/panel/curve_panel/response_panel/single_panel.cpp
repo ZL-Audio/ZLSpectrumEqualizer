@@ -98,7 +98,9 @@ namespace zlpanel {
                           zldsp::vector::aligned_vector<float>& target_mag,
                           const float center_x, const float center_mag, const float button_mag,
                           const bool is_all_pass, const bool is_first_order) {
-        if (band >= zlp::kBandNum) return;
+        if (band >= zlp::kBandNum) {
+            return;
+        }
         const auto center_y = center_y_.load(std::memory_order_relaxed);
         auto& next_base_path{base_paths_[band].getWriter()};
         auto& next_base_fill{base_fills_[band].getWriter()};

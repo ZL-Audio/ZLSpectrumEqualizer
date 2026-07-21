@@ -35,7 +35,8 @@ namespace zlp {
         } else if (parameter_ID == PSpecSmooth::kID) {
             controller_.setSpecSmoothValue(value);
         } else if (parameter_ID == PSpecSmoothType::kID) {
-            controller_.setSpecSmoothType(static_cast<zldsp::filter::SpecSmoother<float>::SmoothMethod>(std::round(value)));
+            controller_.setSpecSmoothType(
+                static_cast<zldsp::filter::SpecSmoother<float>::SmoothMethod>(std::round(value)));
         } else if (parameter_ID == PSpecTilt::kID) {
             controller_.setSpecTiltSlope(value);
         } else if (parameter_ID == PSpecSkewAttack::kID) {
