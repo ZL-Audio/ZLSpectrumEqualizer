@@ -211,6 +211,16 @@ namespace zlp {
             return to_update_channel_data_;
         }
 
+        void setSGCON(const float f) {
+            sgc_on_.store(f, std::memory_order::relaxed);
+            to_update_sgc_on_.signal();
+            to_update_.signal();
+        }
+
+        double getDisplayedGain() const {
+            return displayed_gain_.load(std::memory_order::relaxed);
+        }
+
     private:
         enum class SideStatus {
             kNotRequired, kLR, kMS, kLRMS
@@ -352,7 +362,15 @@ namespace zlp {
         // loudness matcher
         std::atomic<bool> loudness_matcher_on_{false};
         bool c_loudness_matcher_on_{false};
-        zldsp::loudness::LUFSMatcher<float, true> loudness_matcher_;
+        zldsp::loudness::LUFSMatcher<float, true> loudness_matcher_{};
+
+        std::atomic<float> sgc_on_{false};
+        zlchore::thread::Notifier to_update_sgc_on_{false};
+        bool c_sgc_on_{false};
+        std::array<double, kBandNum> sgc_values_{};
+        float c_sgc_gain_linear_{1.f};
+        zldsp::gain::Gain<float> sgc_gain_{};
+        std::atomic<double> displayed_gain_{1.};
 
         // output gain
         zldsp::gain::Gain<float> output_gain_dsp_{};
@@ -403,6 +421,7 @@ namespace zlp {
         void updateChannelData();
 
         void updateOutputGain();
+        void updateSGC();
 
         void handleAsyncUpdate() override;
     };

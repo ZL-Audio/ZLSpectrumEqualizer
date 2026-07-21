@@ -12,6 +12,7 @@
 namespace zlpanel {
     OutputLabel::OutputLabel(PluginProcessor& p, zlgui::UIBase& base) :
         base_(base),
+        p_ref_(p),
         control_background_(base),
         label_laf_(base),
         scale_ref_(*p.parameters_.getRawParameterValue(zlp::PGainScale::kID)),
@@ -98,7 +99,7 @@ namespace zlpanel {
 
     void OutputLabel::checkUpdate() {
         const auto scale = scale_ref_.load(std::memory_order_relaxed);
-        auto gain_db = gain_slider_.getValue();
+        auto gain_db = zldsp::chore::gainToDecibels(p_ref_.getController().getDisplayedGain());
         if (std::abs(scale - c_scale_) > 1e-3) {
             c_scale_ = scale;
             scale_label_.setText(floatToStringSnprintf(c_scale_, 0) + "%",

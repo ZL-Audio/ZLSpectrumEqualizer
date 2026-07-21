@@ -30,6 +30,7 @@ namespace zlpanel {
 
     private:
         zlgui::UIBase& base_;
+        PluginProcessor& p_ref_;
         zlgui::attachment::ComponentUpdater updater_;
 
         ControlBackground control_background_;

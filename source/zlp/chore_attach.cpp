@@ -44,6 +44,8 @@ namespace zlp {
             controller_.setSpecFollowerSkewRelease(value);
         } else if (parameter_ID == POutputGain::kID) {
             controller_.setOutputGain(value);
+        } else if (parameter_ID == PStaticGain::kID) {
+            controller_.setSGCON(value);
         }
     }
 }

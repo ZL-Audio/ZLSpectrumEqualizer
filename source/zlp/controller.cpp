@@ -8,6 +8,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "controller.hpp"
+#include "../dsp/filter/gain_compensation/gain_compensation.hpp"
 #include "../dsp/splitter/inplace_ms_splitter.hpp"
 
 namespace zlp {
@@ -57,6 +58,7 @@ namespace zlp {
 
         loudness_matcher_.prepare(sample_rate_, 2);
         output_gain_dsp_.prepare(sample_rate_, 2, 0.05);
+        sgc_gain_.prepare(sample_rate_, 2, 0.5);
 
         to_update_.signal();
         to_update_fft_resolution_.signal();
@@ -95,8 +97,12 @@ namespace zlp {
         if (to_update_output_gain_.check()) {
             updateOutputGain();
         }
-
+        c_sgc_on_ = sgc_on_.load(std::memory_order::relaxed) > 0.5f;
+        if (c_sgc_on_ && to_update_sgc_on_.check()) {
+            updateSGC();
+        }
         is_ext_side_ = a_is_ext_side_.load(std::memory_order::relaxed);
+        c_loudness_matcher_on_ = loudness_matcher_on_.load(std::memory_order::relaxed);
     }
 
     void Controller::process(const std::array<float*, 4>& buffer, const size_t num_samples, const bool is_bypass) {
@@ -239,18 +245,22 @@ namespace zlp {
             }
 
             if (c_loudness_matcher_on_) {
-                loudness_matcher_.processPre(std::span<float*>(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()), chunk);
+                loudness_matcher_.processPre(std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()), chunk);
+            }
+            if (c_sgc_on_) {
+                sgc_gain_.process(std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
             }
             if (c_loudness_matcher_on_) {
-                loudness_matcher_.processPost(std::span<float*>(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                loudness_matcher_.processPost(std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
             }
-
-            output_gain_dsp_.process(std::span<float*>(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+            output_gain_dsp_.process(std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+            const auto displayed_gain_linear = c_sgc_on_ ? c_sgc_gain_linear_ * output_gain_dsp_.getCurrentGainLinear() : output_gain_dsp_.getCurrentGainLinear();
+            displayed_gain_.store(displayed_gain_linear, std::memory_order::relaxed);
 
             analyzer_sender_.process({
-                std::span<float*>(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
-                std::span<float*>(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()),
-                std::span<float*>(side_analyzer_ptrs_.data(), side_analyzer_ptrs_.size())
+                std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
+                std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()),
+                std::span(side_analyzer_ptrs_.data(), side_analyzer_ptrs_.size())
             }, chunk);
 
             samples_processed += chunk;
@@ -933,6 +943,7 @@ namespace zlp {
             if (to_update_base) {
                 const auto paras = emptys_[band].getParas();
                 spec_response_[band].updateBaseResponse(paras, ideal_, ws_);
+                sgc_values_[band] = zldsp::filter::getGainCompensation(paras);
                 const auto lrms = static_cast<size_t>(lrms_[band]);
                 to_update_channel_static_[lrms] = true;
                 channel_needs_update = true;
@@ -952,6 +963,7 @@ namespace zlp {
         if (channel_needs_update) {
             to_update_channel_data_.signal();
         }
+        to_update_sgc_on_.signal();
     }
 
     void Controller::updateLRMS() {
@@ -1077,5 +1089,34 @@ namespace zlp {
     void Controller::handleAsyncUpdate() {
         const auto latency = latency_.load(std::memory_order::seq_cst);
         p_ref_.setLatencySamples(latency);
+    }
+
+    void Controller::updateSGC() {
+        double sgc_gain_db{0.0};
+        for (const size_t& band : on_bands_) {
+            if (filter_status_[band] == FilterStatus::kOn) {
+                switch (lrms_[band]) {
+                case FilterStereo::kStereo: {
+                    sgc_gain_db += sgc_values_[band];
+                    break;
+                }
+                case FilterStereo::kLeft:
+                case FilterStereo::kRight: {
+                    sgc_gain_db += 0.5 * sgc_values_[band];
+                    break;
+                }
+                case FilterStereo::kMid: {
+                    sgc_gain_db += 0.9 * sgc_values_[band];
+                    break;
+                }
+                case FilterStereo::kSide: {
+                    sgc_gain_db += 0.1 * sgc_values_[band];
+                    break;
+                }
+                }
+            }
+        }
+        c_sgc_gain_linear_ = static_cast<float>(zldsp::filter::dbToGain(sgc_gain_db));
+        sgc_gain_.setGainLinear(c_sgc_gain_linear_);
     }
 }
