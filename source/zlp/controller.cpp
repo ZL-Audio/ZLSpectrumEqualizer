@@ -41,11 +41,23 @@ namespace zlp {
         sample_rate_ = sample_rate;
         prepareFFTPlans();
         fft_order_ = fft_extreme_->get_order();
+        const size_t max_fft_size = 1ULL << fft_order_;
+        const size_t max_num_bin_effective = max_fft_size / 2;
+        {
+            const std::lock_guard lock(tri_buffer_lock_);
+            for (auto& tri_buf : tri_buffers_) {
+                for (auto& buf : tri_buf.getBuffer()) {
+                    buf.dyn_start = 0;
+                    buf.dyn_end = 0;
+                    buf.delta.resize(max_num_bin_effective);
+                }
+            }
+        }
         resizeWorkingSpace();
 
         ideal_.prepare(sample_rate);
 
-        const size_t max_analyzer_hop = ((size_t)1 << fft_order_) / 4;
+        const size_t max_analyzer_hop = (static_cast<size_t>(1) << fft_order_) / 4;
         for (size_t chan = 0; chan < 2; ++chan) {
             pre_analyzer_temp_[chan].resize(max_analyzer_hop);
             post_analyzer_temp_[chan].resize(max_analyzer_hop);
@@ -364,11 +376,11 @@ namespace zlp {
                 main_fft_done = true;
                 computeSideAbsSqrFromMain();
             }
-            processDynamicBands(stereo_data_);
-            processDynamicBands(l_data_);
-            processDynamicBands(r_data_);
-            processDynamicBands(m_data_);
-            processDynamicBands(s_data_);
+            processDynamicBands(stereo_data_, tri_buffers_[0]);
+            processDynamicBands(l_data_, tri_buffers_[1]);
+            processDynamicBands(r_data_, tri_buffers_[2]);
+            processDynamicBands(m_data_, tri_buffers_[3]);
+            processDynamicBands(s_data_, tri_buffers_[4]);
         }
         processMain(is_bypass, !main_fft_done);
     }
@@ -534,7 +546,8 @@ namespace zlp {
         }
     }
 
-    void Controller::processDynamicBands(ChannelData& data) {
+    void Controller::processDynamicBands(ChannelData& data,
+                                         zlchore::thread::TriBuffer<SharedData>& shared_data) {
         if (data.dynamic_bands.empty()) {
             return;
         }
@@ -622,6 +635,17 @@ namespace zlp {
                 spec_dynamic_[band].process<true, false>(side_ptr, dynamic_ptr,
                                                          spec_response_[band], spec_follower_[band], band_avgs_[band]);
             }
+        }
+
+        if (editor_on_) {
+            auto& shared_buffer = shared_data.getWriter();
+            if (shared_buffer.delta.size() != num_bin_effective_) {
+                shared_buffer.delta.resize(num_bin_effective_);
+            }
+            shared_buffer.dyn_start = dyn_start;
+            shared_buffer.dyn_end = dyn_end;
+            std::copy_n(dynamic_ptr + dyn_start, dyn_end - dyn_start, shared_buffer.delta.data() + dyn_start);
+            shared_data.publish();
         }
 
         // convert dynamic response from db to linear

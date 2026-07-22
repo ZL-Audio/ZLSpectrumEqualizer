@@ -32,6 +32,7 @@ namespace zlpanel {
             }
         }
         p_ref_.parameters_.addParameterListener(zlp::PGainScale::kID, this);
+        p_ref_.parameters_.addParameterListener(zlp::PFFTResolution::kID, this);
 
         xs_.resize(kNumPoints);
         ws_.resize(kNumPoints);
@@ -43,6 +44,7 @@ namespace zlpanel {
         for (size_t i = 0; i < 5; ++i) {
             sum_mags_[i].resize(kNumPoints);
             on_lr_indices_[i].reserve(zlp::kBandNum);
+            interpolated_deltas_[i].resize(kNumPoints);
         }
         addAndMakeVisible(single_panel_);
         addAndMakeVisible(sum_panel_);
@@ -65,6 +67,7 @@ namespace zlpanel {
             }
         }
         p_ref_.parameters_.removeParameterListener(zlp::PGainScale::kID, this);
+        p_ref_.parameters_.removeParameterListener(zlp::PFFTResolution::kID, this);
     }
 
     void ResponsePanel::paint(juce::Graphics& g) {
@@ -241,11 +244,57 @@ namespace zlpanel {
                     break;
                 }
             }
+            auto& tri_buffers = p_ref_.getController().getDynamicResponseTriBuffers();
+
             for (size_t lr = 0; lr < 5; ++lr) {
-                sum_panel_.run(lr, to_update_lr_flags_[lr], is_lr_not_off_flags_[lr],
-                               on_lr_indices_[lr],
-                               xs_, c_k_, c_b_,
-                               dynamic_mags_);
+                bool channel_has_dynamic = false;
+                for (const auto band : on_lr_indices_[lr]) {
+                    if (c_dynamic_ons_[band]) {
+                        channel_has_dynamic = true;
+                        break;
+                    }
+                }
+                bool valid_size = false;
+                {
+                    const std::lock_guard lock(p_ref_.getController().getTriBufferLock());
+                    tri_buffers[lr].pull();
+                    const auto& shared_buffer = tri_buffers[lr].getReader();
+                    valid_size = (shared_buffer.delta.size() == ws_dsp_.size() && !ws_dsp_.empty());
+                    if (valid_size) {
+                        static constexpr float kLogToDB = 8.685889638065037f;
+                        std::fill(delta_dsp_.data(), delta_dsp_.data() + shared_buffer.dyn_start, 0.f);
+                        for (size_t i = shared_buffer.dyn_start; i < shared_buffer.dyn_end; ++i) {
+                            delta_dsp_[i] = shared_buffer.delta[i] * kLogToDB;
+                        }
+                        std::fill(delta_dsp_.data() + shared_buffer.dyn_end, delta_dsp_.data() + delta_dsp_.size(), 0.f);
+                    }
+                }
+                if (valid_size) {
+                    makima_.prepare(ws_dsp_.data(), delta_dsp_.data(), ws_dsp_.size());
+                    makima_.eval(ws_.data(), interpolated_deltas_[lr].data(), kNumPoints);
+                }
+
+                const bool should_update_sum = to_update_lr_flags_[lr] || (channel_has_dynamic);
+                if (should_update_sum && channel_has_dynamic && !ws_dsp_.empty()) {
+                    if (valid_size) {
+                        sum_panel_.run(lr, true, is_lr_not_off_flags_[lr],
+                                       on_lr_indices_[lr],
+                                       xs_, c_k_, c_b_,
+                                       dynamic_mags_,
+                                       std::span<const float>(interpolated_deltas_[lr]));
+                    } else {
+                        sum_panel_.run(lr, should_update_sum, is_lr_not_off_flags_[lr],
+                                       on_lr_indices_[lr],
+                                       xs_, c_k_, c_b_,
+                                       dynamic_mags_);
+                    }
+                } else {
+                    sum_panel_.run(lr, should_update_sum, is_lr_not_off_flags_[lr],
+                                   on_lr_indices_[lr],
+                                   xs_, c_k_, c_b_,
+                                   dynamic_mags_);
+                }
+                to_update_lr_flags_[lr] = false;
                 if (threadShouldExit()) {
                     break;
                 }
@@ -301,6 +350,8 @@ namespace zlpanel {
                 std::clamp(value * gain_scale_.load(std::memory_order::relaxed) / 100.f, -30.f, 30.f),
                 std::memory_order::relaxed);
             to_update_target_gain_flags_[band].signal();
+        } else if (parameter_ID.startsWith(zlp::PFFTResolution::kID)) {
+            to_update_fft_resolution_.signal();
         }
     }
 
@@ -324,9 +375,7 @@ namespace zlpanel {
                 if (c_dynamic_ons_[band] != dynamic_on) {
                     c_dynamic_ons_[band] = dynamic_ons_[band].load(std::memory_order::relaxed);
                     to_update_lr_flags_[static_cast<size_t>(c_lr_modes_[band])] = true;
-                    if (!dynamic_on) {
-                        dynamic_mags_[band] = base_mags_[band];
-                    }
+                    dynamic_mags_[band] = base_mags_[band];
                 }
             }
             message_to_update_panels_.signal();
@@ -354,8 +403,10 @@ namespace zlpanel {
             message_to_update_panels_.signal();
         }
         // update sample rate
-        if (const auto sample_rate = sample_rate_.load(std::memory_order::relaxed);
-            std::abs(sample_rate - c_sample_rate_) > 1.0) {
+        const bool sr_changed = std::abs(sample_rate_.load(std::memory_order::relaxed) - c_sample_rate_) > 1.0;
+        const bool fft_res_changed = to_update_fft_resolution_.check();
+        if (sr_changed) {
+            const auto sample_rate = sample_rate_.load(std::memory_order::relaxed);
             c_sample_rate_ = sample_rate;
             c_slider_max_ = freq_helper::getSliderMax(sample_rate);
             if (sample_rate < 40000.0) {
@@ -372,6 +423,24 @@ namespace zlpanel {
                 ws_[i] = static_cast<float>(std::exp(interval_log_value * static_cast<double>(i)) * freq_scale);
             }
             std::fill(to_update_base_y_flags_.begin(), to_update_base_y_flags_.end(), true);
+        }
+        if ((sr_changed || fft_res_changed || ws_dsp_.empty()) && c_sample_rate_ >= 40000.0) {
+            const auto fft_resolution = p_ref_.parameters_.getRawParameterValue(zlp::PFFTResolution::kID)->load(std::memory_order::relaxed);
+            size_t fft_low_order;
+            if (c_sample_rate_ < 50000.0) { fft_low_order = 12; }
+            else if (c_sample_rate_ < 100000.0) { fft_low_order = 13; }
+            else if (c_sample_rate_ < 200000.0) { fft_low_order = 14; }
+            else if (c_sample_rate_ < 400000.0) { fft_low_order = 15; }
+            else { fft_low_order = 16; }
+
+            const size_t order = fft_low_order + static_cast<size_t>(std::round(fft_resolution));
+            const size_t fft_size = 1ULL << order;
+            const size_t num_bin_effective = fft_size / 2;
+
+            ws_dsp_.resize(num_bin_effective + 1);
+            zldsp::filter::IdealBase<float>::calculateWs(ws_dsp_);
+            ws_dsp_.resize(num_bin_effective);
+            delta_dsp_.resize(num_bin_effective);
         }
         // update width & xs
         if (to_update_bound_.check()) {
@@ -421,9 +490,7 @@ namespace zlpanel {
                     ideal_[band].forceUpdate(para);
                     ideal_[band].updateMagnitudeSquare(ws_, base_mags_[band]);
                     zldsp::vector::sqr_mag_to_db(base_mags_[band].data(), base_mags_[band].size());
-                    if (!c_dynamic_ons_[band]) {
-                        dynamic_mags_[band] = base_mags_[band];
-                    }
+                    dynamic_mags_[band] = base_mags_[band];
                     const auto center_w = para.freq * (2.0 * std::numbers::pi / c_sample_rate_);
                     const float center_square_magnitude = zldsp::chore::squareGainToDecibels(
                         ideal_[band].getCenterMagnitudeSquare(static_cast<float>(center_w)));

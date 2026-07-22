@@ -274,8 +274,8 @@ namespace zlp {
     public:
         static constexpr auto kID = "spectrum_tilt";
         static constexpr auto kName = "Spectrum Tilt";
-        inline static const auto kRange = juce::NormalisableRange<float>(-6.0f, 6.0f, 0.01f);
-        static constexpr auto kDefaultV = 0.0f;
+        inline static const auto kRange = juce::NormalisableRange<float>(-6.0f, 15.0f, 0.01f);
+        static constexpr auto kDefaultV = 4.5f;
     };
 
     class PSpecSkewAttack : public FloatParameters<PSpecSkewAttack> {

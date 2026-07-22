@@ -30,7 +30,8 @@ namespace zlpanel {
         void run(size_t lr, bool to_update, bool is_not_off,
                  std::span<size_t> on_indices,
                  std::span<float> xs, float k, float b,
-                 std::array<zldsp::vector::aligned_vector<float>, zlp::kBandNum>& dynamic_mags);
+                 std::array<zldsp::vector::aligned_vector<float>, zlp::kBandNum>& dynamic_mags,
+                 std::span<const float> delta_dB = {});
 
     private:
         static constexpr size_t kNumPoints = 400;

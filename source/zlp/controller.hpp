@@ -27,6 +27,8 @@
 #include "../dsp/splitter/inplace_ms_splitter.hpp"
 
 #include "../chore/thread/notifier.hpp"
+#include "../chore/thread/tri_buffer.hpp"
+#include "../dsp/lock/spin_lock.hpp"
 
 #include "../dsp/analyzer/analyzer_base/analyzer_sender_base.hpp"
 
@@ -236,6 +238,14 @@ namespace zlp {
             to_update_.signal();
         }
 
+        auto& getDynamicResponseTriBuffers() {
+            return tri_buffers_;
+        }
+
+        zldsp::lock::SpinLock& getTriBufferLock() {
+            return tri_buffer_lock_;
+        }
+
     private:
         enum class SideStatus {
             kNotRequired, kLR, kMS, kLRMS
@@ -255,6 +265,11 @@ namespace zlp {
             std::vector<size_t> dynamic_bands{};
             zldsp::vector::aligned_vector<float> dynamic_response;
             bool require_relative{false};
+        };
+
+        struct SharedData {
+            zldsp::vector::aligned_vector<float> delta;
+            size_t dyn_start{0}, dyn_end{0};
         };
 
         juce::AudioProcessor& p_ref_;
@@ -386,6 +401,8 @@ namespace zlp {
 
         std::atomic<bool> a_editor_on_{false};
         bool editor_on_{false};
+        std::array<zlchore::thread::TriBuffer<SharedData>, 5> tri_buffers_{};
+        zldsp::lock::SpinLock tri_buffer_lock_{};
 
         // output gain
         std::atomic<float> a_output_gain_{0.0f};
@@ -420,7 +437,7 @@ namespace zlp {
 
         void processDualChannelSide(ChannelData& ch1, ChannelData& ch2);
 
-        void processDynamicBands(ChannelData& data);
+        void processDynamicBands(ChannelData& data, zlchore::thread::TriBuffer<SharedData>& shared_data);
 
         void processMain(bool is_bypass, bool perform_fft);
 

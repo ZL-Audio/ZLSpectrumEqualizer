@@ -51,8 +51,9 @@ namespace zlpanel {
 
     void SumPanel::run(const size_t lr, const bool to_update, const bool is_not_off,
                        const std::span<size_t> on_indices,
-                       const std::span<float> xs, float k, float b,
-                       std::array<zldsp::vector::aligned_vector<float>, zlp::kBandNum>& dynamic_mags) {
+                       const std::span<float> xs, const float k, const float b,
+                       std::array<zldsp::vector::aligned_vector<float>, zlp::kBandNum>& dynamic_mags,
+                       const std::span<const float> delta_dB) {
         if (!to_update) {
             return;
         }
@@ -76,21 +77,43 @@ namespace zlpanel {
 
             const auto vk = hn::Set(d, k);
             const auto vb = hn::Set(d, b);
+            const bool has_delta = !delta_dB.empty();
             size_t i = 0;
-            for (; i + lanes <= temp_db_.size(); i += lanes) {
-                auto v_sum = hn::Zero(d);
-                for (const size_t on_index : on_indices) {
-                    const float* mag_ptr = dynamic_mags[on_index].data();
-                    v_sum = hn::Add(v_sum, hn::Load(d, mag_ptr + i));
+            if (has_delta) {
+                for (; i + lanes <= temp_db_.size(); i += lanes) {
+                    auto v_sum = hn::Zero(d);
+                    for (const size_t on_index : on_indices) {
+                        const float* mag_ptr = dynamic_mags[on_index].data();
+                        v_sum = hn::Add(v_sum, hn::Load(d, mag_ptr + i));
+                    }
+                    const auto v_delta = hn::Load(d, delta_dB.data() + i);
+                    v_sum = hn::Add(v_sum, v_delta);
+                    hn::Store(hn::MulAdd(vk, v_sum, vb), d, temp_db_.data() + i);
                 }
-                hn::Store(hn::MulAdd(vk, v_sum, vb), d, temp_db_.data() + i);
-            }
-            for (; i < temp_db_.size(); ++i) {
-                float sum = 0.0f;
-                for (const size_t on_index : on_indices) {
-                    sum += dynamic_mags[on_index][i];
+                for (; i < temp_db_.size(); ++i) {
+                    float sum = 0.0f;
+                    for (const size_t on_index : on_indices) {
+                        sum += dynamic_mags[on_index][i];
+                    }
+                    sum += delta_dB[i];
+                    temp_db_[i] = std::fma(k, sum, b);
                 }
-                temp_db_[i] = std::fma(k, sum, b);
+            } else {
+                for (; i + lanes <= temp_db_.size(); i += lanes) {
+                    auto v_sum = hn::Zero(d);
+                    for (const size_t on_index : on_indices) {
+                        const float* mag_ptr = dynamic_mags[on_index].data();
+                        v_sum = hn::Add(v_sum, hn::Load(d, mag_ptr + i));
+                    }
+                    hn::Store(hn::MulAdd(vk, v_sum, vb), d, temp_db_.data() + i);
+                }
+                for (; i < temp_db_.size(); ++i) {
+                    float sum = 0.0f;
+                    for (const size_t on_index : on_indices) {
+                        sum += dynamic_mags[on_index][i];
+                    }
+                    temp_db_[i] = std::fma(k, sum, b);
+                }
             }
         }
 

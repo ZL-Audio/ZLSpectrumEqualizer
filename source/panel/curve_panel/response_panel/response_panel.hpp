@@ -14,6 +14,7 @@
 #include "dragger_panel/dragger_panel.hpp"
 #include "solo_panel.hpp"
 #include "../../../chore/thread/notifier.hpp"
+#include "../../../dsp/interpolation/seq_makima.hpp"
 
 namespace zlpanel {
     class ResponsePanel final : public juce::Component,
@@ -119,6 +120,12 @@ namespace zlpanel {
 
         std::array<bool, zlp::kBandNum> to_update_base_y_flags_{};
         std::array<bool, zlp::kBandNum> to_update_target_y_flags_{};
+
+        zldsp::vector::aligned_vector<float> ws_dsp_{};
+        zldsp::vector::aligned_vector<float> delta_dsp_{};
+        zlchore::thread::Notifier to_update_fft_resolution_{false};
+        std::array<zldsp::vector::aligned_vector<float>, 5> interpolated_deltas_{};
+        zldsp::interpolation::SeqMakima<float> makima_{};
 
         // center x, left x, right x, center y, base button y, target button y
         std::array<std::array<std::atomic<float>, 6>, zlp::kBandNum> points_{};
