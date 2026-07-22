@@ -898,7 +898,7 @@ namespace zlp {
             channel_data.dynamic_bands.resize(kBandNum);
 
             channel_data.static_response.resize(num_bin_effective_);
-            channel_data.fft_side_abs_sqr.resize(num_bin_effective_);
+            channel_data.fft_side_abs_sqr.resize(num_bin_);
             channel_data.dynamic_response.resize(num_bin_effective_);
         }
     }
