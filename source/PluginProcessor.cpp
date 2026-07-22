@@ -111,7 +111,7 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                    juce::MidiBuffer&) {
 
-    const auto bypass = a_bypass_.load(std::memory_order::relaxed) > 5.f;
+    const auto bypass = a_bypass_.load(std::memory_order::relaxed) > .5f;
     processBlockInternal(buffer, bypass);
 }
 

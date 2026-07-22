@@ -256,8 +256,8 @@ namespace zlp {
     public:
         static constexpr auto kID = "spectrum_smooth";
         static constexpr auto kName = "Spectrum Smooth";
-        inline static const auto kRange = juce::NormalisableRange<float>(0.f, 1.f, .01f);
-        static constexpr auto kDefaultV = .5f;
+        inline static const auto kRange = getLogMidRangeShift(1.f, 2.f, 1.25f, 0.01f, -1.f);
+        static constexpr auto kDefaultV = .25f;
     };
 
     class PSpecSmoothType : public ChoiceParameters<PSpecSmoothType> {
@@ -467,8 +467,8 @@ namespace zlp {
     public:
         static constexpr auto kID = "knee_width";
         static constexpr auto kName = "Knee Width";
-        inline static const auto kRange = getLogMidRangeShift(1.f, 33.f, 9.f, 0.01f, -1.f);
-        static constexpr auto kDefaultV = 8.f;
+        inline static const auto kRange = getLogMidRangeShift(1.f, 65.f, 20.f, 0.01f, -1.f);
+        static constexpr auto kDefaultV = 20.f;
     };
 
     class PAttack : public FloatParameters<PAttack> {

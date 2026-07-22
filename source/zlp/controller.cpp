@@ -660,8 +660,10 @@ namespace zlp {
     template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
     void Controller::processMainImpl(const bool perform_fft) {
         if constexpr (!(has_stereo || has_l || has_r || has_m || has_s)) {
-            multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window_bypass_.data());
-            return;
+            if (perform_fft) {
+                multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window_bypass_.data());
+                return;
+            }
         }
 
         if (perform_fft) {
