@@ -53,32 +53,45 @@ namespace zldsp::filter {
             ideal.updateMagnitudeSquare(ws, diff_response_);
             static constexpr hn::ScalableTag<FloatType> d;
             static constexpr size_t lanes = hn::MaxLanes(d);
-
             const auto v_min = hn::Set(d, kLogSqrMin);
-            size_t i = 0;
-            for (; i < base_response_.size(); i += lanes) {
-                const auto v = hn::Load(d, diff_response_.data() + i);
-                const auto v_log = hn::Log(d, hn::Max(v, v_min));
-                const auto r_log = hn::Load(d, base_response_.data() + i);
-                const auto diff = hn::Sub(v_log, r_log);
-                if (hn::ReduceMax(d, hn::Abs(diff)) > kDiffMin) {
-                    break;
+
+            if (paras.filter_type == zldsp::filter::kTiltShelf || paras.filter_type == zldsp::filter::kFlatTilt) {
+                const auto v_half = hn::Set(d, 0.5f);
+                for (size_t i = 0; i < base_response_.size(); i += lanes) {
+                    const auto v = hn::Load(d, diff_response_.data() + i);
+                    const auto v_log = hn::Log(d, hn::Max(v, v_min));
+                    const auto r_log = hn::Load(d, base_response_.data() + i);
+                    const auto diff = hn::Sub(v_log, r_log);
+                    hn::Store(hn::Mul(diff, v_half), d, diff_response_.data() + i);
                 }
-            }
-            diff_start_idx_ = i;
-            const auto v_half = hn::Set(d, 0.5f);
-            for (; i < base_response_.size(); i += lanes) {
-                const auto v = hn::Load(d, diff_response_.data() + i);
-                const auto v_log = hn::Log(d, hn::Max(v, v_min));
-                const auto r_log = hn::Load(d, base_response_.data() + i);
-                const auto diff = hn::Sub(v_log, r_log);
-                if (hn::ReduceMax(d, hn::Abs(diff)) < kDiffMin) {
-                    break;
+                diff_start_idx_ = 0;
+                diff_end_idx_ = base_response_.size();
+            } else {
+                size_t i = 0;
+                for (; i < base_response_.size(); i += lanes) {
+                    const auto v = hn::Load(d, diff_response_.data() + i);
+                    const auto v_log = hn::Log(d, hn::Max(v, v_min));
+                    const auto r_log = hn::Load(d, base_response_.data() + i);
+                    const auto diff = hn::Sub(v_log, r_log);
+                    if (hn::ReduceMax(d, hn::Abs(diff)) > kDiffMin) {
+                        break;
+                    }
                 }
-                hn::Store(hn::Mul(diff, v_half), d, diff_response_.data() + i);
+                diff_start_idx_ = i;
+                const auto v_half = hn::Set(d, 0.5f);
+                for (; i < base_response_.size(); i += lanes) {
+                    const auto v = hn::Load(d, diff_response_.data() + i);
+                    const auto v_log = hn::Log(d, hn::Max(v, v_min));
+                    const auto r_log = hn::Load(d, base_response_.data() + i);
+                    const auto diff = hn::Sub(v_log, r_log);
+                    if (hn::ReduceMax(d, hn::Abs(diff)) < kDiffMin) {
+                        break;
+                    }
+                    hn::Store(hn::Mul(diff, v_half), d, diff_response_.data() + i);
+                }
+                diff_end_idx_ = i;
             }
-            diff_size_ = i - diff_start_idx_;
-            diff_end_idx_ = i;
+            diff_size_ = diff_end_idx_ - diff_start_idx_;
             if (diff_size_ == 0) {
                 diff_start_idx_ = 0;
                 diff_end_idx_ = 0;
