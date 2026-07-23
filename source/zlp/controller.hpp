@@ -119,6 +119,12 @@ namespace zlp {
             to_update_.signal();
         }
 
+        void setSpecGate(const float gate) {
+            a_spec_gate_.store(gate, std::memory_order::relaxed);
+            to_update_spec_gate_.signal();
+            to_update_.signal();
+        }
+
         void setOutputGain(const float gain) {
             a_output_gain_.store(gain, std::memory_order::relaxed);
             to_update_output_gain_.signal();
@@ -309,6 +315,10 @@ namespace zlp {
 
         std::atomic<float> a_spec_tilt_slope_{0.0f};
         zlchore::thread::Notifier to_update_spec_tilt_{false};
+
+        std::atomic<float> a_spec_gate_{-80.0f};
+        zlchore::thread::Notifier to_update_spec_gate_{false};
+        float spec_gate_{-80.0f};
 
         std::array<std::atomic<float>, kBandNum> a_spec_attack_{};
         std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_attack_{};

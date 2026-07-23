@@ -28,7 +28,7 @@ namespace zlp {
         static constexpr std::array kIDs{
             PExtSide::kID, PFFTResolution::kID,
             PSpecSmooth::kID, PSpecSmoothType::kID, PSpecTilt::kID,
-            PSpecSkewAttack::kID, PSpecSkewRelease::kID,
+            PSpecSkewAttack::kID, PSpecSkewRelease::kID, PSpecGate::kID,
             POutputGain::kID, PStaticGain::kID
         };
 

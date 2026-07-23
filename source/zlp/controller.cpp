@@ -101,6 +101,9 @@ namespace zlp {
         if (to_update_spec_tilt_.check()) {
             updateSpecTilt();
         }
+        if (to_update_spec_gate_.check()) {
+            spec_gate_ = a_spec_gate_.load(std::memory_order::relaxed) / 4.342944819032518f;
+        }
         updateSpecFollower();
         updateSpecDynamic();
         if (to_update_spec_response_.check()) {
@@ -611,7 +614,20 @@ namespace zlp {
             }
             case DynamicMode::kRelative: {
                 band_avgs_[band] = relative_avg;
+                break;
             }
+            }
+
+            if (dynamic_mode_[band] == DynamicMode::kBand || dynamic_mode_[band] == DynamicMode::kRelative) {
+                const auto band_avg = band_avgs_[band];
+                if (band_avg < spec_gate_) {
+                    if (band_avg < spec_gate_ - 4.f) {
+                        band_avgs_[band] = 0.0f;
+                    } else {
+                        const float t = (band_avg - (spec_gate_ - 4.0f)) / 4.0f;
+                        band_avgs_[band] *= t;
+                    }
+                }
             }
         }
 
@@ -944,6 +960,7 @@ namespace zlp {
         to_update_channel_data_.signal();
         to_update_spec_smooth_.signal();
         to_update_spec_tilt_.signal();
+        to_update_spec_gate_.signal();
         to_update_spec_skew_.signal();
         for (size_t band = 0; band < kBandNum; ++band) {
             to_update_spec_attack_[band].signal();

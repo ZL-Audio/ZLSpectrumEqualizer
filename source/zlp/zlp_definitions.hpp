@@ -294,6 +294,14 @@ namespace zlp {
         static constexpr auto kDefaultV = 0.2f;
     };
 
+    class PSpecGate : public FloatParameters<PSpecGate> {
+    public:
+        static constexpr auto kID = "spectrum_gate";
+        static constexpr auto kName = "Spectrum Gate";
+        inline static const auto kRange = juce::NormalisableRange<float>(-120.0f, -40.0f, 0.1f);
+        static constexpr auto kDefaultV = -80.0f;
+    };
+
     class POutputGain : public FloatParameters<POutputGain> {
     public:
         static constexpr auto kID = "total_output_gain";
@@ -491,6 +499,7 @@ namespace zlp {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
         layout.add(PExtSide::get(), PBypass::get(), PFFTResolution::get(), PSpecSmooth::get(),
                    PSpecSmoothType::get(), PSpecTilt::get(), PSpecSkewAttack::get(), PSpecSkewRelease::get(),
+                   PSpecGate::get(),
                    POutputGain::get(), PGainScale::get(),
                    PStaticGain::get());
         for (size_t i = 0; i < kBandNum; ++i) {
