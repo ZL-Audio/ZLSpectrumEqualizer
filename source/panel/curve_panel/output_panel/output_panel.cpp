@@ -99,7 +99,7 @@ namespace zlpanel {
         const auto slider_width = getSliderWidth(font_size);
         const auto button_height = getButtonSize(font_size);
         const auto padding = getPaddingSize(font_size);
-        return 5 * padding + 3 * button_height + slider_width;
+        return 4 * padding + 2 * button_height + slider_width;
     }
 
     void OutputPanel::resized() {
@@ -126,6 +126,9 @@ namespace zlpanel {
         bound.removeFromTop(padding);
         {
             auto t_bound = bound.removeFromTop(button_height);
+            const auto t_padding = (t_bound.getWidth() - button_height * 2) / 4;
+            t_bound.removeFromLeft(t_padding);
+            t_bound.removeFromRight(t_padding);
             sgc_button_.setBounds(t_bound.removeFromLeft(button_height));
             lm_button_.setBounds(t_bound.removeFromRight(button_height));
         }

@@ -86,6 +86,7 @@ namespace zlpanel {
             const auto right_pad = getWidth() - bound.getRight();
             const auto t_width = 5 * padding + 2 * slider_width - right_pad + 2 * padding;
             output_label_.setBounds(bound.getRight() - t_width, 0, t_width, getHeight());
+            bound.removeFromRight(t_width);
         }
     }
 
