@@ -39,14 +39,8 @@ namespace zlpanel {
         zlgui::slider::CompactLinearSlider<false, false, false> smooth_slider_;
         zlgui::attachment::SliderAttachment<true> smooth_attach_;
 
-        bool is_over_{false};
-
-        void mouseDown(const juce::MouseEvent&) override;
-
-        void mouseEnter(const juce::MouseEvent&) override;
-
-        void mouseExit(const juce::MouseEvent&) override;
-
-        void updateAlpha(bool is_panel_open);
+        const std::unique_ptr<juce::Drawable> spec_setting_drawable_;
+        zlgui::button::ClickButton spec_setting_button_;
+        zlgui::attachment::ButtonAttachment<true> spec_setting_attach_;
     };
 }

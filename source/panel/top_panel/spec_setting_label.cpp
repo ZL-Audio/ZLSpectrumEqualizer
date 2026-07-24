@@ -8,6 +8,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "spec_setting_label.hpp"
+#include <BinaryData.h>
 
 namespace zlpanel {
     SpecSettingLabel::SpecSettingLabel(PluginProcessor& p, zlgui::UIBase& base) :
@@ -20,11 +21,18 @@ namespace zlpanel {
                             zlp::PSpecSmoothType::kID, updater_),
         smooth_slider_("", base, ""),
         smooth_attach_(smooth_slider_.getSlider(), p.parameters_,
-                       zlp::PSpecSmooth::kID, updater_) {
+                       zlp::PSpecSmooth::kID, updater_),
+        spec_setting_drawable_(juce::Drawable::createFromImageData(BinaryData::settings_svg,
+                                                                   BinaryData::settings_svgSize)),
+        spec_setting_button_(base, spec_setting_drawable_.get(), spec_setting_drawable_.get(), ""),
+        spec_setting_attach_(spec_setting_button_.getButton(), p.parameters_NA_,
+                             zlstate::PSpecSettingOpen::kID, updater_) {
         const auto popup_option = juce::PopupMenu::Options().withPreferredPopupDirection(
             juce::PopupMenu::Options::PopupDirection::downwards);
 
-        for (auto& box: {&resolution_box_, &smooth_type_box_}) {
+        resolution_box_.getLAF().setItemJustification(juce::Justification::centredRight);
+        resolution_box_.getLAF().setLabelJustification(juce::Justification::centredRight);
+        for (auto& box : {&resolution_box_, &smooth_type_box_}) {
             box->getLAF().setOption(popup_option);
             box->setBufferedToImage(true);
             addAndMakeVisible(box);
@@ -34,8 +42,11 @@ namespace zlpanel {
         smooth_slider_.setBufferedToImage(true);
         addAndMakeVisible(smooth_slider_);
 
+        spec_setting_button_.setBufferedToImage(true);
+        addAndMakeVisible(spec_setting_button_);
+
         setAlpha(.5f);
-        setInterceptsMouseClicks(true, false);
+        setInterceptsMouseClicks(false, true);
     }
 
     SpecSettingLabel::~SpecSettingLabel() {
@@ -59,36 +70,25 @@ namespace zlpanel {
 
         const auto dragging_distance = getSliderDraggingDistance(font_size);
         smooth_slider_.setMouseDragSensitivity(dragging_distance);
+
+        spec_setting_button_.setBounds(getLocalBounds().withSizeKeepingCentre(button_height, button_height));
     }
 
     void SpecSettingLabel::repaintCallbackSlow() {
         updater_.updateComponents();
-    }
-
-    void SpecSettingLabel::mouseDown(const juce::MouseEvent&) {
-        // const auto f = static_cast<double>(base_.getPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel));
-        // base_.setPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel, f < .5 ? 1. : 0.);
-    }
-
-    void SpecSettingLabel::mouseEnter(const juce::MouseEvent&) {
-        is_over_ = true;
-        // const auto f = static_cast<double>(base_.getPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel));
-        // updateAlpha(f > .5);
-    }
-
-    void SpecSettingLabel::mouseExit(const juce::MouseEvent&) {
-        is_over_ = false;
-        // const auto f = static_cast<double>(base_.getPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel));
-        // updateAlpha(f > .5);
-    }
-
-    void SpecSettingLabel::updateAlpha(const bool is_panel_open) {
-        if (is_panel_open) {
-            setAlpha(1.f);
-        } else if (is_over_) {
-            setAlpha(.75f);
+        const auto alpha = getAlpha();
+        if (spec_setting_button_.getButton().getToggleState()) {
+            if (std::abs(alpha - 1.f) > 0.1f) {
+                setAlpha(1.f);
+            }
+        } else if (isMouseOver(true)) {
+            if (std::abs(alpha - .75f) > 0.1f) {
+                setAlpha(.75f);
+            }
         } else {
-            setAlpha(.5f);
+            if (std::abs(alpha - .5f) > 0.1f) {
+                setAlpha(.5f);
+            }
         }
     }
 }

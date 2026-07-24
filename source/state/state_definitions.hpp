@@ -244,13 +244,21 @@ namespace zlstate {
         static constexpr auto kDefaultV = .5f;
     };
 
+    class PSpecSettingOpen : public BoolParameters<PSpecSettingOpen> {
+    public:
+        static constexpr auto kID = "spec_setting_open";
+        static constexpr auto kName = "";
+        static constexpr auto kDefaultV = false;
+    };
+
     inline juce::AudioProcessorValueTreeState::ParameterLayout getNAParameterLayout() {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
         layout.add(PEQMaxDB::get(), PFFTMinDB::get(),
                    PFFTPreON::get(), PFFTPostON::get(), PFFTSideON::get(),
                    PFFTSmoothOCTValue::get(), PFFTSmoothERBValue::get(),PFFTSmoothType::get(),
                    PFFTSpeed::get(), PFFTTilt::get(),
-                   PFFTFreezeON::get(), PFFTStereo::get(), PCollisionON::get(), PCollisionStrength::get());
+                   PFFTFreezeON::get(), PFFTStereo::get(), PCollisionON::get(), PCollisionStrength::get(),
+                   PSpecSettingOpen::get());
         return layout;
     }
 
