@@ -32,6 +32,8 @@ namespace zlpanel {
 
         resolution_box_.getLAF().setItemJustification(juce::Justification::centredRight);
         resolution_box_.getLAF().setLabelJustification(juce::Justification::centredRight);
+        smooth_type_box_.getLAF().setItemJustification(juce::Justification::centredLeft);
+        smooth_type_box_.getLAF().setLabelJustification(juce::Justification::centredLeft);
         for (auto& box : {&resolution_box_, &smooth_type_box_}) {
             box->getLAF().setOption(popup_option);
             box->setBufferedToImage(true);

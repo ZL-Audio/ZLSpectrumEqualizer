@@ -60,7 +60,8 @@ namespace zlgui::combobox {
         void drawLabel(juce::Graphics& g, juce::Label& label) override {
             g.setColour(base_.getTextColour());
             g.setFont(base_.getFontSize() * font_scale_);
-            g.drawText(label.getText(), label.getLocalBounds(), label_justification_);
+            const auto bound = label.getLocalBounds().toFloat().reduced(padding_, 0.f);
+            g.drawText(label.getText(), bound, label_justification_);
         }
 
         void drawPopupMenuBackground(juce::Graphics& g, const int width, const int height) override {
