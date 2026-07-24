@@ -59,11 +59,7 @@ namespace zlgui {
         kCurveShouldTransparent,
         kOutputPanel,
         kAnalyzerPanel,
-        kDynamicExtraPanel,
         kFFTFrozen,
-        kMatchPanel,
-        kSuggestedNumBand,
-        kMaximumNumBand,
         kPanelSettingNum
     };
 
@@ -73,11 +69,7 @@ namespace zlgui {
         juce::Identifier("curve_should_transparent"),
         juce::Identifier("output_panel"),
         juce::Identifier("analyzer_panel"),
-        juce::Identifier("dynamic_extra_panel"),
         juce::Identifier("fft_frozen"),
-        juce::Identifier("match_panel"),
-        juce::Identifier("suggested_num_band"),
-        juce::Identifier("maximum_num_band")
     };
 
     inline juce::Identifier kSoloIdentifier("solo_whole_idx");

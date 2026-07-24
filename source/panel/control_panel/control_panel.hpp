@@ -13,8 +13,7 @@
 #include "right_control_panel.hpp"
 
 namespace zlpanel {
-    class ControlPanel final : public juce::Component,
-                               private juce::ValueTree::Listener {
+    class ControlPanel final : public juce::Component {
     public:
         explicit ControlPanel(PluginProcessor& p, zlgui::UIBase& base,
 
@@ -53,7 +52,5 @@ namespace zlpanel {
         juce::Rectangle<int> center_bound_{};
 
         void changeLeftRightBound(bool dynamic_on);
-
-        void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property) override;
     };
 }

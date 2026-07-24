@@ -1017,9 +1017,14 @@ namespace zlp {
     }
 
     void Controller::updateSpecSmooth() {
-        const auto smooth = a_spec_smooth_value_.load(std::memory_order::relaxed);
+        const auto value = a_spec_smooth_value_.load(std::memory_order::relaxed);
+        const auto smooth = std::pow(2.f, 0.08f * value - 8.f);
         const auto type = a_spec_smooth_type_.load(std::memory_order::relaxed);
-        spec_smoother_.setSmooth(smooth, sample_rate_, type);
+        if (type == zldsp::filter::SpecSmoother<float>::SmoothMethod::kOCT) {
+            spec_smoother_.setSmooth(smooth, sample_rate_, type);
+        } else {
+            spec_smoother_.setSmooth(smooth * 6.f, sample_rate_, type);
+        }
 
         std::ranges::fill(to_update_channel_smooth_bounds_, true);
         to_update_channel_data_.signal();

@@ -25,12 +25,9 @@ namespace zlpanel {
         addChildComponent(right_control_panel_);
 
         setInterceptsMouseClicks(false, true);
-
-        base_.getPanelValueTree().addListener(this);
     }
 
     ControlPanel::~ControlPanel() {
-        base_.getPanelValueTree().removeListener(this);
     }
 
     int ControlPanel::getIdealWidth() const {
@@ -101,7 +98,6 @@ namespace zlpanel {
             left_control_panel_.setVisible(false);
             right_control_panel_.setVisible(false);
         }
-        base_.setPanelProperty(zlgui::PanelSettingIdx::kDynamicExtraPanel, 0.0);
         repaintCallBackSlow();
     }
 
@@ -114,14 +110,5 @@ namespace zlpanel {
         mouse_event_eater_.setBounds(dynamic_on ? mouse_full_bound_ : mouse_center_bound_);
         left_control_panel_.setBounds(dynamic_on ? left_bound_ : center_bound_);
         right_control_panel_.setVisible(dynamic_on);
-        if (!dynamic_on) {
-            base_.setPanelProperty(zlgui::PanelSettingIdx::kDynamicExtraPanel, 0.0);
-        }
-    }
-
-    void ControlPanel::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property) {
-        if (base_.isPanelIdentifier(zlgui::PanelSettingIdx::kMatchPanel, property)) {
-            base_.setSelectedBand(zlp::kBandNum);
-        }
     }
 }
