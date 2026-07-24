@@ -281,7 +281,7 @@ namespace zlp {
         juce::AudioProcessor& p_ref_;
         zlchore::thread::Notifier to_update_{false};
         // fft resolution
-        std::atomic<FFTResolution> a_fft_resolution_{FFTResolution::kMedium};
+        std::atomic<FFTResolution> a_fft_resolution_{FFTResolution::kLow};
         zlchore::thread::Notifier to_update_fft_resolution_{false};
         std::atomic<int> latency_{0};
         // filter status
@@ -355,6 +355,7 @@ namespace zlp {
 
         // fft working space
         double sample_rate_{48000.0};
+        std::unique_ptr<zldsp::fft::RFFT<float>> fft_very_low_;
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_low_;
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_medium_;
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_high_;

@@ -433,7 +433,7 @@ namespace zlpanel {
             else if (c_sample_rate_ < 400000.0) { fft_low_order = 15; }
             else { fft_low_order = 16; }
 
-            const size_t order = fft_low_order + static_cast<size_t>(std::round(fft_resolution));
+            const size_t order = fft_low_order - 1 + static_cast<size_t>(std::round(fft_resolution));
             const size_t fft_size = 1ULL << order;
             const size_t num_bin_effective = fft_size / 2;
 

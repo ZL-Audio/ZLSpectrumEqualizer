@@ -847,6 +847,7 @@ namespace zlp {
         } else {
             fft_low_order = 16;
         }
+        fft_very_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order - 1);
         fft_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order);
         fft_medium_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order + 1);
         fft_high_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order + 2);
@@ -922,6 +923,10 @@ namespace zlp {
     void Controller::updateFFTResolution() {
         const auto fft_resolution = a_fft_resolution_.load(std::memory_order_relaxed);
         switch (fft_resolution) {
+        case FFTResolution::kVeryLow: {
+            fft_ = fft_very_low_.get();
+            break;
+        }
         case FFTResolution::kLow: {
             fft_ = fft_low_.get();
             break;
