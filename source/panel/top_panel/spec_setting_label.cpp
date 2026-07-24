@@ -22,10 +22,10 @@ namespace zlpanel {
         smooth_slider_("", base, ""),
         smooth_attach_(smooth_slider_.getSlider(), p.parameters_,
                        zlp::PSpecSmooth::kID, updater_),
-        spec_setting_drawable_(juce::Drawable::createFromImageData(BinaryData::settings_svg,
+        setting_drawable_(juce::Drawable::createFromImageData(BinaryData::settings_svg,
                                                                    BinaryData::settings_svgSize)),
-        spec_setting_button_(base, spec_setting_drawable_.get(), spec_setting_drawable_.get(), ""),
-        spec_setting_attach_(spec_setting_button_.getButton(), p.parameters_NA_,
+        setting_button_(base, setting_drawable_.get(), setting_drawable_.get(), ""),
+        setting_attach_(setting_button_.getButton(), p.parameters_NA_,
                              zlstate::PSpecSettingOpen::kID, updater_) {
         const auto popup_option = juce::PopupMenu::Options().withPreferredPopupDirection(
             juce::PopupMenu::Options::PopupDirection::downwards);
@@ -42,10 +42,10 @@ namespace zlpanel {
         smooth_slider_.setBufferedToImage(true);
         addAndMakeVisible(smooth_slider_);
 
-        spec_setting_button_.setBufferedToImage(true);
-        addAndMakeVisible(spec_setting_button_);
+        setting_button_.setBufferedToImage(true);
+        addAndMakeVisible(setting_button_);
 
-        setAlpha(.5f);
+        setComponentsAlpha(.5f);
         setInterceptsMouseClicks(false, true);
     }
 
@@ -71,24 +71,24 @@ namespace zlpanel {
         const auto dragging_distance = getSliderDraggingDistance(font_size);
         smooth_slider_.setMouseDragSensitivity(dragging_distance);
 
-        spec_setting_button_.setBounds(getLocalBounds().withSizeKeepingCentre(button_height, button_height));
+        setting_button_.setBounds(getLocalBounds().withSizeKeepingCentre(button_height, button_height));
     }
 
     void SpecSettingLabel::repaintCallbackSlow() {
         updater_.updateComponents();
-        const auto alpha = getAlpha();
-        if (spec_setting_button_.getButton().getToggleState()) {
-            if (std::abs(alpha - 1.f) > 0.1f) {
-                setAlpha(1.f);
-            }
-        } else if (isMouseOver(true)) {
-            if (std::abs(alpha - .75f) > 0.1f) {
-                setAlpha(.75f);
-            }
+        if (setting_button_.getButton().getToggleState()) {
+            setComponentsAlpha(1.f);
         } else {
-            if (std::abs(alpha - .5f) > 0.1f) {
-                setAlpha(.5f);
-            }
+            setComponentsAlpha(.5f);
+        }
+    }
+
+    void SpecSettingLabel::setComponentsAlpha(const float alpha) {
+        const auto c_alpha = resolution_box_.getAlpha();
+        if (std::abs(c_alpha - alpha) > 0.01f) {
+            resolution_box_.setAlpha(alpha);
+            smooth_type_box_.setAlpha(alpha);
+            smooth_slider_.setAlpha(alpha);
         }
     }
 }

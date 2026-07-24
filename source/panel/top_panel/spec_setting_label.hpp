@@ -39,8 +39,10 @@ namespace zlpanel {
         zlgui::slider::CompactLinearSlider<false, false, false> smooth_slider_;
         zlgui::attachment::SliderAttachment<true> smooth_attach_;
 
-        const std::unique_ptr<juce::Drawable> spec_setting_drawable_;
-        zlgui::button::ClickButton spec_setting_button_;
-        zlgui::attachment::ButtonAttachment<true> spec_setting_attach_;
+        const std::unique_ptr<juce::Drawable> setting_drawable_;
+        zlgui::button::ClickButton setting_button_;
+        zlgui::attachment::ButtonAttachment<true> setting_attach_;
+
+        void setComponentsAlpha(float alpha);
     };
 }
