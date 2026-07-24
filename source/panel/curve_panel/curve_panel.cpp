@@ -18,26 +18,19 @@ namespace zlpanel {
         background_panel_(p, base, tooltip_helper),
         fft_panel_(p, base),
         response_panel_(p, base, tooltip_helper),
-
-        scale_panel_(p, base, tooltip_helper),
         output_panel_(p, base, tooltip_helper),
         analyzer_panel_(p, base, tooltip_helper) {
         background_panel_.setBufferedToImage(true);
         addAndMakeVisible(background_panel_);
         addAndMakeVisible(fft_panel_);
-
         addAndMakeVisible(response_panel_);
         response_panel_.addMouseListener(this, true);
-        scale_panel_.setBufferedToImage(false);
-        addAndMakeVisible(scale_panel_);
         addChildComponent(output_panel_);
         addChildComponent(analyzer_panel_);
         setInterceptsMouseClicks(false, true);
-        base_.getPanelValueTree().addListener(this);
     }
 
     CurvePanel::~CurvePanel() {
-        base_.getPanelValueTree().removeListener(this);
         stopThreads();
     }
 
@@ -70,8 +63,6 @@ namespace zlpanel {
         const auto analyzer_width = analyzer_panel_.getIdealWidth();
         const auto analyzer_height = analyzer_panel_.getIdealHeight();
         analyzer_panel_.setBounds(0, 0, analyzer_width, analyzer_height);
-
-        scale_panel_.setBounds(bound.withLeft(bound.getWidth() - scale_panel_.getIdealWidth()));
     }
 
     void CurvePanel::mouseDown(const juce::MouseEvent&) {
@@ -88,7 +79,6 @@ namespace zlpanel {
         response_panel_.repaintCallBackSlow();
         output_panel_.repaintCallBackSlow();
         analyzer_panel_.repaintCallBackSlow();
-        scale_panel_.repaintCallBackSlow();
     }
 
     void CurvePanel::updateBand() {
@@ -112,8 +102,5 @@ namespace zlpanel {
         if (response_panel_.isThreadRunning()) {
             response_panel_.stopThread(-1);
         }
-    }
-
-    void CurvePanel::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) {
     }
 }

@@ -26,6 +26,9 @@ namespace zlpanel {
         slope_slider_(base, "") {
         mouse_event_panel_.addMouseListener(this, false);
         addAndMakeVisible(mouse_event_panel_);
+
+        scale_panel_.setBufferedToImage(true);
+        addAndMakeVisible(scale_panel_);
         target_dragger_.setScale(kDraggerScale * kDraggerSizeMultiplier);
         target_dragger_.getButton().setToggleState(true, juce::sendNotificationSync);
         target_dragger_.getButton().addMouseListener(this, false);

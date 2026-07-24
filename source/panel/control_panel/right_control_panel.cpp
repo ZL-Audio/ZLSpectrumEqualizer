@@ -89,6 +89,7 @@ namespace zlpanel {
             auto temp_bound = bound.removeFromTop(button_height);
             bypass_button_.setBounds(temp_bound.removeFromLeft(button_height));
             temp_bound.removeFromLeft(padding);
+            temp_bound.removeFromTop(padding / 2);
             mode_box_.setBounds(temp_bound);
         }
 

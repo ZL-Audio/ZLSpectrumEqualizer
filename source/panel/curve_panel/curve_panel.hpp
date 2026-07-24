@@ -18,7 +18,6 @@
 
 namespace zlpanel {
     class CurvePanel final : public juce::Component,
-                             private juce::ValueTree::Listener,
                              private juce::Thread {
     public:
         explicit CurvePanel(PluginProcessor& p, zlgui::UIBase& base,
@@ -61,11 +60,7 @@ namespace zlpanel {
         FFTPanel fft_panel_;
         ResponsePanel response_panel_;
 
-        ScalePanel scale_panel_;
         OutputPanel output_panel_;
         AnalyzerPanel analyzer_panel_;
-
-
-        void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property) override;
     };
 }

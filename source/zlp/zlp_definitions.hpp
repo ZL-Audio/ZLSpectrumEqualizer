@@ -230,7 +230,7 @@ namespace zlp {
         static constexpr auto kID = "spec_resolution";
         static constexpr auto kName = "Spec Resolution";
         inline static const auto kChoices = juce::StringArray{
-            "Very Low", "Low", "Medium", "High", "Extreme"
+            "Very Low", "Low", "Medium", "High", "Very High"
         };
         static constexpr int kDefaultI = 1;
     };

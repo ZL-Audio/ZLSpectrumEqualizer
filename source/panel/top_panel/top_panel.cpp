@@ -91,8 +91,13 @@ namespace zlpanel {
             output_label_.setBounds(bound.getRight() - t_width, 0, t_width, getHeight());
             bound.removeFromRight(t_width);
         }
-
-        spec_setting_label_.setBounds(bound);
+        {
+            auto t_bound = getLocalBounds();
+            const auto t1 = bound.getX() - t_bound.getX();
+            const auto t2 = t_bound.getRight() - bound.getRight();
+            t_bound.reduce(std::max(t1, t2), padding / 2);
+            spec_setting_label_.setBounds(t_bound);
+        }
     }
 
     void TopPanel::repaintCallbackSlow() {
