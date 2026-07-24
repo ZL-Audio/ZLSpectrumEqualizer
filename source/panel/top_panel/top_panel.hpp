@@ -12,6 +12,7 @@
 #include "logo_panel.hpp"
 #include "output_label.hpp"
 #include "analyzer_label.hpp"
+#include "spec_setting_label.hpp"
 
 namespace zlpanel {
     class TopPanel final : public juce::Component {
@@ -34,7 +35,7 @@ namespace zlpanel {
         LogoPanel logo_panel_;
         OutputLabel output_label_;
         AnalyzerLabel analyzer_label_;
-
+        SpecSettingLabel spec_setting_label_;
 
         const std::unique_ptr<juce::Drawable> bypass_drawable_;
         zlgui::button::ClickButton bypass_button_;

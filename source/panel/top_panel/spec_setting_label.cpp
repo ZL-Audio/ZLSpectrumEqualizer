@@ -12,26 +12,27 @@
 namespace zlpanel {
     SpecSettingLabel::SpecSettingLabel(PluginProcessor& p, zlgui::UIBase& base) :
         base_(base),
-        p_ref_(p),
-        label_laf_(base),
-        resolution_combobox_(zlp::PFFTResolution::kChoices, base, ""),
-        resolution_attach_(resolution_combobox_.getBox(), p.parameters_,
-                           zlp::PFFTResolution::kID, updater_),
+        resolution_box_(zlp::PSpecResolution::kChoices, base, ""),
+        resolution_attach_(resolution_box_.getBox(), p.parameters_,
+                           zlp::PSpecResolution::kID, updater_),
+        smooth_type_box_(zlp::PSpecSmoothType::kChoices, base, ""),
+        smooth_type_attach_(smooth_type_box_.getBox(), p.parameters_,
+                            zlp::PSpecSmoothType::kID, updater_),
         smooth_slider_("", base, ""),
         smooth_attach_(smooth_slider_.getSlider(), p.parameters_,
                        zlp::PSpecSmooth::kID, updater_) {
+        const auto popup_option = juce::PopupMenu::Options().withPreferredPopupDirection(
+            juce::PopupMenu::Options::PopupDirection::downwards);
 
-        label_laf_.setFontScale(1.5f);
-
-        resolution_label_.setText("Resolution:", juce::dontSendNotification);
-        smooth_label_.setText("Smooth:", juce::dontSendNotification);
-        for (auto& l : {&resolution_label_, &smooth_label_}) {
-            l->setInterceptsMouseClicks(false, false);
-            l->setLookAndFeel(&label_laf_);
-            l->setJustificationType(juce::Justification::centredRight);
-            l->setBufferedToImage(true);
-            addAndMakeVisible(l);
+        for (auto& box: {&resolution_box_, &smooth_type_box_}) {
+            box->getLAF().setOption(popup_option);
+            box->setBufferedToImage(true);
+            addAndMakeVisible(box);
         }
+
+        smooth_slider_.getSlider().setSliderSnapsToMousePosition(false);
+        smooth_slider_.setBufferedToImage(true);
+        addAndMakeVisible(smooth_slider_);
 
         setAlpha(.5f);
         setInterceptsMouseClicks(true, false);
@@ -41,29 +42,44 @@ namespace zlpanel {
     }
 
     void SpecSettingLabel::resized() {
-        const auto padding = 2 * getPaddingSize(base_.getFontSize());
-        const auto bound = getLocalBounds();
+        const auto font_size = base_.getFontSize();
+        const auto padding = getPaddingSize(font_size);
+        const auto button_height = getButtonSize(font_size);
+        const auto slider_width = getSliderWidth(font_size);
+
+        auto right_bound = getLocalBounds();
+        auto left_bound = right_bound.removeFromLeft(right_bound.getWidth() / 2);
+
+        left_bound.removeFromRight(button_height / 2 + padding);
+        resolution_box_.setBounds(left_bound.removeFromRight(slider_width + button_height));
+
+        right_bound.removeFromLeft(button_height / 2 + padding);
+        smooth_type_box_.setBounds(right_bound.removeFromLeft(button_height * 2));
+        smooth_slider_.setBounds(right_bound.removeFromLeft(slider_width - button_height));
+
+        const auto dragging_distance = getSliderDraggingDistance(font_size);
+        smooth_slider_.setMouseDragSensitivity(dragging_distance);
     }
 
     void SpecSettingLabel::repaintCallbackSlow() {
-
+        updater_.updateComponents();
     }
 
     void SpecSettingLabel::mouseDown(const juce::MouseEvent&) {
-        const auto f = static_cast<double>(base_.getPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel));
-        base_.setPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel, f < .5 ? 1. : 0.);
+        // const auto f = static_cast<double>(base_.getPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel));
+        // base_.setPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel, f < .5 ? 1. : 0.);
     }
 
     void SpecSettingLabel::mouseEnter(const juce::MouseEvent&) {
         is_over_ = true;
-        const auto f = static_cast<double>(base_.getPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel));
-        updateAlpha(f > .5);
+        // const auto f = static_cast<double>(base_.getPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel));
+        // updateAlpha(f > .5);
     }
 
     void SpecSettingLabel::mouseExit(const juce::MouseEvent&) {
         is_over_ = false;
-        const auto f = static_cast<double>(base_.getPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel));
-        updateAlpha(f > .5);
+        // const auto f = static_cast<double>(base_.getPanelProperty(zlgui::PanelSettingIdx::kAnalyzerPanel));
+        // updateAlpha(f > .5);
     }
 
     void SpecSettingLabel::updateAlpha(const bool is_panel_open) {

@@ -32,7 +32,7 @@ namespace zlpanel {
             }
         }
         p_ref_.parameters_.addParameterListener(zlp::PGainScale::kID, this);
-        p_ref_.parameters_.addParameterListener(zlp::PFFTResolution::kID, this);
+        p_ref_.parameters_.addParameterListener(zlp::PSpecResolution::kID, this);
 
         xs_.resize(kNumPoints);
         ws_.resize(kNumPoints);
@@ -67,7 +67,7 @@ namespace zlpanel {
             }
         }
         p_ref_.parameters_.removeParameterListener(zlp::PGainScale::kID, this);
-        p_ref_.parameters_.removeParameterListener(zlp::PFFTResolution::kID, this);
+        p_ref_.parameters_.removeParameterListener(zlp::PSpecResolution::kID, this);
     }
 
     void ResponsePanel::paint(juce::Graphics& g) {
@@ -350,7 +350,7 @@ namespace zlpanel {
                 std::clamp(value * gain_scale_.load(std::memory_order::relaxed) / 100.f, -30.f, 30.f),
                 std::memory_order::relaxed);
             to_update_target_gain_flags_[band].signal();
-        } else if (parameter_ID.startsWith(zlp::PFFTResolution::kID)) {
+        } else if (parameter_ID.startsWith(zlp::PSpecResolution::kID)) {
             to_update_fft_resolution_.signal();
         }
     }
@@ -425,7 +425,7 @@ namespace zlpanel {
             std::fill(to_update_base_y_flags_.begin(), to_update_base_y_flags_.end(), true);
         }
         if ((sr_changed || fft_res_changed || ws_dsp_.empty()) && c_sample_rate_ >= 40000.0) {
-            const auto fft_resolution = p_ref_.parameters_.getRawParameterValue(zlp::PFFTResolution::kID)->load(std::memory_order::relaxed);
+            const auto fft_resolution = p_ref_.parameters_.getRawParameterValue(zlp::PSpecResolution::kID)->load(std::memory_order::relaxed);
             size_t fft_low_order;
             if (c_sample_rate_ < 50000.0) { fft_low_order = 12; }
             else if (c_sample_rate_ < 100000.0) { fft_low_order = 13; }

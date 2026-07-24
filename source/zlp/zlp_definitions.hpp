@@ -225,10 +225,10 @@ namespace zlp {
         }
     };
 
-    class PFFTResolution : public ChoiceParameters<PFFTResolution> {
+    class PSpecResolution : public ChoiceParameters<PSpecResolution> {
     public:
-        static constexpr auto kID = "fft_resolution";
-        static constexpr auto kName = "FFT Resolution";
+        static constexpr auto kID = "spec_resolution";
+        static constexpr auto kName = "Spec Resolution";
         inline static const auto kChoices = juce::StringArray{
             "Low", "Medium", "High", "Extreme"
         };
@@ -267,7 +267,7 @@ namespace zlp {
         inline static const auto kChoices = juce::StringArray{
             "OCT", "ERB"
         };
-        static constexpr int kDefaultI = 0;
+        static constexpr int kDefaultI = 1;
     };
 
     class PSpecTilt : public FloatParameters<PSpecTilt> {
@@ -497,7 +497,7 @@ namespace zlp {
 
     inline juce::AudioProcessorValueTreeState::ParameterLayout getParameterLayout() {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
-        layout.add(PExtSide::get(), PBypass::get(), PFFTResolution::get(), PSpecSmooth::get(),
+        layout.add(PExtSide::get(), PBypass::get(), PSpecResolution::get(), PSpecSmooth::get(),
                    PSpecSmoothType::get(), PSpecTilt::get(), PSpecSkewAttack::get(), PSpecSkewRelease::get(),
                    PSpecGate::get(),
                    POutputGain::get(), PGainScale::get(),

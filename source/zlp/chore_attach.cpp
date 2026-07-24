@@ -30,7 +30,7 @@ namespace zlp {
     void ChoreAttach::parameterChanged(const juce::String& parameter_ID, const float value) {
         if (parameter_ID == PExtSide::kID) {
             controller_.setExtSide(value > .5f);
-        } else if (parameter_ID == PFFTResolution::kID) {
+        } else if (parameter_ID == PSpecResolution::kID) {
             controller_.setFFTResolution(static_cast<FFTResolution>(std::round(value)));
         } else if (parameter_ID == PSpecSmooth::kID) {
             controller_.setSpecSmoothValue(value);

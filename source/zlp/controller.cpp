@@ -1018,7 +1018,7 @@ namespace zlp {
 
     void Controller::updateSpecSmooth() {
         const auto value = a_spec_smooth_value_.load(std::memory_order::relaxed);
-        const auto smooth = std::pow(2.f, 0.08f * value - 8.f);
+        const auto smooth = static_cast<float>(std::pow(12.0, 0.02 * static_cast<double>(value) - 2.));
         const auto type = a_spec_smooth_type_.load(std::memory_order::relaxed);
         if (type == zldsp::filter::SpecSmoother<float>::SmoothMethod::kOCT) {
             spec_smoother_.setSmooth(smooth, sample_rate_, type);

@@ -17,6 +17,7 @@ namespace zlpanel {
         logo_panel_(p, base, tooltip_helper),
         output_label_(p, base),
         analyzer_label_(p, base),
+        spec_setting_label_(p, base),
         bypass_drawable_(juce::Drawable::createFromImageData(BinaryData::bypass_svg,
                                                              BinaryData::bypass_svgSize)),
         bypass_button_(base, bypass_drawable_.get(), bypass_drawable_.get(),
@@ -35,6 +36,8 @@ namespace zlpanel {
 
         analyzer_label_.setBufferedToImage(true);
         addAndMakeVisible(analyzer_label_);
+
+        addAndMakeVisible(spec_setting_label_);
 
         bypass_button_.setImageAlpha(1.f, 1.f, .5f, .75f);
         bypass_button_.setBufferedToImage(true);
@@ -88,10 +91,13 @@ namespace zlpanel {
             output_label_.setBounds(bound.getRight() - t_width, 0, t_width, getHeight());
             bound.removeFromRight(t_width);
         }
+
+        spec_setting_label_.setBounds(bound);
     }
 
     void TopPanel::repaintCallbackSlow() {
         output_label_.repaintCallbackSlow();
+        spec_setting_label_.repaintCallbackSlow();
         updater_.updateComponents();
     }
 }

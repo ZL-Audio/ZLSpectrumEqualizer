@@ -29,16 +29,13 @@ namespace zlpanel {
 
     private:
         zlgui::UIBase& base_;
-        PluginProcessor& p_ref_;
         zlgui::attachment::ComponentUpdater updater_;
 
-        zlgui::label::NameLookAndFeel label_laf_;
-        juce::Label resolution_label_;
-        juce::Label smooth_label_;
-
-        zlgui::combobox::CompactCombobox resolution_combobox_;
+        zlgui::combobox::CompactCombobox resolution_box_;
         zlgui::attachment::ComboBoxAttachment<true> resolution_attach_;
 
+        zlgui::combobox::CompactCombobox smooth_type_box_;
+        zlgui::attachment::ComboBoxAttachment<true> smooth_type_attach_;
         zlgui::slider::CompactLinearSlider<false, false, false> smooth_slider_;
         zlgui::attachment::SliderAttachment<true> smooth_attach_;
 
