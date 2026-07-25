@@ -94,10 +94,10 @@ namespace zldsp::filter {
             bounds.target_end = end_idx;
 
             bounds.pass2_start = low_idx_[start_idx];
-            bounds.pass2_end = high_idx_[end_idx - 1];
+            bounds.pass2_end = std::min(high_idx_.size(), high_idx_[end_idx - 1]);
 
             bounds.pass1_start = low_idx_[bounds.pass2_start];
-            bounds.pass1_end = high_idx_[bounds.pass2_end - 1];
+            bounds.pass1_end = std::min(high_idx_.size(), high_idx_[bounds.pass2_end - 1]);
 
             return bounds;
         }
