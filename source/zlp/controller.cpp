@@ -300,6 +300,12 @@ namespace zlp {
 
                 displayed_gain_.store(output_gain_dsp_.getCurrentGainLinear(), std::memory_order::relaxed);
 
+                analyzer_sender_.process({
+                                             std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
+                                             std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()),
+                                             std::span(side_analyzer_ptrs_.data(), side_analyzer_ptrs_.size())
+                                         }, chunk);
+
                 if (c_solo_on_) {
                     if (!dynamic_on_[c_solo_idx_]) {
                         std::memset(solo_pointers_[0], 0, chunk * sizeof(float));
@@ -352,12 +358,6 @@ namespace zlp {
                         std::copy_n(solo_pointers_[1], chunk, post_analyzer_ptrs_[1]);
                     }
                 }
-
-                analyzer_sender_.process({
-                                             std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
-                                             std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()),
-                                             std::span(side_analyzer_ptrs_.data(), side_analyzer_ptrs_.size())
-                                         }, chunk);
             } else {
                 output_gain_dsp_.process(
                     std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
