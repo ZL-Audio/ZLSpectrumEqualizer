@@ -283,7 +283,7 @@ namespace zlp {
         static constexpr auto kID = "spectrum_skew_attack";
         static constexpr auto kName = "Spectrum Skew Attack";
         inline static const auto kRange = juce::NormalisableRange<float>(-100.0f, 100.0f, 0.1f);
-        static constexpr auto kDefaultV = 45.f;
+        static constexpr auto kDefaultV = 25.f;
     };
 
     class PSpecSkewRelease : public FloatParameters<PSpecSkewRelease> {
@@ -451,15 +451,15 @@ namespace zlp {
     public:
         static constexpr auto kID = "threshold_abs";
         static constexpr auto kName = "Threshold Abs (dB)";
-        inline static const auto kRange = juce::NormalisableRange<float>(-80.f, 0.f, 0.1f);
-        static constexpr auto kDefaultV = -40.f;
+        inline static const auto kRange = juce::NormalisableRange<float>(-100.f, 0.f, 0.1f);
+        static constexpr auto kDefaultV = -50.f;
     };
 
     class PThresholdBand : public FloatParameters<PThresholdBand> {
     public:
         static constexpr auto kID = "threshold_band";
         static constexpr auto kName = "Threshold Band (dB)";
-        inline static const auto kRange = juce::NormalisableRange<float>(-40.f, 40.f, 0.1f);
+        inline static const auto kRange = juce::NormalisableRange<float>(-50.f, 50.f, 0.1f);
         static constexpr auto kDefaultV = 0.f;
     };
 
@@ -467,7 +467,7 @@ namespace zlp {
     public:
         static constexpr auto kID = "threshold_rel";
         static constexpr auto kName = "Threshold Rel (dB)";
-        inline static const auto kRange = juce::NormalisableRange<float>(-40.f, 40.f, 0.1f);
+        inline static const auto kRange = juce::NormalisableRange<float>(-50.f, 50.f, 0.1f);
         static constexpr auto kDefaultV = 0.f;
     };
 
@@ -483,7 +483,7 @@ namespace zlp {
     public:
         static constexpr auto kID = "attack";
         static constexpr auto kName = "Attack";
-        inline static const auto kRange = getLogMidRangeShift(20.f, 1020.f, 120.f, 0.01f, -20.f);
+        inline static const auto kRange = getLogMidRangeShift(20.f, 4020.f, 120.f, 0.01f, -20.f);
         static constexpr auto kDefaultV = 100.f;
     };
 
@@ -491,7 +491,7 @@ namespace zlp {
     public:
         static constexpr auto kID = "release";
         static constexpr auto kName = "Release";
-        inline static const auto kRange = getLogMidRangeShift(100.f, 5100.f, 600.f, 0.01f, -100.f);
+        inline static const auto kRange = getLogMidRangeShift(100.f, 20100.f, 600.f, 0.01f, -100.f);
         static constexpr auto kDefaultV = 500.f;
     };
 
