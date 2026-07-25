@@ -17,9 +17,10 @@ namespace zlpanel {
         scale_label_panel_(p, base, tooltip_helper),
         eq_max_box_({juce::String(static_cast<int>(base_.getCurveDBScale(0))),
                      juce::String(static_cast<int>(base_.getCurveDBScale(1))),
-                     juce::String(static_cast<int>(base_.getCurveDBScale(2)))}, base),
+                     juce::String(static_cast<int>(base_.getCurveDBScale(2)))}, base,
+                    "", {}, false),
         eq_max_attach_(eq_max_box_.getBox(), p.parameters_NA_, zlstate::PEQMaxDB::kID, updater_),
-        fft_min_box_(zlstate::PFFTMinDB::kChoices, base),
+        fft_min_box_(zlstate::PFFTMinDB::kChoices, base, "", {}, false),
         fft_min_attach_(fft_min_box_.getBox(), p.parameters_NA_, zlstate::PFFTMinDB::kID, updater_) {
         juce::ignoreUnused(tooltip_helper);
 

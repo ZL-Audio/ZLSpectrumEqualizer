@@ -12,9 +12,10 @@
 namespace zlgui::combobox {
     CompactCombobox::CompactCombobox(const juce::StringArray& choices,
                                      UIBase& base, const juce::String& tooltip_text,
-                                     const std::vector<juce::String>& item_labels) :
+                                     const std::vector<juce::String>& item_labels,
+                                     const bool align_label) :
         base_(base),
-        box_laf_(base) {
+        box_laf_(base, align_label) {
         if (item_labels.size() < static_cast<size_t>(choices.size())) {
             combo_box_.addItemList(choices, 1);
         } else {
@@ -46,9 +47,10 @@ namespace zlgui::combobox {
     CompactCombobox::CompactCombobox(const std::vector<std::unique_ptr<juce::Drawable>>& icons,
                                      UIBase& base,
                                      const juce::String& tooltip_text,
-                                     const std::vector<juce::String>& item_labels) :
+                                     const std::vector<juce::String>& item_labels,
+                                     const bool align_label) :
         base_(base),
-        box_laf_(base) {
+        box_laf_(base, align_label) {
         const auto menu = combo_box_.getRootMenu();
         for (size_t i = 0; i < icons.size(); ++i) {
             juce::PopupMenu::Item item;

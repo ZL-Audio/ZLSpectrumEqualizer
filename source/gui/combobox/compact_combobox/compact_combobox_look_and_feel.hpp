@@ -16,8 +16,8 @@
 namespace zlgui::combobox {
     class CompactComboboxLookAndFeel : public juce::LookAndFeel_V4 {
     public:
-        explicit CompactComboboxLookAndFeel(UIBase& base) :
-            base_(base) {
+        explicit CompactComboboxLookAndFeel(UIBase& base, bool align_label = true) :
+            base_(base), align_label_(align_label) {
             setColour(juce::PopupMenu::backgroundColourId, base_.getBackgroundInactiveColour());
         }
 
@@ -60,7 +60,8 @@ namespace zlgui::combobox {
         void drawLabel(juce::Graphics& g, juce::Label& label) override {
             g.setColour(base_.getTextColour());
             g.setFont(base_.getFontSize() * font_scale_);
-            const auto bound = label.getLocalBounds().toFloat().reduced(padding_, 0.f);
+            const auto bound = label.getLocalBounds().toFloat().reduced(
+                align_label_ ? padding_ : 0.f, 0.f);
             g.drawText(label.getText(), bound, label_justification_);
         }
 
@@ -187,6 +188,7 @@ namespace zlgui::combobox {
         juce::PopupMenu::Options option_{};
 
         UIBase& base_;
+        bool align_label_{true};
 
         std::vector<std::unique_ptr<juce::Drawable>> icons_;
     };
