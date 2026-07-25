@@ -11,6 +11,8 @@
 
 ZL Spectrum Equalizer is a spectrum equalizer plugin.
 
+<img src="https://drive.google.com/uc?export=view&id=1P3VNweMNSP9esDAmQqbVtesbs-d5cs9Q" style="width:750px; max-width: 100%; height: auto" />
+
 ## Build from Source
 
 ### Install Dependencies
