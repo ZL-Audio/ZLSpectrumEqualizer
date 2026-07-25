@@ -175,7 +175,7 @@ namespace zlp {
                     pre_analyzer_ptrs_[chan] = pre_analyzer_temp_[chan].data();
                 }
 
-                if (side_status_ != SideStatus::kNotRequired && is_ext_side_) {
+                if ((side_status_ != SideStatus::kNotRequired || editor_on_) && is_ext_side_) {
                     for (size_t chan = 2; chan < 4; ++chan) {
                         std::copy_n(input_fifos_[chan].data() + fft_pos_, chunk1,
                                     side_analyzer_temp_[chan - 2].data());
@@ -211,7 +211,7 @@ namespace zlp {
                     std::fill_n(output_fifos_[chan].data(), chunk2, 0.0f);
                 }
             }
-            if (side_status_ != SideStatus::kNotRequired && is_ext_side_) {
+            if ((side_status_ != SideStatus::kNotRequired || editor_on_) && is_ext_side_) {
                 for (size_t chan = 2; chan < 4; ++chan) {
                     if (buffer[chan] != nullptr) {
                         std::copy_n(buffer[chan] + samples_processed, chunk1,
