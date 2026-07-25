@@ -77,9 +77,9 @@ namespace zlpanel {
 
         auto bound = getLocalBounds();
         control_background_.setBounds(bound);
+        bound.reduce(padding, padding);
 
         {
-            bound.removeFromLeft(padding);
             tilt_label_.setBounds(bound.removeFromLeft(slider_width - button_height));
             tilt_slider_.setBounds(bound.removeFromLeft(slider_width - button_height));
         }
