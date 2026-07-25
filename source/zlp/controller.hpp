@@ -266,6 +266,7 @@ namespace zlp {
 
             zldsp::vector::aligned_vector<float> fft_side_abs_sqr;
             zldsp::filter::SpecSmoother<float>::SmoothBounds smooth_bounds;
+            size_t side_start_idx{0}, side_end_idx{0};
 
             size_t dynamic_start_idx{0}, dynamic_end_idx{0};
             std::vector<size_t> dynamic_bands{};

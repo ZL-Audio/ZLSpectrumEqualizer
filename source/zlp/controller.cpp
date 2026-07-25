@@ -467,8 +467,8 @@ namespace zlp {
 
         if (!l_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT l_abs_sqr = l_data_.fft_side_abs_sqr.data();
-            const auto start_idx = l_data_.smooth_bounds.pass1_start;
-            const auto end_idx = l_data_.smooth_bounds.pass1_end;
+            const auto start_idx = l_data_.side_start_idx;
+            const auto end_idx = l_data_.side_end_idx;
             for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto real_v = hn::Load(d, l_real_ptr + i);
                 const auto imag_v = hn::Load(d, l_imag_ptr + i);
@@ -480,8 +480,8 @@ namespace zlp {
         }
         if (!r_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT r_abs_sqr = r_data_.fft_side_abs_sqr.data();
-            const auto start_idx = r_data_.smooth_bounds.pass1_start;
-            const auto end_idx = r_data_.smooth_bounds.pass1_end;
+            const auto start_idx = r_data_.side_start_idx;
+            const auto end_idx = r_data_.side_end_idx;
             for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto real_v = hn::Load(d, r_real_ptr + i);
                 const auto imag_v = hn::Load(d, r_imag_ptr + i);
@@ -493,8 +493,8 @@ namespace zlp {
         }
         if (!stereo_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT st_abs_sqr = stereo_data_.fft_side_abs_sqr.data();
-            const auto start_idx = stereo_data_.smooth_bounds.pass1_start;
-            const auto end_idx = stereo_data_.smooth_bounds.pass1_end;
+            const auto start_idx = stereo_data_.side_start_idx;
+            const auto end_idx = stereo_data_.side_end_idx;
             for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto l_real_v = hn::Load(d, l_real_ptr + i);
                 const auto l_imag_v = hn::Load(d, l_imag_ptr + i);
@@ -512,8 +512,8 @@ namespace zlp {
         if (!m_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT m_abs_sqr = m_data_.fft_side_abs_sqr.data();
             const auto quarter_v = hn::Set(d, 0.25f);
-            const auto start_idx = m_data_.smooth_bounds.pass1_start;
-            const auto end_idx = m_data_.smooth_bounds.pass1_end;
+            const auto start_idx = m_data_.side_start_idx;
+            const auto end_idx = m_data_.side_end_idx;
             for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto l_real_v = hn::Load(d, l_real_ptr + i);
                 const auto r_real_v = hn::Load(d, r_real_ptr + i);
@@ -531,8 +531,8 @@ namespace zlp {
         if (!s_data_.dynamic_bands.empty()) {
             auto* HWY_RESTRICT s_abs_sqr = s_data_.fft_side_abs_sqr.data();
             const auto quarter_v = hn::Set(d, 0.25f);
-            const auto start_idx = s_data_.smooth_bounds.pass1_start;
-            const auto end_idx = s_data_.smooth_bounds.pass1_end;
+            const auto start_idx = s_data_.side_start_idx;
+            const auto end_idx = s_data_.side_end_idx;
             for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto l_real_v = hn::Load(d, l_real_ptr + i);
                 const auto r_real_v = hn::Load(d, r_real_ptr + i);
@@ -1193,6 +1193,11 @@ namespace zlp {
                     }
                     if (max_idx > min_idx) {
                         data.smooth_bounds = spec_smoother_.cacheRange(min_idx, max_idx - min_idx);
+                        data.side_start_idx = data.smooth_bounds.pass1_start / lanes * lanes;
+                        data.side_end_idx = std::min((data.smooth_bounds.pass1_end + lanes - 1) / lanes * lanes, num_bin_effective_);
+                    } else {
+                        data.side_start_idx = 0;
+                        data.side_end_idx = 0;
                     }
                 }
             }
