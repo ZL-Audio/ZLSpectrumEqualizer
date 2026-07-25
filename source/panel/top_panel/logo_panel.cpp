@@ -26,8 +26,9 @@ namespace zlpanel {
         const auto temp_logo = logo_drawable_->createCopy();
         temp_brand->replaceColour(juce::Colours::black, base_.getTextColour());
         temp_logo->replaceColour(juce::Colours::black, base_.getTextColour());
-        temp_logo->replaceColour(juce::Colours::black.withAlpha(.5f), base_.getTextColour().withMultipliedAlpha(.5f));
         temp_logo->replaceColour(juce::Colour::fromRGBA(0, 0, 0, 127), base_.getTextColour().withMultipliedAlpha(.5f));
+        temp_logo->replaceColour(juce::Colour::fromRGBA(0, 0, 0, 63), base_.getTextColour().withMultipliedAlpha(.25f));
+        temp_logo->replaceColour(juce::Colour::fromRGBA(0, 0, 0, 191), base_.getTextColour().withMultipliedAlpha(.75f));
 
         const auto padding = getPaddingSize(base_.getFontSize());
 

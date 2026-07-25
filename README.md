@@ -1,7 +1,7 @@
 <p align="center">
-  <img src="docs/zlaudio.svg" width="7.5%"/>
+  <img src="docs/zlaudio.svg" width="7.5%" hspace="6.068%"/>
     &nbsp; &nbsp; &nbsp;
-  <img src="docs/logo.svg" width="7.5%"/>
+  <img src="docs/logo.svg" width="7.5%" hspace="6.068%"/>
 </p>
 
 # ZL Spectrum Equalizer
