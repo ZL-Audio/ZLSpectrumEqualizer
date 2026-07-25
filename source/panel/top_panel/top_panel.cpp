@@ -12,12 +12,12 @@
 
 namespace zlpanel {
     TopPanel::TopPanel(PluginProcessor& p, zlgui::UIBase& base,
-                       multilingual::TooltipHelper& tooltip_helper) :
+                       const multilingual::TooltipHelper& tooltip_helper) :
         p_ref_(p), base_(base), updater_(),
         logo_panel_(p, base, tooltip_helper),
         output_label_(p, base),
         analyzer_label_(p, base),
-        spec_setting_label_(p, base),
+        spec_setting_label_(p, base, tooltip_helper),
         bypass_drawable_(juce::Drawable::createFromImageData(BinaryData::bypass_svg,
                                                              BinaryData::bypass_svgSize)),
         bypass_button_(base, bypass_drawable_.get(), bypass_drawable_.get(),

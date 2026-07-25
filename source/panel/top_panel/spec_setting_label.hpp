@@ -19,7 +19,8 @@
 namespace zlpanel {
     class SpecSettingLabel final : public juce::Component {
     public:
-        explicit SpecSettingLabel(PluginProcessor& p, zlgui::UIBase& base);
+        explicit SpecSettingLabel(PluginProcessor& p, zlgui::UIBase& base,
+                                  const multilingual::TooltipHelper& tooltip_helper);
 
         ~SpecSettingLabel() override;
 

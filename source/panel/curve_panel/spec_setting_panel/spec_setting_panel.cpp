@@ -11,25 +11,29 @@
 
 namespace zlpanel {
     SpecSettingPanel::SpecSettingPanel(PluginProcessor& p, zlgui::UIBase& base,
-                                       const multilingual::TooltipHelper&) :
+                                       const multilingual::TooltipHelper& tooltip_helper) :
         base_(base),
         spec_setting_open_(*p.parameters_NA_.getRawParameterValue(zlstate::PSpecSettingOpen::kID)),
         control_background_(base),
         label_laf_(base),
         tilt_label_("", "Tilt"),
-        tilt_slider_("", base, ""),
+        tilt_slider_("", base,
+                     tooltip_helper.getToolTipText(multilingual::kSpecTilt)),
         tilt_attach_(tilt_slider_.getSlider(), p.parameters_,
                      zlp::PSpecTilt::kID, updater_),
         attack_skew_label_("", "Attack Skew"),
-        attack_skew_slider_("", base, ""),
+        attack_skew_slider_("", base,
+                            tooltip_helper.getToolTipText(multilingual::kSpecAttackSkew)),
         attack_skew_attach_(attack_skew_slider_.getSlider(), p.parameters_,
                             zlp::PSpecSkewAttack::kID, updater_),
         release_skew_label_("", "Release Skew"),
-        release_skew_slider_("", base, ""),
+        release_skew_slider_("", base,
+                             tooltip_helper.getToolTipText(multilingual::kSpecReleaseSkew)),
         release_skew_attach_(release_skew_slider_.getSlider(), p.parameters_,
                              zlp::PSpecSkewRelease::kID, updater_),
         gate_label_("", "Gate"),
-        gate_slider_("", base, ""),
+        gate_slider_("", base,
+                     tooltip_helper.getToolTipText(multilingual::kSpecGate)),
         gate_attach_(gate_slider_.getSlider(), p.parameters_,
                      zlp::PSpecGate::kID, updater_) {
         control_background_.setBufferedToImage(true);

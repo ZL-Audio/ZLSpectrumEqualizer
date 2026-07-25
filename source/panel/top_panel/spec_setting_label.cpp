@@ -11,22 +11,26 @@
 #include <BinaryData.h>
 
 namespace zlpanel {
-    SpecSettingLabel::SpecSettingLabel(PluginProcessor& p, zlgui::UIBase& base) :
+    SpecSettingLabel::SpecSettingLabel(PluginProcessor& p, zlgui::UIBase& base,
+                                       const multilingual::TooltipHelper& tooltip_helper) :
         base_(base),
-        resolution_box_(zlp::PSpecResolution::kChoices, base, ""),
+        resolution_box_(zlp::PSpecResolution::kChoices, base,
+                        tooltip_helper.getToolTipText(multilingual::kSpecResolution)),
         resolution_attach_(resolution_box_.getBox(), p.parameters_,
                            zlp::PSpecResolution::kID, updater_),
-        smooth_type_box_(zlp::PSpecSmoothType::kChoices, base, ""),
+        smooth_type_box_(zlp::PSpecSmoothType::kChoices, base,
+                         tooltip_helper.getToolTipText(multilingual::kSpecSmoothType)),
         smooth_type_attach_(smooth_type_box_.getBox(), p.parameters_,
                             zlp::PSpecSmoothType::kID, updater_),
-        smooth_slider_("", base, ""),
+        smooth_slider_("", base,
+                       tooltip_helper.getToolTipText(multilingual::kSpecSmoothValue)),
         smooth_attach_(smooth_slider_.getSlider(), p.parameters_,
                        zlp::PSpecSmooth::kID, updater_),
         setting_drawable_(juce::Drawable::createFromImageData(BinaryData::settings_svg,
-                                                                   BinaryData::settings_svgSize)),
+                                                              BinaryData::settings_svgSize)),
         setting_button_(base, setting_drawable_.get(), setting_drawable_.get(), ""),
         setting_attach_(setting_button_.getButton(), p.parameters_NA_,
-                             zlstate::PSpecSettingOpen::kID, updater_) {
+                        zlstate::PSpecSettingOpen::kID, updater_) {
         const auto popup_option = juce::PopupMenu::Options().withPreferredPopupDirection(
             juce::PopupMenu::Options::PopupDirection::downwards);
 
