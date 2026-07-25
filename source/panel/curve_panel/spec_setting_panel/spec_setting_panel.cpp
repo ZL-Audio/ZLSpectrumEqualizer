@@ -70,7 +70,7 @@ namespace zlpanel {
         const auto padding = getPaddingSize(font_size);
         const auto button_height = getButtonSize(font_size);
 
-        return 2 * padding + button_height;
+        return padding + button_height;
     }
 
     void SpecSettingPanel::resized() {
@@ -80,8 +80,12 @@ namespace zlpanel {
         const auto padding = getPaddingSize(font_size);
 
         auto bound = getLocalBounds();
-        control_background_.setBounds(bound);
-        bound.reduce(padding, padding);
+        control_background_.setBounds({
+            bound.getX(), bound.getY() - bound.getHeight(),
+            bound.getWidth(), bound.getHeight() * 2
+        });
+        bound.removeFromLeft(padding);
+        bound.removeFromBottom(padding);
 
         {
             tilt_label_.setBounds(bound.removeFromLeft(slider_width - button_height));
