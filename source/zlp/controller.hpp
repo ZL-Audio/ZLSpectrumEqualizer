@@ -282,7 +282,7 @@ namespace zlp {
         juce::AudioProcessor& p_ref_;
         zlchore::thread::Notifier to_update_{false};
         // fft resolution
-        std::atomic<FFTResolution> a_fft_resolution_{FFTResolution::kLow};
+        std::atomic<FFTResolution> a_fft_resolution_{FFTResolution::kMedium};
         zlchore::thread::Notifier to_update_fft_resolution_{false};
         std::atomic<int> latency_{0};
         // filter status
@@ -356,11 +356,13 @@ namespace zlp {
 
         // fft working space
         double sample_rate_{48000.0};
+        std::unique_ptr<zldsp::fft::RFFT<float>> fft_extreme_low_;
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_very_low_;
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_low_;
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_medium_;
         std::unique_ptr<zldsp::fft::RFFT<float>> fft_high_;
-        std::unique_ptr<zldsp::fft::RFFT<float>> fft_extreme_;
+        std::unique_ptr<zldsp::fft::RFFT<float>> fft_very_high_;
+        std::unique_ptr<zldsp::fft::RFFT<float>> fft_extreme_high_;
         zldsp::fft::RFFT<float>* fft_{nullptr};
         size_t fft_order_ = 13;
         size_t fft_size_ = static_cast<size_t>(1) << fft_order_;

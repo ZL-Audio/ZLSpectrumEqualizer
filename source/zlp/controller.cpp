@@ -40,7 +40,7 @@ namespace zlp {
         on_bands_.reserve(kBandNum);
         sample_rate_ = sample_rate;
         prepareFFTPlans();
-        fft_order_ = fft_extreme_->get_order();
+        fft_order_ = fft_very_high_->get_order();
         const size_t max_fft_size = 1ULL << fft_order_;
         const size_t max_num_bin_effective = max_fft_size / 2;
         {
@@ -835,23 +835,25 @@ namespace zlp {
     }
 
     void Controller::prepareFFTPlans() {
-        size_t fft_low_order;
+        size_t fft_medium_order;
         if (sample_rate_ < 50000.0) {
-            fft_low_order = 12;
+            fft_medium_order = 12;
         } else if (sample_rate_ < 100000.0) {
-            fft_low_order = 13;
+            fft_medium_order = 13;
         } else if (sample_rate_ < 200000.0) {
-            fft_low_order = 14;
+            fft_medium_order = 14;
         } else if (sample_rate_ < 400000.0) {
-            fft_low_order = 15;
+            fft_medium_order = 15;
         } else {
-            fft_low_order = 16;
+            fft_medium_order = 16;
         }
-        fft_very_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order - 1);
-        fft_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order);
-        fft_medium_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order + 1);
-        fft_high_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order + 2);
-        fft_extreme_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_low_order + 3);
+        fft_extreme_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_medium_order - 3);
+        fft_very_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_medium_order - 2);
+        fft_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_medium_order - 1);
+        fft_medium_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_medium_order);
+        fft_high_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_medium_order + 1);
+        fft_very_high_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_medium_order + 2);
+        fft_extreme_high_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_medium_order + 3);
     }
 
     void Controller::resizeWorkingSpace() {
@@ -923,6 +925,10 @@ namespace zlp {
     void Controller::updateFFTResolution() {
         const auto fft_resolution = a_fft_resolution_.load(std::memory_order_relaxed);
         switch (fft_resolution) {
+        case FFTResolution::kExtremeLow: {
+            fft_ = fft_extreme_low_.get();
+            break;
+        }
         case FFTResolution::kVeryLow: {
             fft_ = fft_very_low_.get();
             break;
@@ -939,8 +945,12 @@ namespace zlp {
             fft_ = fft_high_.get();
             break;
         }
-        case FFTResolution::kExtreme: {
-            fft_ = fft_extreme_.get();
+        case FFTResolution::kVeryHigh: {
+            fft_ = fft_very_high_.get();
+            break;
+        }
+        case FFTResolution::kExtremeHigh: {
+            fft_ = fft_extreme_high_.get();
             break;
         }
         }

@@ -426,14 +426,14 @@ namespace zlpanel {
         }
         if ((sr_changed || fft_res_changed || ws_dsp_.empty()) && c_sample_rate_ >= 40000.0) {
             const auto fft_resolution = p_ref_.parameters_.getRawParameterValue(zlp::PSpecResolution::kID)->load(std::memory_order::relaxed);
-            size_t fft_low_order;
-            if (c_sample_rate_ < 50000.0) { fft_low_order = 12; }
-            else if (c_sample_rate_ < 100000.0) { fft_low_order = 13; }
-            else if (c_sample_rate_ < 200000.0) { fft_low_order = 14; }
-            else if (c_sample_rate_ < 400000.0) { fft_low_order = 15; }
-            else { fft_low_order = 16; }
+            size_t fft_medium_order;
+            if (c_sample_rate_ < 50000.0) { fft_medium_order = 12; }
+            else if (c_sample_rate_ < 100000.0) { fft_medium_order = 13; }
+            else if (c_sample_rate_ < 200000.0) { fft_medium_order = 14; }
+            else if (c_sample_rate_ < 400000.0) { fft_medium_order = 15; }
+            else { fft_medium_order = 16; }
 
-            const size_t order = fft_low_order - 1 + static_cast<size_t>(std::round(fft_resolution));
+            const size_t order = fft_medium_order - 3 + static_cast<size_t>(std::round(fft_resolution));
             const size_t fft_size = 1ULL << order;
             const size_t num_bin_effective = fft_size / 2;
 

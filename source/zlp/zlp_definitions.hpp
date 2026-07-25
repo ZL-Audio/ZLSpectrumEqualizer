@@ -29,7 +29,7 @@ namespace zlp {
     };
 
     enum class FFTResolution {
-        kVeryLow, kLow, kMedium, kHigh, kExtreme
+        kExtremeLow, kVeryLow, kLow, kMedium, kHigh, kVeryHigh, kExtremeHigh
     };
 
     enum class DynamicMode {
@@ -230,9 +230,9 @@ namespace zlp {
         static constexpr auto kID = "spec_resolution";
         static constexpr auto kName = "Spec Resolution";
         inline static const auto kChoices = juce::StringArray{
-            "Very Low", "Low", "Medium", "High", "Very High"
+            "Extreme Low", "Very Low", "Low", "Medium", "High", "Very High", "Extreme High"
         };
-        static constexpr int kDefaultI = 1;
+        static constexpr int kDefaultI = 3;
     };
 
     class PExtSide : public BoolParameters<PExtSide> {

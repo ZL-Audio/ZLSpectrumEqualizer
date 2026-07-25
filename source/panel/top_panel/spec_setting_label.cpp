@@ -64,7 +64,7 @@ namespace zlpanel {
         auto left_bound = right_bound.removeFromLeft(right_bound.getWidth() / 2);
 
         left_bound.removeFromRight(button_height / 2 + padding);
-        resolution_box_.setBounds(left_bound.removeFromRight(slider_width + button_height / 2));
+        resolution_box_.setBounds(left_bound.removeFromRight(slider_width + button_height + padding));
 
         right_bound.removeFromLeft(button_height / 2 + padding);
         smooth_type_box_.setBounds(right_bound.removeFromLeft(button_height * 2));
