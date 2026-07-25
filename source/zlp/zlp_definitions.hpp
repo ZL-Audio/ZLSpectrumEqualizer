@@ -282,16 +282,16 @@ namespace zlp {
     public:
         static constexpr auto kID = "spectrum_skew_attack";
         static constexpr auto kName = "Spectrum Skew Attack";
-        inline static const auto kRange = juce::NormalisableRange<float>(-2.0f, 2.0f, 0.01f);
-        static constexpr auto kDefaultV = 0.9f;
+        inline static const auto kRange = juce::NormalisableRange<float>(-100.0f, 100.0f, 0.1f);
+        static constexpr auto kDefaultV = 45.f;
     };
 
     class PSpecSkewRelease : public FloatParameters<PSpecSkewRelease> {
     public:
         static constexpr auto kID = "spectrum_skew_release";
         static constexpr auto kName = "Spectrum Skew Release";
-        inline static const auto kRange = juce::NormalisableRange<float>(-2.0f, 2.0f, 0.01f);
-        static constexpr auto kDefaultV = 0.2f;
+        inline static const auto kRange = juce::NormalisableRange<float>(-100.0f, 100.0f, 0.1f);
+        static constexpr auto kDefaultV = 10.f;
     };
 
     class PSpecGate : public FloatParameters<PSpecGate> {

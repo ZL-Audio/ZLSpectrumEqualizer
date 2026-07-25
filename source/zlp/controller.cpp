@@ -1042,8 +1042,8 @@ namespace zlp {
 
     void Controller::updateSpecFollower() {
         const bool skew_changed = to_update_spec_skew_.check();
-        const auto skew_attack = a_spec_skew_attack_.load(std::memory_order::relaxed);
-        const auto skew_release = a_spec_skew_release_.load(std::memory_order::relaxed);
+        const auto skew_attack = a_spec_skew_attack_.load(std::memory_order::relaxed) * 0.02f;
+        const auto skew_release = a_spec_skew_release_.load(std::memory_order::relaxed) * 0.02f;
         for (const auto& band : on_bands_) {
             if (skew_changed || to_update_spec_attack_[band].check()) {
                 const auto attack = a_spec_attack_[band].load(std::memory_order::relaxed);
