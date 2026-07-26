@@ -29,7 +29,8 @@ namespace zlpanel {
 
         scale_panel_.setBufferedToImage(true);
         addAndMakeVisible(scale_panel_);
-        target_dragger_.setScale(kDraggerScale * kDraggerSizeMultiplier);
+        target_dragger_.setScale(kDraggerScale * kDraggerSizeMultiplier,
+                                 kDraggerScale * kDraggerPaddingMultiplier);
         target_dragger_.getButton().setToggleState(true, juce::sendNotificationSync);
         target_dragger_.getButton().addMouseListener(this, false);
         target_dragger_.setXYEnabled(false, true);
@@ -39,7 +40,8 @@ namespace zlpanel {
         for (size_t band = 0; band < zlp::kBandNum; ++band) {
             draggers_[band].setBroughtToFrontOnMouseClick(true);
             draggers_[band].getButton().addMouseListener(this, false);
-            draggers_[band].setScale(kDraggerScale * kDraggerSizeMultiplier);
+            draggers_[band].setScale(kDraggerScale * kDraggerSizeMultiplier,
+                                     kDraggerScale * kDraggerPaddingMultiplier);
             draggers_[band].getButton().setBufferedToImage(true);
             draggers_[band].getLAF().setColour(base_.getColourMap1(band));
             draggers_[band].getLAF().setDraggerShape(zlgui::dragger::DraggerLookAndFeel::kRound);
