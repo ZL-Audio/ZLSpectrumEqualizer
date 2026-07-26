@@ -437,12 +437,12 @@ namespace zlp {
             zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
             fft_->forward_sqr_mag(fft_ins_[3].data(), ch2.fft_side_abs_sqr.data()); // NOLINT
         }
-        if (!stereo_data_.dynamic_bands.empty()) {
+        if (!stereo_data_.dynamic_bands.empty() && stereo_data_.side_end_idx > stereo_data_.side_start_idx) {
             auto* HWY_RESTRICT stereo_abs_sqr = stereo_data_.fft_side_abs_sqr.data();
             const auto* HWY_RESTRICT ch1_abs_sqr = ch1.fft_side_abs_sqr.data();
             const auto* HWY_RESTRICT ch2_abs_sqr = ch2.fft_side_abs_sqr.data();
-            const auto start_idx = stereo_data_.smooth_bounds.pass1_start;
-            const auto end_idx = stereo_data_.smooth_bounds.pass1_end;
+            const auto start_idx = stereo_data_.side_start_idx;
+            const auto end_idx = stereo_data_.side_end_idx;
 
             for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto v1 = hn::Load(d, ch1_abs_sqr + i);
@@ -451,10 +451,10 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(stereo_data_.fft_side_abs_sqr, stereo_data_.smooth_bounds);
         }
-        if (!ch1.dynamic_bands.empty()) {
+        if (!ch1.dynamic_bands.empty() && ch1.side_end_idx > ch1.side_start_idx) {
             spec_smoother_.smoothRange(ch1.fft_side_abs_sqr, ch1.smooth_bounds);
         }
-        if (!ch2.dynamic_bands.empty()) {
+        if (!ch2.dynamic_bands.empty() && ch2.side_end_idx > ch2.side_start_idx) {
             spec_smoother_.smoothRange(ch2.fft_side_abs_sqr, ch2.smooth_bounds);
         }
     }
@@ -465,7 +465,7 @@ namespace zlp {
         const auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
         const auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
 
-        if (!l_data_.dynamic_bands.empty()) {
+        if (!l_data_.dynamic_bands.empty() && l_data_.side_end_idx > l_data_.side_start_idx) {
             auto* HWY_RESTRICT l_abs_sqr = l_data_.fft_side_abs_sqr.data();
             const auto start_idx = l_data_.side_start_idx;
             const auto end_idx = l_data_.side_end_idx;
@@ -478,7 +478,7 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(l_data_.fft_side_abs_sqr, l_data_.smooth_bounds);
         }
-        if (!r_data_.dynamic_bands.empty()) {
+        if (!r_data_.dynamic_bands.empty() && r_data_.side_end_idx > r_data_.side_start_idx) {
             auto* HWY_RESTRICT r_abs_sqr = r_data_.fft_side_abs_sqr.data();
             const auto start_idx = r_data_.side_start_idx;
             const auto end_idx = r_data_.side_end_idx;
@@ -491,7 +491,7 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(r_data_.fft_side_abs_sqr, r_data_.smooth_bounds);
         }
-        if (!stereo_data_.dynamic_bands.empty()) {
+        if (!stereo_data_.dynamic_bands.empty() && stereo_data_.side_end_idx > stereo_data_.side_start_idx) {
             auto* HWY_RESTRICT st_abs_sqr = stereo_data_.fft_side_abs_sqr.data();
             const auto start_idx = stereo_data_.side_start_idx;
             const auto end_idx = stereo_data_.side_end_idx;
@@ -509,7 +509,7 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(stereo_data_.fft_side_abs_sqr, stereo_data_.smooth_bounds);
         }
-        if (!m_data_.dynamic_bands.empty()) {
+        if (!m_data_.dynamic_bands.empty() && m_data_.side_end_idx > m_data_.side_start_idx) {
             auto* HWY_RESTRICT m_abs_sqr = m_data_.fft_side_abs_sqr.data();
             const auto quarter_v = hn::Set(d, 0.25f);
             const auto start_idx = m_data_.side_start_idx;
@@ -528,7 +528,7 @@ namespace zlp {
             }
             spec_smoother_.smoothRange(m_data_.fft_side_abs_sqr, m_data_.smooth_bounds);
         }
-        if (!s_data_.dynamic_bands.empty()) {
+        if (!s_data_.dynamic_bands.empty() && s_data_.side_end_idx > s_data_.side_start_idx) {
             auto* HWY_RESTRICT s_abs_sqr = s_data_.fft_side_abs_sqr.data();
             const auto quarter_v = hn::Set(d, 0.25f);
             const auto start_idx = s_data_.side_start_idx;
@@ -1206,6 +1206,7 @@ namespace zlp {
                         data.side_start_idx = data.smooth_bounds.pass1_start / lanes * lanes;
                         data.side_end_idx = std::min((data.smooth_bounds.pass1_end + lanes - 1) / lanes * lanes, num_bin_effective_);
                     } else {
+                        data.smooth_bounds = {};
                         data.side_start_idx = 0;
                         data.side_end_idx = 0;
                     }
