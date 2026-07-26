@@ -62,7 +62,7 @@ namespace zlpanel {
         const auto slider_width = getSliderWidth(font_size);
         const auto button_height = getButtonSize(font_size);
 
-        return 5 * padding + 8 * slider_width - 4 * button_height;
+        return 5 * padding + 8 * slider_width - 4 * button_height - 4 * padding;
     }
 
     int SpecSettingPanel::getIdealHeight() const {
@@ -88,7 +88,7 @@ namespace zlpanel {
         bound.removeFromBottom(padding);
 
         {
-            tilt_label_.setBounds(bound.removeFromLeft(slider_width - button_height));
+            tilt_label_.setBounds(bound.removeFromLeft(slider_width - button_height - 2 * padding));
             tilt_slider_.setBounds(bound.removeFromLeft(slider_width - button_height));
         }
         {
@@ -103,7 +103,7 @@ namespace zlpanel {
         }
         {
             bound.removeFromLeft(padding);
-            gate_label_.setBounds(bound.removeFromLeft(slider_width - button_height));
+            gate_label_.setBounds(bound.removeFromLeft(slider_width - button_height - 2 * padding));
             gate_slider_.setBounds(bound.removeFromLeft(slider_width - button_height));
         }
 
