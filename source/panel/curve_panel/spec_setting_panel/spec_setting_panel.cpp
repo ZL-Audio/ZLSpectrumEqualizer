@@ -58,11 +58,10 @@ namespace zlpanel {
 
     int SpecSettingPanel::getIdealWidth() const {
         const auto font_size = base_.getFontSize();
-        const auto padding = getPaddingSize(font_size);
         const auto slider_width = getSliderWidth(font_size);
         const auto button_height = getButtonSize(font_size);
 
-        return 5 * padding + 8 * slider_width - 4 * button_height - 4 * padding;
+        return 8 * slider_width - 4 * button_height;
     }
 
     int SpecSettingPanel::getIdealHeight() const {
@@ -102,7 +101,6 @@ namespace zlpanel {
             release_skew_slider_.setBounds(bound.removeFromLeft(slider_width - button_height));
         }
         {
-            bound.removeFromLeft(padding);
             gate_label_.setBounds(bound.removeFromLeft(slider_width - button_height - 2 * padding));
             gate_slider_.setBounds(bound.removeFromLeft(slider_width - button_height));
         }
