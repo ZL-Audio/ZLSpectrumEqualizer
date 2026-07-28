@@ -373,11 +373,11 @@ namespace zlgui {
         }
 
         float getSumEQCurveThickness() const {
-            return single_eq_curve_thickness_.load(std::memory_order::relaxed);
+            return sum_eq_curve_thickness_.load(std::memory_order::relaxed);
         }
 
         void setSumEQCurveThickness(const float x) {
-            single_eq_curve_thickness_.store(x, std::memory_order::relaxed);
+            sum_eq_curve_thickness_.store(x, std::memory_order::relaxed);
         }
 
         size_t getTooltipLangID() const {
@@ -474,8 +474,10 @@ namespace zlgui {
         }
 
         float getCurveDBScale(const size_t max_idx) const {
-            if (max_idx == 0) return loadPara(zlstate::PCurveDBScale0::kID);
-            if (max_idx == 1) return loadPara(zlstate::PCurveDBScale1::kID);
+            if (max_idx == 0)
+                return loadPara(zlstate::PCurveDBScale0::kID);
+            if (max_idx == 1)
+                return loadPara(zlstate::PCurveDBScale1::kID);
             return loadPara(zlstate::PCurveDBScale2::kID);
         }
 
@@ -485,36 +487,95 @@ namespace zlgui {
             savePara(zlstate::PCurveDBScale2::kID, scales[2]);
         }
 
-        MouseActionType getEnterSoloMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PEnterSoloMouse::kID))); }
-        KeyActionType getEnterSoloKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PEnterSoloKey::kID))); }
-        void setEnterSoloMouse(MouseActionType type) { savePara(zlstate::PEnterSoloMouse::kID, static_cast<float>(type)); }
+        MouseActionType getEnterSoloMouse() const {
+            return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PEnterSoloMouse::kID)));
+        }
+
+        KeyActionType getEnterSoloKey() const {
+            return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PEnterSoloKey::kID)));
+        }
+
+        void setEnterSoloMouse(MouseActionType type) {
+            savePara(zlstate::PEnterSoloMouse::kID, static_cast<float>(type));
+        }
+
         void setEnterSoloKey(KeyActionType type) { savePara(zlstate::PEnterSoloKey::kID, static_cast<float>(type)); }
 
-        MouseActionType getExitSoloMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PExitSoloMouse::kID))); }
-        KeyActionType getExitSoloKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PExitSoloKey::kID))); }
-        void setExitSoloMouse(MouseActionType type) { savePara(zlstate::PExitSoloMouse::kID, static_cast<float>(type)); }
+        MouseActionType getExitSoloMouse() const {
+            return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PExitSoloMouse::kID)));
+        }
+
+        KeyActionType getExitSoloKey() const {
+            return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PExitSoloKey::kID)));
+        }
+
+        void setExitSoloMouse(MouseActionType type) {
+            savePara(zlstate::PExitSoloMouse::kID, static_cast<float>(type));
+        }
+
         void setExitSoloKey(KeyActionType type) { savePara(zlstate::PExitSoloKey::kID, static_cast<float>(type)); }
 
-        MouseActionType getContextMenuMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PRightClickMenuMouse::kID))); }
-        KeyActionType getContextMenuKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PRightClickMenuKey::kID))); }
-        void setContextMenuMouse(MouseActionType type) { savePara(zlstate::PRightClickMenuMouse::kID, static_cast<float>(type)); }
-        void setContextMenuKey(KeyActionType type) { savePara(zlstate::PRightClickMenuKey::kID, static_cast<float>(type)); }
+        MouseActionType getContextMenuMouse() const {
+            return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PRightClickMenuMouse::kID)));
+        }
 
-        MouseActionType getToggleDynamicMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PToggleDynamicMouse::kID))); }
-        KeyActionType getToggleDynamicKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PToggleDynamicKey::kID))); }
-        void setToggleDynamicMouse(MouseActionType type) { savePara(zlstate::PToggleDynamicMouse::kID, static_cast<float>(type)); }
-        void setToggleDynamicKey(KeyActionType type) { savePara(zlstate::PToggleDynamicKey::kID, static_cast<float>(type)); }
+        KeyActionType getContextMenuKey() const {
+            return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PRightClickMenuKey::kID)));
+        }
 
-        MouseActionType getToggleBypassMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PToggleBypassMouse::kID))); }
-        KeyActionType getToggleBypassKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PToggleBypassKey::kID))); }
-        void setToggleBypassMouse(MouseActionType type) { savePara(zlstate::PToggleBypassMouse::kID, static_cast<float>(type)); }
-        void setToggleBypassKey(KeyActionType type) { savePara(zlstate::PToggleBypassKey::kID, static_cast<float>(type)); }
+        void setContextMenuMouse(MouseActionType type) {
+            savePara(zlstate::PRightClickMenuMouse::kID, static_cast<float>(type));
+        }
 
-        MouseActionType getDeleteBandMouse() const { return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PDeleteBandMouse::kID))); }
-        KeyActionType getDeleteBandKey() const { return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PDeleteBandKey::kID))); }
-        void setDeleteBandMouse(MouseActionType type) { savePara(zlstate::PDeleteBandMouse::kID, static_cast<float>(type)); }
+        void setContextMenuKey(KeyActionType type) {
+            savePara(zlstate::PRightClickMenuKey::kID, static_cast<float>(type));
+        }
+
+        MouseActionType getToggleDynamicMouse() const {
+            return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PToggleDynamicMouse::kID)));
+        }
+
+        KeyActionType getToggleDynamicKey() const {
+            return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PToggleDynamicKey::kID)));
+        }
+
+        void setToggleDynamicMouse(MouseActionType type) {
+            savePara(zlstate::PToggleDynamicMouse::kID, static_cast<float>(type));
+        }
+
+        void setToggleDynamicKey(KeyActionType type) {
+            savePara(zlstate::PToggleDynamicKey::kID, static_cast<float>(type));
+        }
+
+        MouseActionType getToggleBypassMouse() const {
+            return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PToggleBypassMouse::kID)));
+        }
+
+        KeyActionType getToggleBypassKey() const {
+            return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PToggleBypassKey::kID)));
+        }
+
+        void setToggleBypassMouse(MouseActionType type) {
+            savePara(zlstate::PToggleBypassMouse::kID, static_cast<float>(type));
+        }
+
+        void setToggleBypassKey(KeyActionType type) {
+            savePara(zlstate::PToggleBypassKey::kID, static_cast<float>(type));
+        }
+
+        MouseActionType getDeleteBandMouse() const {
+            return static_cast<MouseActionType>(static_cast<int>(loadPara(zlstate::PDeleteBandMouse::kID)));
+        }
+
+        KeyActionType getDeleteBandKey() const {
+            return static_cast<KeyActionType>(static_cast<int>(loadPara(zlstate::PDeleteBandKey::kID)));
+        }
+
+        void setDeleteBandMouse(MouseActionType type) {
+            savePara(zlstate::PDeleteBandMouse::kID, static_cast<float>(type));
+        }
+
         void setDeleteBandKey(KeyActionType type) { savePara(zlstate::PDeleteBandKey::kID, static_cast<float>(type)); }
-
 
     private:
         juce::AudioProcessorValueTreeState& state;
