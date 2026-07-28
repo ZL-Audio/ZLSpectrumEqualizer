@@ -48,11 +48,11 @@ namespace zldsp::interpolation {
             for (size_t i = 0; i < input_size_ - 1; ++i) {
                 deltas_[i] = (ys_[i + 1] - ys_[i]) / (xs_[i + 1] - xs_[i]);
             }
-            const auto left_delta = FloatType(2) * deltas_[0] - deltas_[1];
             derivatives_[0] = left_derivative_;
             derivatives_[input_size_ - 1] = right_derivative_;
 
             if (input_size_ >= 4) {
+                const auto left_delta = FloatType(2) * deltas_[0] - deltas_[1];
                 const auto right_delta = FloatType(2) * deltas_[input_size_ - 2] - deltas_[input_size_ - 3];
                 derivatives_[1] = calculateD(left_delta, deltas_[0], deltas_[1], deltas_[2]);
                 for (size_t i = 2; i < input_size_ - 2; ++i) {
