@@ -294,8 +294,13 @@ namespace zlp {
                         loudness_matcher_.processPost(
                             std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
                     }
-                    output_gain_dsp_.process(
-                        std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                    if (is_bypass) {
+                        output_gain_dsp_.process<true>(
+                            std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                    } else {
+                        output_gain_dsp_.process<false>(
+                            std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                    }
                 }
 
                 displayed_gain_.store(output_gain_dsp_.getCurrentGainLinear(), std::memory_order::relaxed);
@@ -359,8 +364,13 @@ namespace zlp {
                     }
                 }
             } else {
-                output_gain_dsp_.process(
-                    std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                if (is_bypass) {
+                    output_gain_dsp_.process<true>(
+                        std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                } else {
+                    output_gain_dsp_.process<false>(
+                        std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                }
             }
 
             samples_processed += chunk;
