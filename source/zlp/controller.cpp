@@ -883,12 +883,15 @@ namespace zlp {
 
         for (auto& fifo : input_fifos_) {
             fifo.resize(fft_size_);
+            std::ranges::fill(fifo, 0.f);
         }
         for (auto& fifo : output_fifos_) {
             fifo.resize(fft_size_);
+            std::ranges::fill(fifo, 0.f);
         }
         for (auto& fifo : fft_ins_) {
             fifo.resize(fft_size_);
+            std::ranges::fill(fifo, 0.f);
         }
         for (auto& fifo : fft_out_reals_) {
             fifo.resize(num_bin_);
