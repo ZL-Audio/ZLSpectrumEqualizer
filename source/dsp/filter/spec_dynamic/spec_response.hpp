@@ -91,8 +91,10 @@ namespace zldsp::filter {
                 }
                 diff_end_idx_ = i;
             }
-            diff_size_ = diff_end_idx_ - diff_start_idx_;
-            if (diff_size_ == 0) {
+            if (diff_end_idx_ > diff_start_idx_) {
+                diff_size_ = diff_end_idx_ - diff_start_idx_;
+            } else {
+                diff_size_ = 0;
                 diff_start_idx_ = 0;
                 diff_end_idx_ = 0;
             }
