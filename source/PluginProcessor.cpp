@@ -77,6 +77,8 @@ void PluginProcessor::changeProgramName(int, const juce::String&) {
 }
 
 void PluginProcessor::prepareToPlay(const double sample_rate, const int samples_per_block) {
+    sample_rate_.store(sample_rate, std::memory_order::relaxed);
+
     dummy_main_.resize(static_cast<size_t>(samples_per_block));
     dummy_side_.resize(static_cast<size_t>(samples_per_block));
     const juce::PluginHostType hostType;
