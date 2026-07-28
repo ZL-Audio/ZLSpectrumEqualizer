@@ -256,7 +256,7 @@ namespace zlp {
                         }
                     }
                 }
-                processFrame(is_bypass || (c_solo_on_ && editor_on_));
+                processFrame(is_bypass);
                 // overlap-add
                 const size_t range1 = fft_size_ - fft_pos_;
                 for (size_t chan = 0; chan < 2; ++chan) {
@@ -313,26 +313,26 @@ namespace zlp {
                     }
                     switch (lrms_[c_solo_idx_]) {
                     case FilterStereo::kStereo: {
-                        std::copy_n(post_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
-                        std::copy_n(post_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+                        std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+                        std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
                         solo_filter_.process(solo_pointers_, chunk);
                         break;
                     }
                     case FilterStereo::kLeft: {
                         std::memset(solo_pointers_[1], 0, chunk * sizeof(float));
-                        std::copy_n(post_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+                        std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
                         solo_filter_.process({&solo_pointers_[0], 1}, chunk);
                         break;
                     }
                     case FilterStereo::kRight: {
                         std::memset(solo_pointers_[0], 0, chunk * sizeof(float));
-                        std::copy_n(post_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+                        std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
                         solo_filter_.process({&solo_pointers_[1], 1}, chunk);
                         break;
                     }
                     case FilterStereo::kMid: {
-                        std::copy_n(post_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
-                        std::copy_n(post_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+                        std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+                        std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
                         zldsp::splitter::InplaceMSSplitter<float>::split(
                             solo_pointers_[0], solo_pointers_[1], chunk);
                         solo_filter_.process({&solo_pointers_[0], 1}, chunk);
@@ -342,8 +342,8 @@ namespace zlp {
                         break;
                     }
                     case FilterStereo::kSide: {
-                        std::copy_n(post_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
-                        std::copy_n(post_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+                        std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+                        std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
                         zldsp::splitter::InplaceMSSplitter<float>::split(
                             solo_pointers_[0], solo_pointers_[1], chunk);
                         solo_filter_.process({&solo_pointers_[1], 1}, chunk);
