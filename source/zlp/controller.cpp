@@ -40,7 +40,7 @@ namespace zlp {
         on_bands_.reserve(kBandNum);
         sample_rate_ = sample_rate;
         prepareFFTPlans();
-        fft_order_ = fft_very_high_->get_order();
+        fft_order_ = fft_extreme_high_->get_order();
         const size_t max_fft_size = 1ULL << fft_order_;
         const size_t max_num_bin_effective = max_fft_size / 2;
         {
