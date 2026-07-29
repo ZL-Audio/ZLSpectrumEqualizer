@@ -404,7 +404,7 @@ namespace zlp {
         // loudness matcher
         std::atomic<bool> a_loudness_matcher_on_{false};
         bool loudness_matcher_on_{false};
-        zldsp::loudness::LUFSMatcher<float, true> loudness_matcher_{};
+        zldsp::loudness::LUFSMatcher<float> loudness_matcher_{true};
 
         std::atomic<bool> a_sgc_on_{false};
         zlchore::thread::Notifier to_update_sgc_on_{false};

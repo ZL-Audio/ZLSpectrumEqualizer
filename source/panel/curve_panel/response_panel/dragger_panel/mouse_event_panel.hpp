@@ -64,8 +64,8 @@ namespace zlpanel {
         std::atomic<float>& fft_freeze_ref_;
         bool c_fft_freeze_{false};
 
-        float fft_max_{0.f};
-        float slider_max_{0.f};
+        float fft_max_{30000.f};
+        float slider_max_{30000.f};
 
         zlgui::slider::SnappingSlider q_slider_;
         std::unique_ptr<zlgui::attachment::SliderAttachment<true>> q_attachment_;

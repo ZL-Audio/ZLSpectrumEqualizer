@@ -9,17 +9,35 @@
 
 #pragma once
 
-#include "../../zlp/sample_rate_helper.hpp"
+#include <cstddef>
 
-namespace zlpanel::freq_helper {
-    inline double getSliderMax(const double sample_rate) {
-        return zlp::getFrequencyParameterMax(sample_rate);
-    }
-
-    inline double getFFTMax(const double sample_rate) {
+namespace zlp {
+    inline constexpr double getFrequencyParameterMax(const double sample_rate) noexcept {
         if (sample_rate >= 40000.0 && sample_rate < 50000.0) {
             return 30000.0;
         }
-        return 0.5 * sample_rate;
+        return 0.49964 * sample_rate;
+    }
+
+    inline constexpr std::size_t getMediumFFTOrder(const double sample_rate) noexcept {
+        if (sample_rate < 12500.0) {
+            return 10;
+        }
+        if (sample_rate < 25000.0) {
+            return 11;
+        }
+        if (sample_rate < 50000.0) {
+            return 12;
+        }
+        if (sample_rate < 100000.0) {
+            return 13;
+        }
+        if (sample_rate < 200000.0) {
+            return 14;
+        }
+        if (sample_rate < 400000.0) {
+            return 15;
+        }
+        return 16;
     }
 }

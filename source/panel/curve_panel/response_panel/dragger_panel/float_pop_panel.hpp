@@ -31,6 +31,8 @@ namespace zlpanel {
 
         void updateBand();
 
+        void updateSampleRate(double sample_rate);
+
         int getIdealHeight() const;
 
         int getIdealWidth() const;
@@ -77,8 +79,11 @@ namespace zlpanel {
 
         zlgui::slider::CompactLinearSlider<false, false, false> freq_slider_;
         std::unique_ptr<zlgui::attachment::SliderAttachment<true>> freq_attachment_;
+        double freq_max_{20000.0};
 
         void updateTransformation();
+
+        void updateFreqAttachment();
 
         void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) override;
     };

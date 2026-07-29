@@ -109,7 +109,7 @@ namespace zlpanel {
         std::array<bool, zlp::kBandNum> is_dynamic_on_{};
         std::array<zldsp::filter::FilterType, zlp::kBandNum> filter_types_{};
         juce::Rectangle<float> bound_;
-        float sample_rate_{0.f};
+        float sample_rate_{48000.f};
         float c_max_db_id_{-1.f};
 
         zlgui::slider::SnappingSlider q_slider_;

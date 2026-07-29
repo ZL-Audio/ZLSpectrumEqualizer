@@ -150,6 +150,7 @@ namespace zlpanel {
 
     void DraggerPanel::updateSampleRate(const double sample_rate) {
         mouse_event_panel_.updateSampleRate(sample_rate);
+        float_pop_panel_.updateSampleRate(sample_rate);
         sample_rate_ = static_cast<float>(sample_rate);
         for (size_t band = 0; band < zlp::kBandNum; ++band) {
             updateDraggerBound(band);

@@ -409,7 +409,7 @@ namespace zlpanel {
             const auto sample_rate = sample_rate_.load(std::memory_order::relaxed);
             c_sample_rate_ = sample_rate;
             c_slider_max_ = freq_helper::getSliderMax(sample_rate);
-            if (sample_rate < 40000.0) {
+            if (sample_rate <= 20.0) {
                 return;
             }
             fft_max_ = freq_helper::getFFTMax(sample_rate);
@@ -424,15 +424,9 @@ namespace zlpanel {
             }
             std::fill(to_update_base_y_flags_.begin(), to_update_base_y_flags_.end(), true);
         }
-        if ((sr_changed || fft_res_changed || ws_dsp_.empty()) && c_sample_rate_ >= 40000.0) {
+        if ((sr_changed || fft_res_changed || ws_dsp_.empty()) && c_sample_rate_ > 20.0) {
             const auto fft_resolution = p_ref_.parameters_.getRawParameterValue(zlp::PSpecResolution::kID)->load(std::memory_order::relaxed);
-            size_t fft_medium_order;
-            if (c_sample_rate_ < 50000.0) { fft_medium_order = 12; }
-            else if (c_sample_rate_ < 100000.0) { fft_medium_order = 13; }
-            else if (c_sample_rate_ < 200000.0) { fft_medium_order = 14; }
-            else if (c_sample_rate_ < 400000.0) { fft_medium_order = 15; }
-            else { fft_medium_order = 16; }
-
+            const auto fft_medium_order = zlp::getMediumFFTOrder(c_sample_rate_);
             const size_t order = fft_medium_order - 3 + static_cast<size_t>(std::round(fft_resolution));
             const size_t fft_size = 1ULL << order;
             const size_t num_bin_effective = fft_size / 2;

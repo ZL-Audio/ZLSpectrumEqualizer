@@ -172,10 +172,7 @@ namespace zlpanel {
                 ftype_box_.getBox(), p_ref_.parameters_, zlp::PFilterType::kID + band_s, updater_);
             lr_attachment_ = std::make_unique<zlgui::attachment::ComboBoxAttachment<true>>(
                 lr_box_.getBox(), p_ref_.parameters_, zlp::PLRMode::kID + band_s, updater_);
-            freq_attachment_ = std::make_unique<zlgui::attachment::SliderAttachment<true>>(
-                freq_slider_.getSlider(), p_ref_.parameters_, zlp::PFreq::kID + band_s, updater_);
-            freq_attachment_->updateComponent();
-            freq_slider_.updateDisplayValue();
+            updateFreqAttachment();
             filter_status_ptr_ = p_ref_.parameters_.getRawParameterValue(zlp::PFilterStatus::kID + band_s);
             repaintCallBackSlow();
         } else {
@@ -185,6 +182,23 @@ namespace zlpanel {
             filter_status_ptr_ = nullptr;
         }
         setVisible(base_.getSelectedBand() < zlp::kBandNum);
+    }
+
+    void FloatPopPanel::updateSampleRate(const double sample_rate) {
+        freq_max_ = freq_helper::getSliderMax(sample_rate);
+        updateFreqAttachment();
+    }
+
+    void FloatPopPanel::updateFreqAttachment() {
+        freq_attachment_.reset();
+        if (base_.getSelectedBand() < zlp::kBandNum) {
+            const auto band_s = std::to_string(base_.getSelectedBand());
+            freq_attachment_ = std::make_unique<zlgui::attachment::SliderAttachment<true>>(
+                freq_slider_.getSlider(), p_ref_.parameters_, zlp::PFreq::kID + band_s,
+                zlp::getLogMidRange(10.0, freq_max_, 1000.0, 0.1), updater_);
+            freq_attachment_->updateComponent();
+            freq_slider_.updateDisplayValue();
+        }
     }
 
     void FloatPopPanel::repaintCallBackSlow() {

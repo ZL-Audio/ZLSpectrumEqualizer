@@ -8,6 +8,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "controller.hpp"
+#include "sample_rate_helper.hpp"
 #include "../dsp/filter/gain_compensation/gain_compensation.hpp"
 #include "../dsp/splitter/inplace_ms_splitter.hpp"
 
@@ -30,6 +31,14 @@ namespace zlp {
         }
 
         constexpr auto dispatcher = makeDispatchTable(std::make_index_sequence<32>{});
+
+        zldsp::filter::FilterParameters getEffectiveFilterParameters(
+            const zldsp::filter::Empty& filter, const double sample_rate) {
+            auto parameters = filter.getParas();
+            parameters.freq = std::min(
+                parameters.freq, getFrequencyParameterMax(sample_rate));
+            return parameters;
+        }
     }
 
     Controller::Controller(juce::AudioProcessor& p) :
@@ -73,7 +82,7 @@ namespace zlp {
             solo_pointers_[chan] = solo_buffers_[chan].data();
         }
         solo_filter_.prepare(sample_rate_, 2, max_analyzer_hop);
-        updateSoloFilter<true>(emptys_[c_solo_idx_].getParas());
+        updateSoloFilter<true>(getEffectiveFilterParameters(emptys_[c_solo_idx_], sample_rate_));
 
         loudness_matcher_.prepare(sample_rate_, 2);
         output_gain_dsp_.prepare(sample_rate_, 2, 0.05);
@@ -134,7 +143,7 @@ namespace zlp {
                 c_solo_on_ = true;
                 solo_filter_.reset();
                 c_solo_idx_ = solo_whole_idx % kBandNum;
-                updateSoloFilter<true>(emptys_[c_solo_idx_].getParas());
+                updateSoloFilter<true>(getEffectiveFilterParameters(emptys_[c_solo_idx_], sample_rate_));
             }
         }
         is_ext_side_ = a_is_ext_side_.load(std::memory_order::relaxed);
@@ -848,18 +857,7 @@ namespace zlp {
     }
 
     void Controller::prepareFFTPlans() {
-        size_t fft_medium_order;
-        if (sample_rate_ < 50000.0) {
-            fft_medium_order = 12;
-        } else if (sample_rate_ < 100000.0) {
-            fft_medium_order = 13;
-        } else if (sample_rate_ < 200000.0) {
-            fft_medium_order = 14;
-        } else if (sample_rate_ < 400000.0) {
-            fft_medium_order = 15;
-        } else {
-            fft_medium_order = 16;
-        }
+        const auto fft_medium_order = getMediumFFTOrder(sample_rate_);
         fft_extreme_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_medium_order - 3);
         fft_very_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_medium_order - 2);
         fft_low_ = std::make_unique<zldsp::fft::RFFT<float>>(fft_medium_order - 1);
@@ -1106,7 +1104,7 @@ namespace zlp {
         for (const auto& band : on_bands_) {
             const auto to_update_base = to_update_bases_[band] || to_update_empty_bases_[band].check();
             if (to_update_base) {
-                const auto paras = emptys_[band].getParas();
+                const auto paras = getEffectiveFilterParameters(emptys_[band], sample_rate_);
                 if (c_solo_on_ && c_solo_idx_ == band) {
                     updateSoloFilter<false>(paras);
                 }
@@ -1118,7 +1116,7 @@ namespace zlp {
             }
             if (to_update_base || to_update_empty_targets_[band].check()) {
                 if (dynamic_on_[band]) {
-                    auto paras = emptys_[band].getParas();
+                    auto paras = getEffectiveFilterParameters(emptys_[band], sample_rate_);
                     paras.gain = static_cast<double>(empty_target_gains_[band].load(std::memory_order::relaxed));
                     spec_response_[band].updateDiffResponse(paras, ideal_, ws_);
                     const auto lrms = static_cast<size_t>(lrms_[band]);

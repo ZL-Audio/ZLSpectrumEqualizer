@@ -14,3 +14,4 @@
 #include "filter_attach.hpp"
 #include "filter_dynamic_attach.hpp"
 #include "chore_attach.hpp"
+#include "sample_rate_helper.hpp"
