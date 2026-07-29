@@ -112,7 +112,6 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                    juce::MidiBuffer&) {
-
     const auto bypass = a_bypass_.load(std::memory_order::relaxed) > .5f;
     processBlockInternal(buffer, bypass);
 }
@@ -211,6 +210,9 @@ void PluginProcessor::processBlockInternal(juce::AudioBuffer<float>& buffer, con
     juce::ScopedNoDenormals noDenormals;
     if (buffer.getNumSamples() == 0) {
         return; // ignore empty blocks
+    }
+    if (update_channel_layout_per_call_) {
+        updateChannelLayout();
     }
     controller_.prepareBuffer();
     const auto ext_side = controller_.getExtSide();
