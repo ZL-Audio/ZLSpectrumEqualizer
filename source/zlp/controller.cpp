@@ -312,10 +312,6 @@ namespace zlp {
                                          }, chunk);
 
                 if (c_solo_on_) {
-                    if (!dynamic_on_[c_solo_idx_]) {
-                        std::memset(solo_pointers_[0], 0, chunk * sizeof(float));
-                        std::memset(solo_pointers_[1], 0, chunk * sizeof(float));
-                    }
                     switch (lrms_[c_solo_idx_]) {
                     case FilterStereo::kStereo: {
                         std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
