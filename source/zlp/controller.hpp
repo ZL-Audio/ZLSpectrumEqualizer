@@ -449,6 +449,7 @@ namespace zlp {
 
         void processSideLRMS();
 
+        template <bool compensate_stereo_energy>
         void processDualChannelSide(ChannelData& ch1, ChannelData& ch2);
 
         void processDynamicBands(ChannelData& data, zlchore::thread::TriBuffer<SharedData>& shared_data);

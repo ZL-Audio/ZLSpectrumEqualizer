@@ -413,12 +413,12 @@ namespace zlp {
     }
 
     void Controller::processSideLR() {
-        processDualChannelSide(l_data_, r_data_);
+        processDualChannelSide<false>(l_data_, r_data_);
     }
 
     void Controller::processSideMS() {
         zldsp::splitter::InplaceMSSplitter<float>::split(fft_ins_[2].data(), fft_ins_[3].data(), fft_size_);
-        processDualChannelSide(m_data_, s_data_);
+        processDualChannelSide<true>(m_data_, s_data_);
     }
 
     void Controller::processSideLRMS() {
@@ -434,6 +434,7 @@ namespace zlp {
         computeSideAbsSqrFromMain();
     }
 
+    template <bool compensate_stereo_energy>
     void Controller::processDualChannelSide(ChannelData& ch1, ChannelData& ch2) {
         if (!ch1.dynamic_bands.empty() || !stereo_data_.dynamic_bands.empty()) {
             zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
@@ -453,7 +454,13 @@ namespace zlp {
             for (size_t i = start_idx; i < end_idx; i += lanes) {
                 const auto v1 = hn::Load(d, ch1_abs_sqr + i);
                 const auto v2 = hn::Load(d, ch2_abs_sqr + i);
-                hn::Store(hn::Add(v1, v2), d, stereo_abs_sqr + i);
+                const auto sum = hn::Add(v1, v2);
+
+                if constexpr (compensate_stereo_energy) {
+                    hn::Store(hn::Add(sum, sum), d, stereo_abs_sqr + i);
+                } else {
+                    hn::Store(sum, d, stereo_abs_sqr + i);
+                }
             }
             spec_smoother_.smoothRange(stereo_data_.fft_side_abs_sqr, stereo_data_.smooth_bounds);
         }
