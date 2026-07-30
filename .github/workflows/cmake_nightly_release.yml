@@ -249,11 +249,6 @@ jobs:
       - name: Move current release assets
         run: |
           mv -v "current_release"/* "release_repo/${{ github.event.repository.name }}/"
-          mv -v "current_repo/docs" "release_repo/${{ github.event.repository.name }}/docs"
-          mv -v "current_repo/assets" "release_repo/${{ github.event.repository.name }}/assets"
-          mv -v "current_repo/README.md" "release_repo/${{ github.event.repository.name }}/README.md"
-          mv -v "current_repo/LICENSE.md" "release_repo/${{ github.event.repository.name }}/LICENSE.md"
-          mv -v "current_repo/CHANGELOG.md" "release_repo/${{ github.event.repository.name }}/CHANGELOG.md"
 
       - name: Commit release repo
         run: |
