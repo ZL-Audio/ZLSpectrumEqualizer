@@ -1,6 +1,5 @@
 <p align="center">
   <img src="docs/zlaudio.svg" width="7.5%" hspace="6.068%"/>
-    &nbsp; &nbsp; &nbsp;
   <img src="docs/logo.svg" width="7.5%" hspace="6.068%"/>
 </p>
 
@@ -27,7 +26,7 @@ sudo apt-get update && sudo apt install libasound2-dev libx11-dev libxcomposite-
 
 ### Clone and Build
 
-Once you have set up the environment, you can clone the ZL Equalizer code, populate all submodules, then configure & build the code. Please set:
+Once you have set up the environment, you can clone the ZL Spectrum Equalizer code, populate all submodules, then configure & build the code. Please set:
 
 - the variable `ZL_JUCE_FORMATS` as a list of plugin formats that you want, e.g., `"VST3;LV2"`
   - AAX plug-ins need to be digitally signed using PACE Anti-Piracy's signing tools before they will run in commercially available versions of Pro Tools.
@@ -69,6 +68,8 @@ JUCE template from [pamplejuce](https://github.com/sudara/pamplejuce)
 [inter](https://github.com/rsms/inter) by [The Inter Project Authors](https://github.com/rsms/inter)
 
 ## References
+
+Yuriy Ivantsov. *On the Ideal Bilinear and Biquadratic Digital Filter*. (2025).
 
 Dimitrios Giannoulis, Michael Massberg, and Joshua D. Reiss. *Digital dynamic range compressor design—A tutorial and analysis*. Journal of the Audio Engineering Society. (2012).
 
