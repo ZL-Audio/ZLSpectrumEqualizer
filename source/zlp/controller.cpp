@@ -1028,6 +1028,8 @@ namespace zlp {
             const auto dynamic_mode = a_dynamic_mode_[band].load(std::memory_order::relaxed);
             if (dynamic_mode != dynamic_mode_[band]) {
                 dynamic_mode_[band] = dynamic_mode;
+                const auto lrms = static_cast<size_t>(lrms_[band]);
+                to_update_channel_smooth_bounds_[lrms] = true;
                 to_update_channel_data_.signal();
                 to_update_spec_threshold_[band].signal();
             }
