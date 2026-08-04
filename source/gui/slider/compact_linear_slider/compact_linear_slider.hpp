@@ -301,6 +301,11 @@ namespace zlgui::slider {
             editor.setInputRestrictions(0, permitted_characters_);
             text_.addMouseListener(this, true);
 
+            if constexpr (kUseName) {
+                text_.setVisible(true);
+                label_.setVisible(false);
+            }
+
             editor.setJustification(juce::Justification::centred);
             editor.setColour(juce::TextEditor::outlineColourId, base_.getTextColour());
             editor.setColour(juce::TextEditor::highlightedTextColourId, base_.getTextColour());
