@@ -1162,19 +1162,6 @@ namespace zlp {
 
     void Controller::updateDynamicStatus() {
         dynamic_delta_on_ = false;
-        bool dynamic_delta_changed = false;
-        for (size_t band = 0; band < kBandNum; ++band) {
-            const auto dynamic_delta = a_dynamic_delta_[band].load(std::memory_order::relaxed);
-            dynamic_delta_on_ |= dynamic_delta;
-            if (dynamic_delta != dynamic_delta_[band]) {
-                dynamic_delta_[band] = dynamic_delta;
-                dynamic_delta_changed = true;
-            }
-        }
-        if (dynamic_delta_changed) {
-            to_update_channel_data_.signal();
-        }
-
         for (const auto& band : on_bands_) {
             dynamic_bypass_[band] = a_dynamic_bypass_[band].load(std::memory_order::relaxed);
             const auto dynamic_mode = a_dynamic_mode_[band].load(std::memory_order::relaxed);
@@ -1194,6 +1181,13 @@ namespace zlp {
                 to_update_channel_smooth_bounds_[lrms] = true;
                 to_update_lrms_.signal();
                 to_update_spec_response_.signal();
+                to_update_channel_data_.signal();
+            }
+
+            const auto dynamic_delta = a_dynamic_delta_[band].load(std::memory_order::relaxed) && dynamic_on_[band];
+            dynamic_delta_on_ |= dynamic_delta;
+            if (dynamic_delta != dynamic_delta_[band]) {
+                dynamic_delta_[band] = dynamic_delta;
                 to_update_channel_data_.signal();
             }
         }
