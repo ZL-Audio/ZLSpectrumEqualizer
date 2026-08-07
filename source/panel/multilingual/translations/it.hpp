@@ -27,6 +27,7 @@ namespace zlpanel::multilingual::it {
         "Clicca: disattiva la banda.",
 
         "Rilascia: bypassa l'elaborazione dinamica.",
+        "Premi: emetti il segnale delta dinamico.",
         "Scegli la modalità dinamica.",
         "L'elaborazione dinamica utilizza una soglia statica.",
         "L'elaborazione dinamica utilizza una soglia dinamica legata alla loudness della side-chain di banda.",

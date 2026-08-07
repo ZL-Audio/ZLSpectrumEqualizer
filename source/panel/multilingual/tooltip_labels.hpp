@@ -23,6 +23,7 @@ namespace zlpanel::multilingual {
         kBandOff,
 
         kBandDynamicBypass,
+        kBandDynamicDelta,
         kBandDynamicMode,
         kBandDynamicAbs,
         kBandDynamicBand,

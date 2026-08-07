@@ -27,6 +27,7 @@ namespace zlpanel::multilingual::en {
         "Click: turn off the band.",
 
         "Release: bypass the dynamic processing.",
+        "Press: output the dynamic delta signal.",
         "Choose the dynamic mode.",
         "Dynamic processing uses a static threshold.",
         "Dynamic processing uses a dynamic threshold related to band side-chain loudness",

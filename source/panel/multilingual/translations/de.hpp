@@ -27,6 +27,7 @@ namespace zlpanel::multilingual::de {
         "Klicken: Band ausschalten.",
 
         "Loslassen: Dynamikbearbeitung bypassen.",
+        "Drücken: Dynamik-Delta-Signal ausgeben.",
         "Dynamikmodus auswählen.",
         "Dynamikbearbeitung nutzt einen statischen Schwellenwert.",
         "Dynamikbearbeitung nutzt einen dynamischen Schwellenwert, basierend auf der Band-Sidechain-Lautheit.",

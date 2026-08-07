@@ -27,6 +27,7 @@ namespace zlpanel::multilingual::es {
         "Clic: desactivar la banda.",
 
         "Soltar: omitir el procesamiento dinámico.",
+        "Pulsar: emitir la señal delta dinámica.",
         "Seleccionar el modo dinámico.",
         "El procesamiento dinámico utiliza un umbral estático.",
         "El procesamiento dinámico utiliza un umbral dinámico relacionado con la sonoridad del sidechain de la banda.",
