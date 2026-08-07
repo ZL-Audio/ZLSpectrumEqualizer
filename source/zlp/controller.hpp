@@ -263,7 +263,7 @@ namespace zlp {
             kNotRequired, kLR, kMS, kLRMS
         };
 
-        static constexpr hn::ScalableTag<float> d;
+        static constexpr hn::ScalableTag<float> d{};
         static constexpr size_t lanes = hn::MaxLanes(d);
 
         struct ChannelData {
