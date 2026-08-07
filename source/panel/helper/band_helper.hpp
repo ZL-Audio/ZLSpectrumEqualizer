@@ -74,7 +74,7 @@ namespace zlpanel::band_helper {
         if (items_set.isSelected(band)) {
             const auto band_array = items_set.getItemArray();
             for (const size_t& b : band_array) {
-                updateValue(p.parameters_.getParameter(zlp::PDynamicDelta::kID + std::to_string(band)), 0.f);
+                updateValue(p.parameters_.getParameter(zlp::PDynamicDelta::kID + std::to_string(b)), 0.f);
                 updateValue(p.parameters_.getParameter(zlp::PFilterStatus::kID + std::to_string(b)), 0.f);
             }
             items_set.deselectAll();
