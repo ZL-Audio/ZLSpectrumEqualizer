@@ -9,6 +9,7 @@ LICENSE and CODE are available at [https://github.com/ZL-Audio/ZLSpectrumEqualiz
 BREAKING CHANGES
 
 - fix the `Relative` dynamic mode
+- use separate sensitivity controls for sliders/draggers
 
 Bug fixes
 
