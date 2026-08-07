@@ -74,10 +74,12 @@ namespace zlpanel::band_helper {
         if (items_set.isSelected(band)) {
             const auto band_array = items_set.getItemArray();
             for (const size_t& b : band_array) {
+                updateValue(p.parameters_.getParameter(zlp::PDynamicDelta::kID + std::to_string(band)), 0.f);
                 updateValue(p.parameters_.getParameter(zlp::PFilterStatus::kID + std::to_string(b)), 0.f);
             }
             items_set.deselectAll();
         } else {
+            updateValue(p.parameters_.getParameter(zlp::PDynamicDelta::kID + std::to_string(band)), 0.f);
             updateValue(p.parameters_.getParameter(zlp::PFilterStatus::kID + std::to_string(band)), 0.f);
         }
     }
@@ -93,11 +95,14 @@ namespace zlpanel::band_helper {
                             gain > 0.f ? gain - eq_max_db * .33f : gain + eq_max_db * .33f));
         }
 
-        updateValue(p.parameters_.getParameter(zlp::PDynamicBypass::kID + band_s),
-                    dynamic_on ? 0.f : 1.f);
+        updateValue(p.parameters_.getParameter(zlp::PDynamicBypass::kID + band_s), dynamic_on ? 0.f : 1.f);
+        updateValue(p.parameters_.getParameter(zlp::PDynamicDelta::kID + band_s), 0.f);
 
         if (!dynamic_on) {
-            for (const auto& ID : {zlp::PThresholdAbs::kID, zlp::PThresholdBand::kID, zlp::PThresholdRel::kID, zlp::PKneeW::kID, zlp::PAttack::kID, zlp::PRelease::kID}) {
+            for (const auto& ID : {
+                zlp::PDynamicMode::kID,
+                zlp::PThresholdAbs::kID, zlp::PThresholdBand::kID, zlp::PThresholdRel::kID,
+                zlp::PKneeW::kID, zlp::PAttack::kID, zlp::PRelease::kID}) {
                 auto* para = p.parameters_.getParameter(ID + band_s);
                 updateValue(para, para->getDefaultValue());
             }
