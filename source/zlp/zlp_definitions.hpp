@@ -437,6 +437,13 @@ namespace zlp {
         static constexpr auto kDefaultV = false;
     };
 
+    class PDynamicDelta : public BoolParameters<PDynamicDelta> {
+    public:
+        static constexpr auto kID = "dynamic_delta";
+        static constexpr auto kName = "Dynamic Delta";
+        static constexpr auto kDefaultV = false;
+    };
+
     class PDynamicMode : public ChoiceParameters<PDynamicMode> {
     public:
         static constexpr auto kID = "dynamic_mode";
@@ -510,7 +517,8 @@ namespace zlp {
                        PFreq::get(suffix, true, true),
                        PGain::get(suffix), PTargetGain::get(suffix),
                        PQ::get(suffix, true, true),
-                       PDynamicON::get(suffix), PDynamicBypass::get(suffix), PDynamicMode::get(suffix),
+                       PDynamicON::get(suffix), PDynamicBypass::get(suffix),
+                       PDynamicDelta::get(suffix), PDynamicMode::get(suffix),
                        PThresholdAbs::get(suffix), PThresholdBand::get(suffix), PThresholdRel::get(suffix),
                        PKneeW::get(suffix), PAttack::get(suffix), PRelease::get(suffix));
         }

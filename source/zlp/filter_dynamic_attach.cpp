@@ -34,6 +34,8 @@ namespace zlp {
             controller_.setDynamicON(idx_, value > .5f);
         } else if (parameter_ID.startsWith(PDynamicBypass::kID)) {
             controller_.setDynamicBypass(idx_, value > .5f);
+        } else if (parameter_ID.startsWith(PDynamicDelta::kID)) {
+            controller_.setDynamicDelta(idx_, value > .5f);
         } else if (parameter_ID.startsWith(PDynamicMode::kID)) {
             controller_.setDynamicMode(idx_, static_cast<DynamicMode>(std::round(value)));
         } else if (parameter_ID.startsWith(PThresholdAbs::kID)) {

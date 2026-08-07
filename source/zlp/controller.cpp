@@ -15,18 +15,19 @@
 namespace zlp {
     namespace {
         template <size_t Mask>
-        void dispatchMask(Controller* instance, const bool perform_fft) {
+        void dispatchMask(Controller* instance, const bool perform_fft, const bool is_delta) {
             instance->processMainImpl<
                 (Mask & 1) != 0,
                 (Mask & 2) != 0,
                 (Mask & 4) != 0,
                 (Mask & 8) != 0,
                 (Mask & 16) != 0
-            >(perform_fft);
+            >(perform_fft, is_delta);
         }
 
         template <size_t... Is>
-        constexpr std::array<void (*)(Controller*, bool), sizeof...(Is)> makeDispatchTable(std::index_sequence<Is...>) {
+        constexpr std::array<void (*)(Controller*, bool, bool), sizeof...(Is)> makeDispatchTable(
+            std::index_sequence<Is...>) {
             return {&dispatchMask<Is>...};
         }
 
@@ -415,9 +416,11 @@ namespace zlp {
 
     void Controller::processMain(const bool is_bypass, const bool perform_fft) {
         if (is_bypass) {
-            dispatcher[0](this, perform_fft);
+            dispatcher[0](this, perform_fft, false);
+        } else if (dynamic_delta_on_) {
+            dispatcher[dynamic_delta_mask_](this, perform_fft, true);
         } else {
-            dispatcher[dispatch_mask_](this, perform_fft);
+            dispatcher[dispatch_mask_](this, perform_fft, false);
         }
     }
 
@@ -663,15 +666,57 @@ namespace zlp {
         }
 
         std::fill(dynamic_ptr + dyn_start, dynamic_ptr + dyn_end, 0.0f);
-        // process each dynamic band
-        for (size_t i = 0; i < data.dynamic_bands.size(); ++i) {
-            const auto band = data.dynamic_bands[i];
-            if (dynamic_bypass_[band]) {
-                spec_dynamic_[band].process<true, true>(side_ptr, dynamic_ptr,
-                                                        spec_response_[band], spec_follower_[band], band_avgs_[band]);
-            } else {
-                spec_dynamic_[band].process<true, false>(side_ptr, dynamic_ptr,
-                                                         spec_response_[band], spec_follower_[band], band_avgs_[band]);
+        if (dynamic_delta_on_) {
+            auto* HWY_RESTRICT delta_ptr = data.delta_response.data();
+            auto* HWY_RESTRICT band_ptr = dynamic_band_response_.data();
+            std::fill(delta_ptr + dyn_start, delta_ptr + dyn_end, 0.0f);
+
+            // Keep every band's detector state and displayed curve updated, but
+            // accumulate the audible difference only for delta-enabled bands.
+            for (const auto band : data.dynamic_bands) {
+                if (!dynamic_delta_[band]) {
+                    if (dynamic_bypass_[band]) {
+                        spec_dynamic_[band].process<true, true>(side_ptr, dynamic_ptr,
+                                                                spec_response_[band], spec_follower_[band],
+                                                                band_avgs_[band]);
+                    } else {
+                        spec_dynamic_[band].process<true, false>(side_ptr, dynamic_ptr,
+                                                                 spec_response_[band], spec_follower_[band],
+                                                                 band_avgs_[band]);
+                    }
+                    continue;
+                }
+
+                if (dynamic_bypass_[band]) {
+                    spec_dynamic_[band].process<false, true>(side_ptr, band_ptr,
+                                                             spec_response_[band], spec_follower_[band],
+                                                             band_avgs_[band]);
+                    continue;
+                }
+                spec_dynamic_[band].process<false, false>(side_ptr, band_ptr,
+                                                          spec_response_[band], spec_follower_[band],
+                                                          band_avgs_[band]);
+
+                const auto band_start = spec_response_[band].getDiffStartIdx();
+                const auto band_end = spec_response_[band].getDiffEndIdx();
+                for (size_t i = band_start; i < band_end; i += lanes) {
+                    const auto v_band = hn::Load(d, band_ptr + i);
+                    const auto v_dynamic = hn::Load(d, dynamic_ptr + i);
+                    const auto v_delta = hn::Load(d, delta_ptr + i);
+                    hn::Store(hn::Add(v_dynamic, v_band), d, dynamic_ptr + i);
+                    hn::Store(hn::Add(v_delta, v_band), d, delta_ptr + i);
+                }
+            }
+        } else {
+            // process each dynamic band
+            for (const auto band : data.dynamic_bands) {
+                if (dynamic_bypass_[band]) {
+                    spec_dynamic_[band].process<true, true>(side_ptr, dynamic_ptr,
+                                                            spec_response_[band], spec_follower_[band], band_avgs_[band]);
+                } else {
+                    spec_dynamic_[band].process<true, false>(side_ptr, dynamic_ptr,
+                                                             spec_response_[band], spec_follower_[band], band_avgs_[band]);
+                }
             }
         }
 
@@ -686,19 +731,26 @@ namespace zlp {
             shared_data.publish();
         }
 
-        // convert dynamic response from db to linear
-        const auto* HWY_RESTRICT static_ptr = data.static_response.data();
-        for (size_t i = dyn_start; i < dyn_end; i += lanes) {
-            const auto v_dynamic = hn::Load(d, dynamic_ptr + i);
-            const auto v_static = hn::Load(d, static_ptr + i);
-            hn::Store(hn::Mul(hn::Exp(d, v_dynamic), v_static), d, dynamic_ptr + i);
+        if (dynamic_delta_on_) {
+            auto* HWY_RESTRICT delta_ptr = data.delta_response.data();
+            for (size_t i = dyn_start; i < dyn_end; i += lanes) {
+                const auto v_delta = hn::Load(d, delta_ptr + i);
+                hn::Store(hn::Exp(d, v_delta), d, delta_ptr + i);
+            }
+        } else {
+            const auto* HWY_RESTRICT static_ptr = data.static_response.data();
+            for (size_t i = dyn_start; i < dyn_end; i += lanes) {
+                const auto v_dynamic = hn::Load(d, dynamic_ptr + i);
+                const auto v_static = hn::Load(d, static_ptr + i);
+                hn::Store(hn::Mul(hn::Exp(d, v_dynamic), v_static), d, dynamic_ptr + i);
+            }
         }
     }
 
     template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
-    void Controller::processMainImpl(const bool perform_fft) {
+    void Controller::processMainImpl(const bool perform_fft, const bool is_delta) {
         if constexpr (!(has_stereo || has_l || has_r || has_m || has_s)) {
-            if (perform_fft) {
+            if (!is_delta && perform_fft) {
                 multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window_bypass_.data());
                 return;
             }
@@ -715,78 +767,154 @@ namespace zlp {
         auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
         auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
 
-        const float* HWY_RESTRICT stereo_res_ptr = stereo_data_.dynamic_response.data();
-        const float* HWY_RESTRICT l_res_ptr = l_data_.dynamic_response.data();
-        const float* HWY_RESTRICT r_res_ptr = r_data_.dynamic_response.data();
-        const float* HWY_RESTRICT m_res_ptr = m_data_.dynamic_response.data();
-        const float* HWY_RESTRICT s_res_ptr = s_data_.dynamic_response.data();
+        const float* HWY_RESTRICT stereo_res_ptr = is_delta
+                                                       ? stereo_data_.delta_response.data()
+                                                       : stereo_data_.dynamic_response.data();
+        const float* HWY_RESTRICT l_res_ptr = is_delta
+                                                  ? l_data_.delta_response.data()
+                                                  : l_data_.dynamic_response.data();
+        const float* HWY_RESTRICT r_res_ptr = is_delta
+                                                  ? r_data_.delta_response.data()
+                                                  : r_data_.dynamic_response.data();
+        const float* HWY_RESTRICT m_res_ptr = is_delta
+                                                  ? m_data_.delta_response.data()
+                                                  : m_data_.dynamic_response.data();
+        const float* HWY_RESTRICT s_res_ptr = is_delta
+                                                  ? s_data_.delta_response.data()
+                                                  : s_data_.dynamic_response.data();
 
         const auto v_half = hn::Set(d, 0.5f);
 
-        for (size_t i = 0; i < num_bin_effective_; i += lanes) {
-            auto vl_real = hn::Load(d, l_real_ptr + i);
-            auto vl_imag = hn::Load(d, l_imag_ptr + i);
-            auto vr_real = hn::Load(d, r_real_ptr + i);
-            auto vr_imag = hn::Load(d, r_imag_ptr + i);
+        if (is_delta) {
+            for (size_t i = 0; i < num_bin_effective_; i += lanes) {
+                const auto vl_dry_real = hn::Load(d, l_real_ptr + i);
+                const auto vl_dry_imag = hn::Load(d, l_imag_ptr + i);
+                const auto vr_dry_real = hn::Load(d, r_real_ptr + i);
+                const auto vr_dry_imag = hn::Load(d, r_imag_ptr + i);
+                auto vl_real = vl_dry_real;
+                auto vl_imag = vl_dry_imag;
+                auto vr_real = vr_dry_real;
+                auto vr_imag = vr_dry_imag;
 
-            if constexpr (has_stereo) {
-                const auto v_res = hn::Load(d, stereo_res_ptr + i);
-                vl_real = hn::Mul(vl_real, v_res);
-                vl_imag = hn::Mul(vl_imag, v_res);
-                vr_real = hn::Mul(vr_real, v_res);
-                vr_imag = hn::Mul(vr_imag, v_res);
-            }
-
-            if constexpr (has_l) {
-                const auto vl_res = hn::Load(d, l_res_ptr + i);
-                vl_real = hn::Mul(vl_real, vl_res);
-                vl_imag = hn::Mul(vl_imag, vl_res);
-            }
-
-            if constexpr (has_r) {
-                const auto vr_res = hn::Load(d, r_res_ptr + i);
-                vr_real = hn::Mul(vr_real, vr_res);
-                vr_imag = hn::Mul(vr_imag, vr_res);
-            }
-
-            if constexpr (has_m || has_s) {
-                auto vm_real = hn::Mul(hn::Add(vl_real, vr_real), v_half);
-                auto vs_real = hn::Mul(hn::Sub(vl_real, vr_real), v_half);
-                auto vm_imag = hn::Mul(hn::Add(vl_imag, vr_imag), v_half);
-                auto vs_imag = hn::Mul(hn::Sub(vl_imag, vr_imag), v_half);
-
-                if constexpr (has_m) {
-                    const auto vm_res = hn::Load(d, m_res_ptr + i);
-                    vm_real = hn::Mul(vm_real, vm_res);
-                    vm_imag = hn::Mul(vm_imag, vm_res);
+                if constexpr (has_stereo) {
+                    const auto v_res = hn::Load(d, stereo_res_ptr + i);
+                    vl_real = hn::Mul(vl_real, v_res);
+                    vl_imag = hn::Mul(vl_imag, v_res);
+                    vr_real = hn::Mul(vr_real, v_res);
+                    vr_imag = hn::Mul(vr_imag, v_res);
                 }
 
-                if constexpr (has_s) {
-                    const auto vs_res = hn::Load(d, s_res_ptr + i);
-                    vs_real = hn::Mul(vs_real, vs_res);
-                    vs_imag = hn::Mul(vs_imag, vs_res);
+                if constexpr (has_l) {
+                    const auto vl_res = hn::Load(d, l_res_ptr + i);
+                    vl_real = hn::Mul(vl_real, vl_res);
+                    vl_imag = hn::Mul(vl_imag, vl_res);
                 }
 
-                vl_real = hn::Add(vm_real, vs_real);
-                vr_real = hn::Sub(vm_real, vs_real);
-                vl_imag = hn::Add(vm_imag, vs_imag);
-                vr_imag = hn::Sub(vm_imag, vs_imag);
-            }
+                if constexpr (has_r) {
+                    const auto vr_res = hn::Load(d, r_res_ptr + i);
+                    vr_real = hn::Mul(vr_real, vr_res);
+                    vr_imag = hn::Mul(vr_imag, vr_res);
+                }
 
-            hn::Store(vl_real, d, l_real_ptr + i);
-            hn::Store(vl_imag, d, l_imag_ptr + i);
-            hn::Store(vr_real, d, r_real_ptr + i);
-            hn::Store(vr_imag, d, r_imag_ptr + i);
+                if constexpr (has_m || has_s) {
+                    auto vm_real = hn::Mul(hn::Add(vl_real, vr_real), v_half);
+                    auto vs_real = hn::Mul(hn::Sub(vl_real, vr_real), v_half);
+                    auto vm_imag = hn::Mul(hn::Add(vl_imag, vr_imag), v_half);
+                    auto vs_imag = hn::Mul(hn::Sub(vl_imag, vr_imag), v_half);
+
+                    if constexpr (has_m) {
+                        const auto vm_res = hn::Load(d, m_res_ptr + i);
+                        vm_real = hn::Mul(vm_real, vm_res);
+                        vm_imag = hn::Mul(vm_imag, vm_res);
+                    }
+
+                    if constexpr (has_s) {
+                        const auto vs_res = hn::Load(d, s_res_ptr + i);
+                        vs_real = hn::Mul(vs_real, vs_res);
+                        vs_imag = hn::Mul(vs_imag, vs_res);
+                    }
+
+                    vl_real = hn::Add(vm_real, vs_real);
+                    vr_real = hn::Sub(vm_real, vs_real);
+                    vl_imag = hn::Add(vm_imag, vs_imag);
+                    vr_imag = hn::Sub(vm_imag, vs_imag);
+                }
+
+                hn::Store(hn::Sub(vl_real, vl_dry_real), d, l_real_ptr + i);
+                hn::Store(hn::Sub(vl_imag, vl_dry_imag), d, l_imag_ptr + i);
+                hn::Store(hn::Sub(vr_real, vr_dry_real), d, r_real_ptr + i);
+                hn::Store(hn::Sub(vr_imag, vr_dry_imag), d, r_imag_ptr + i);
+            }
+        } else {
+            for (size_t i = 0; i < num_bin_effective_; i += lanes) {
+                auto vl_real = hn::Load(d, l_real_ptr + i);
+                auto vl_imag = hn::Load(d, l_imag_ptr + i);
+                auto vr_real = hn::Load(d, r_real_ptr + i);
+                auto vr_imag = hn::Load(d, r_imag_ptr + i);
+
+                if constexpr (has_stereo) {
+                    const auto v_res = hn::Load(d, stereo_res_ptr + i);
+                    vl_real = hn::Mul(vl_real, v_res);
+                    vl_imag = hn::Mul(vl_imag, v_res);
+                    vr_real = hn::Mul(vr_real, v_res);
+                    vr_imag = hn::Mul(vr_imag, v_res);
+                }
+
+                if constexpr (has_l) {
+                    const auto vl_res = hn::Load(d, l_res_ptr + i);
+                    vl_real = hn::Mul(vl_real, vl_res);
+                    vl_imag = hn::Mul(vl_imag, vl_res);
+                }
+
+                if constexpr (has_r) {
+                    const auto vr_res = hn::Load(d, r_res_ptr + i);
+                    vr_real = hn::Mul(vr_real, vr_res);
+                    vr_imag = hn::Mul(vr_imag, vr_res);
+                }
+
+                if constexpr (has_m || has_s) {
+                    auto vm_real = hn::Mul(hn::Add(vl_real, vr_real), v_half);
+                    auto vs_real = hn::Mul(hn::Sub(vl_real, vr_real), v_half);
+                    auto vm_imag = hn::Mul(hn::Add(vl_imag, vr_imag), v_half);
+                    auto vs_imag = hn::Mul(hn::Sub(vl_imag, vr_imag), v_half);
+
+                    if constexpr (has_m) {
+                        const auto vm_res = hn::Load(d, m_res_ptr + i);
+                        vm_real = hn::Mul(vm_real, vm_res);
+                        vm_imag = hn::Mul(vm_imag, vm_res);
+                    }
+
+                    if constexpr (has_s) {
+                        const auto vs_res = hn::Load(d, s_res_ptr + i);
+                        vs_real = hn::Mul(vs_real, vs_res);
+                        vs_imag = hn::Mul(vs_imag, vs_res);
+                    }
+
+                    vl_real = hn::Add(vm_real, vs_real);
+                    vr_real = hn::Sub(vm_real, vs_real);
+                    vl_imag = hn::Add(vm_imag, vs_imag);
+                    vr_imag = hn::Sub(vm_imag, vs_imag);
+                }
+
+                hn::Store(vl_real, d, l_real_ptr + i);
+                hn::Store(vl_imag, d, l_imag_ptr + i);
+                hn::Store(vr_real, d, r_real_ptr + i);
+                hn::Store(vr_imag, d, r_imag_ptr + i);
+            }
         }
 
         {
             const size_t i = num_bin_effective_;
             const size_t res_i = num_bin_effective_ - 1;
 
-            auto vl_real = l_real_ptr[i];
-            auto vl_imag = l_imag_ptr[i];
-            auto vr_real = r_real_ptr[i];
-            auto vr_imag = r_imag_ptr[i];
+            const auto vl_dry_real = l_real_ptr[i];
+            const auto vl_dry_imag = l_imag_ptr[i];
+            const auto vr_dry_real = r_real_ptr[i];
+            const auto vr_dry_imag = r_imag_ptr[i];
+            auto vl_real = vl_dry_real;
+            auto vl_imag = vl_dry_imag;
+            auto vr_real = vr_dry_real;
+            auto vr_imag = vr_dry_imag;
 
             if constexpr (has_stereo) {
                 const auto v_res = stereo_res_ptr[res_i];
@@ -830,6 +958,13 @@ namespace zlp {
                 vr_real = vm_real - vs_real;
                 vl_imag = vm_imag + vs_imag;
                 vr_imag = vm_imag - vs_imag;
+            }
+
+            if (is_delta) {
+                vl_real -= vl_dry_real;
+                vl_imag -= vl_dry_imag;
+                vr_real -= vr_dry_real;
+                vr_imag -= vr_dry_imag;
             }
 
             l_real_ptr[i] = vl_real;
@@ -910,6 +1045,7 @@ namespace zlp {
         for (auto& fifo : fft_out_imags_) {
             fifo.resize(num_bin_);
         }
+        dynamic_band_response_.resize(num_bin_effective_);
 
         for (auto& response : spec_response_) {
             response.prepare(fft_size_);
@@ -933,6 +1069,8 @@ namespace zlp {
             channel_data.static_response.resize(num_bin_effective_);
             channel_data.fft_side_abs_sqr.resize(num_bin_);
             channel_data.dynamic_response.resize(num_bin_effective_);
+            channel_data.delta_response.resize(num_bin_effective_);
+            std::ranges::fill(channel_data.delta_response, 1.0f);
         }
     }
 
@@ -1023,6 +1161,20 @@ namespace zlp {
     }
 
     void Controller::updateDynamicStatus() {
+        dynamic_delta_on_ = false;
+        bool dynamic_delta_changed = false;
+        for (size_t band = 0; band < kBandNum; ++band) {
+            const auto dynamic_delta = a_dynamic_delta_[band].load(std::memory_order::relaxed);
+            dynamic_delta_on_ |= dynamic_delta;
+            if (dynamic_delta != dynamic_delta_[band]) {
+                dynamic_delta_[band] = dynamic_delta;
+                dynamic_delta_changed = true;
+            }
+        }
+        if (dynamic_delta_changed) {
+            to_update_channel_data_.signal();
+        }
+
         for (const auto& band : on_bands_) {
             dynamic_bypass_[band] = a_dynamic_bypass_[band].load(std::memory_order::relaxed);
             const auto dynamic_mode = a_dynamic_mode_[band].load(std::memory_order::relaxed);
@@ -1230,6 +1382,7 @@ namespace zlp {
             }
             if (channel_changed) {
                 std::copy_n(data.static_response.data(), num_bin_effective_, data.dynamic_response.data());
+                std::ranges::fill(data.delta_response, 1.0f);
             }
         }
 
@@ -1239,6 +1392,16 @@ namespace zlp {
         if (!r_data_.bands.empty()) { dispatch_mask_ |= 4; }
         if (!m_data_.bands.empty()) { dispatch_mask_ |= 8; }
         if (!s_data_.bands.empty()) { dispatch_mask_ |= 16; }
+
+        dynamic_delta_mask_ = 0;
+        for (size_t chan = 0; chan < channel_datas_.size(); ++chan) {
+            const auto& dynamic_bands = channel_datas_[chan].dynamic_bands;
+            if (std::ranges::any_of(dynamic_bands, [this](const size_t band) {
+                return dynamic_delta_[band];
+            })) {
+                dynamic_delta_mask_ |= 1ULL << chan;
+            }
+        }
 
         const bool dynamic_lr_on = !l_data_.dynamic_bands.empty() || !r_data_.dynamic_bands.empty();
         const bool dynamic_ms_on = !m_data_.dynamic_bands.empty() || !s_data_.dynamic_bands.empty();

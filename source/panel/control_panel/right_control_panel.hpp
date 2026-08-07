@@ -44,6 +44,10 @@ namespace zlpanel {
         zlgui::button::ClickButton bypass_button_;
         std::unique_ptr<zlgui::attachment::ButtonAttachment<true>> bypass_attachment_;
 
+        const std::unique_ptr<juce::Drawable> delta_drawable_;
+        zlgui::button::ClickButton delta_button_;
+        std::unique_ptr<zlgui::attachment::ButtonAttachment<true>> delta_attachment_;
+
         zlgui::combobox::CompactCombobox mode_box_;
         std::unique_ptr<zlgui::attachment::ComboBoxAttachment<true>> mode_attachment_;
 

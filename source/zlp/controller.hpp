@@ -58,7 +58,7 @@ namespace zlp {
         void process(const std::array<float*, 4>& buffer, size_t num_samples, bool is_bypass);
 
         template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
-        void processMainImpl(bool perform_fft);
+        void processMainImpl(bool perform_fft, bool is_delta = false);
 
         void setFilterStatus(const size_t idx, const FilterStatus filter_status) {
             a_filter_status_[idx].store(filter_status, std::memory_order::relaxed);
@@ -173,6 +173,12 @@ namespace zlp {
             to_update_.signal();
         }
 
+        void setDynamicDelta(const size_t idx, const bool dynamic_delta) {
+            a_dynamic_delta_[idx].store(dynamic_delta, std::memory_order::relaxed);
+            to_update_dynamic_status_.signal();
+            to_update_.signal();
+        }
+
         void setDynamicMode(const size_t idx, const DynamicMode mode) {
             a_dynamic_mode_[idx].store(mode, std::memory_order::relaxed);
             to_update_dynamic_status_.signal();
@@ -271,6 +277,8 @@ namespace zlp {
             size_t dynamic_start_idx{0}, dynamic_end_idx{0};
             std::vector<size_t> dynamic_bands{};
             zldsp::vector::aligned_vector<float> dynamic_response;
+            // Selected transfer H; delta output is formed as (H - I) in processMainImpl.
+            zldsp::vector::aligned_vector<float> delta_response;
             bool require_relative{false};
         };
 
@@ -336,6 +344,10 @@ namespace zlp {
         std::array<std::atomic<float>, kBandNum> a_spec_knee_{};
         std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_knee_{};
 
+        std::array<std::atomic<bool>, kBandNum> a_dynamic_delta_{false};
+        std::array<bool, kBandNum> dynamic_delta_{false};
+        bool dynamic_delta_on_{false};
+
         // filters for calculating prototype response and biquad response
         zldsp::vector::aligned_vector<float> ws_;
         zldsp::filter::Ideal<float, kFilterSize> ideal_{};
@@ -376,8 +388,10 @@ namespace zlp {
         std::array<zldsp::vector::aligned_vector<float>, 4> input_fifos_, output_fifos_;
         std::array<zldsp::vector::aligned_vector<float>, 4> fft_ins_;
         std::array<zldsp::vector::aligned_vector<float>, 2> fft_out_reals_, fft_out_imags_;
+        zldsp::vector::aligned_vector<float> dynamic_band_response_;
 
         size_t dispatch_mask_{0};
+        size_t dynamic_delta_mask_{0};
         std::array<ChannelData, 5> channel_datas_{};
         std::array<bool, 5> to_update_channel_static_{false};
         std::array<bool, 5> to_update_channel_smooth_bounds_{false};

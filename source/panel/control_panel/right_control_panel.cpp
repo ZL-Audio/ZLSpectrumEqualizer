@@ -20,6 +20,9 @@ namespace zlpanel {
                                                              BinaryData::bypass_svgSize)),
         bypass_button_(base, bypass_drawable_.get(), bypass_drawable_.get(),
                        tooltip_helper.getToolTipText(multilingual::kBandDynamicBypass)),
+        delta_drawable_(juce::Drawable::createFromImageData(BinaryData::delta_svg,
+                                                            BinaryData::delta_svgSize)),
+        delta_button_(base, delta_drawable_.get(), delta_drawable_.get(), ""),
         mode_box_(zlp::PDynamicMode::kChoices, base,
                   tooltip_helper.getToolTipText(multilingual::kBandDynamicMode),
                   {tooltip_helper.getToolTipText(multilingual::kBandDynamicAbs),
@@ -44,6 +47,10 @@ namespace zlpanel {
         bypass_button_.setImageAlpha(1.f, 1.f, .5f, .75f);
         bypass_button_.setBufferedToImage(true);
         addAndMakeVisible(bypass_button_);
+
+        delta_button_.setImageAlpha(.5f, .75f, 1.f, 1.f);
+        delta_button_.setBufferedToImage(true);
+        addAndMakeVisible(delta_button_);
 
         mode_box_.setBufferedToImage(true);
         addAndMakeVisible(mode_box_);
@@ -91,6 +98,8 @@ namespace zlpanel {
         {
             auto temp_bound = bound.removeFromTop(button_height);
             bypass_button_.setBounds(temp_bound.removeFromLeft(button_height));
+            temp_bound.removeFromLeft(padding);
+            delta_button_.setBounds(temp_bound.removeFromLeft(button_height));
             temp_bound.removeFromLeft(padding);
             temp_bound.removeFromTop(padding / 2);
             mode_box_.setBounds(temp_bound);
@@ -143,6 +152,8 @@ namespace zlpanel {
             const auto band_s = std::to_string(base_.getSelectedBand());
             bypass_attachment_ = std::make_unique<zlgui::attachment::ButtonAttachment<true>>(
                 bypass_button_.getButton(), p_ref_.parameters_, zlp::PDynamicBypass::kID + band_s, updater_);
+            delta_attachment_ = std::make_unique<zlgui::attachment::ButtonAttachment<true>>(
+                delta_button_.getButton(), p_ref_.parameters_, zlp::PDynamicDelta::kID + band_s, updater_);
             mode_attachment_ = std::make_unique<zlgui::attachment::ComboBoxAttachment<true>>(
                 mode_box_.getBox(), p_ref_.parameters_, zlp::PDynamicMode::kID + band_s, updater_);
             th_attachment_abs_ = std::make_unique<zlgui::attachment::SliderAttachment<true>>(
@@ -165,6 +176,7 @@ namespace zlpanel {
             release_slider_.setComponentID(zlp::PRelease::kID + band_s);
         } else {
             bypass_attachment_.reset();
+            delta_attachment_.reset();
             mode_attachment_.reset();
             th_attachment_abs_.reset();
             th_attachment_band_.reset();

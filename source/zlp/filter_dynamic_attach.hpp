@@ -28,7 +28,7 @@ namespace zlp {
         size_t idx_;
 
         static constexpr std::array kIDs{
-            PDynamicON::kID, PDynamicBypass::kID, PDynamicMode::kID,
+            PDynamicON::kID, PDynamicBypass::kID, PDynamicDelta::kID, PDynamicMode::kID,
             PThresholdAbs::kID, PThresholdBand::kID, PThresholdRel::kID, PKneeW::kID,
             PAttack::kID, PRelease::kID
         };
