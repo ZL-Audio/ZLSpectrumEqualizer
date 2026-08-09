@@ -88,8 +88,9 @@ namespace zlp {
         loudness_matcher_.prepare(sample_rate_, 2);
         output_gain_dsp_.prepare(sample_rate_, 2, 0.05);
 
-        to_update_.signal();
-        to_update_fft_resolution_.signal();
+        to_update_fft_resolution_.check();
+        updateFFTResolution();
+        p_ref_.setLatencySamples(latency_.load(std::memory_order::seq_cst));
     }
 
     void Controller::prepareBuffer() {
@@ -98,6 +99,7 @@ namespace zlp {
         }
         if (to_update_fft_resolution_.check()) {
             updateFFTResolution();
+            triggerAsyncUpdate();
         }
         if (to_update_filter_status_.check()) {
             updateFilterStatus();
@@ -1114,7 +1116,6 @@ namespace zlp {
         fft_count_ = 0;
 
         latency_.store(static_cast<int>(fft_->get_size()), std::memory_order::seq_cst);
-        triggerAsyncUpdate();
 
         std::ranges::fill(to_update_bases_, true);
         std::ranges::fill(to_update_channel_static_, true);
