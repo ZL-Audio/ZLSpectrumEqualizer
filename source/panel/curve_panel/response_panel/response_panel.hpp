@@ -87,6 +87,8 @@ namespace zlpanel {
 
         std::vector<float> ws_;
         std::vector<float> xs_;
+        std::vector<float>::difference_type first_beyond_nyquist_idx_{
+            static_cast<std::vector<float>::difference_type>(kNumPoints)};
 
         std::array<zldsp::filter::Ideal<float, zlp::Controller::kFilterSize>, zlp::kBandNum> ideal_{};
         std::array<zldsp::filter::Ideal<float, zlp::Controller::kFilterSize / 2>, zlp::kBandNum> side_ideal_{};

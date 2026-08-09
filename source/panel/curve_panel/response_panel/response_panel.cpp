@@ -272,6 +272,8 @@ namespace zlpanel {
                 if (valid_size) {
                     makima_.prepare(ws_dsp_.data(), delta_dsp_.data(), ws_dsp_.size());
                     makima_.eval(ws_.data(), interpolated_deltas_[lr].data(), kNumPoints);
+                    std::fill(interpolated_deltas_[lr].begin() + first_beyond_nyquist_idx_,
+                              interpolated_deltas_[lr].end(), 0.f);
                 }
 
                 const bool should_update_sum = to_update_lr_flags_[lr] || (channel_has_dynamic);
@@ -422,6 +424,8 @@ namespace zlpanel {
             for (size_t i = 0; i < kNumPoints; ++i) {
                 ws_[i] = static_cast<float>(std::exp(interval_log_value * static_cast<double>(i)) * freq_scale);
             }
+            first_beyond_nyquist_idx_ =
+                std::upper_bound(ws_.cbegin(), ws_.cend(), std::numbers::pi_v<float>) - ws_.cbegin();
             std::fill(to_update_base_y_flags_.begin(), to_update_base_y_flags_.end(), true);
         }
         if ((sr_changed || fft_res_changed || ws_dsp_.empty()) && c_sample_rate_ > 20.0) {
