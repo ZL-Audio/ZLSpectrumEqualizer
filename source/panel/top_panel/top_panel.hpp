@@ -43,6 +43,6 @@ namespace zlpanel {
 
         const std::unique_ptr<juce::Drawable> ext_drawable_;
         zlgui::button::ClickButton ext_button_;
-        zlgui::attachment::ButtonAttachment<false> ext_attach_;
+        zlgui::attachment::ButtonAttachment<true> ext_attach_;
     };
 }
