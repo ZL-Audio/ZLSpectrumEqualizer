@@ -40,7 +40,7 @@ namespace zlpanel {
         PluginProcessor& p_ref_;
         zlgui::UIBase& base_;
 
-        std::array<TriBuffer<juce::Path>, 5> paths_{};
+        std::array<zlchore::thread::TriBuffer<juce::Path>, 5> paths_{};
 
         std::array<bool, zlp::kBandNum> is_same_stereo_{};
 

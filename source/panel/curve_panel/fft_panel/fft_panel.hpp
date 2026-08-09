@@ -69,7 +69,7 @@ namespace zlpanel {
         std::vector<float> xs_{}, ys_{};
         std::vector<float> inter_xs_{}, inter_ys_{};
         std::unique_ptr<zldsp::interpolation::SeqMakima<float>> inter_;
-        std::array<TriBuffer<juce::Path>, 3> paths_;
+        std::array<zlchore::thread::TriBuffer<juce::Path>, 3> paths_;
 
         [[maybe_unused]] double c_sample_rate_{0.0};
         [[maybe_unused]] int fft_size_{0};
@@ -103,7 +103,7 @@ namespace zlpanel {
         std::array<zldsp::analyzer::SpectrumDecayer, 3> decayers_;
 
         zldsp::vector::aligned_vector<float> current_ps_{}, coll_ps_{};
-        TriBuffer<juce::ColourGradient> gradient_;
+        zlchore::thread::TriBuffer<juce::ColourGradient> gradient_;
 
         void runFFT(const juce::Thread& thread);
 

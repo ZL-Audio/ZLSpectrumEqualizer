@@ -56,15 +56,15 @@ namespace zlpanel {
 
         std::atomic<float> center_y_{0.f};
 
-        std::array<TriBuffer<juce::Path>, zlp::kBandNum> base_paths_{};
+        std::array<zlchore::thread::TriBuffer<juce::Path>, zlp::kBandNum> base_paths_{};
 
-        std::array<TriBuffer<juce::Path>, zlp::kBandNum> base_fills_{};
+        std::array<zlchore::thread::TriBuffer<juce::Path>, zlp::kBandNum> base_fills_{};
 
-        std::array<TriBuffer<juce::Path>, zlp::kBandNum> target_fills_{};
+        std::array<zlchore::thread::TriBuffer<juce::Path>, zlp::kBandNum> target_fills_{};
 
-        std::array<TriBuffer<juce::Line<float>>, zlp::kBandNum> button_lines_{};
+        std::array<zlchore::thread::TriBuffer<juce::Line<float>>, zlp::kBandNum> button_lines_{};
 
-        std::array<TriBuffer<juce::Line<float>>, zlp::kBandNum> all_pass_lines_{};
+        std::array<zlchore::thread::TriBuffer<juce::Line<float>>, zlp::kBandNum> all_pass_lines_{};
 
         std::array<float, zlp::kBandNum> base_stroke_alpha_{};
         std::array<float, zlp::kBandNum> base_fill_alpha_{};
