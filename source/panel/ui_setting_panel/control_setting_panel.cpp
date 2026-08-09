@@ -336,7 +336,7 @@ namespace zlpanel {
             juce::File setting_file(chooser.getResult().withFileExtension("xml"));
             if (setting_file.create()) {
                 saveSetting();
-                juce::XmlElement xml_output{"colour_setting"};
+                juce::XmlElement xml_output{"control_setting"};
                 {
                     auto* xml_element = xml_output.createNewChildElement("slider_sensitivity");
                     xml_element->setAttribute("value", base_.getSensitivity(zlgui::kMouseSlider));
