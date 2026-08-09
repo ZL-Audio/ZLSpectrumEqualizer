@@ -130,7 +130,7 @@ namespace zlp {
         if (to_update_output_gain_.check()) {
             updateOutputGain();
         }
-        sgc_on_ = a_sgc_on_.load(std::memory_order::relaxed) > 0.5f;
+        sgc_on_ = a_sgc_on_.load(std::memory_order::relaxed);
         if (sgc_on_ && to_update_sgc_on_.check()) {
             updateSGC();
             output_gain_dsp_.setGainLinear(sgc_gain_linear_ * output_gain_linear_);
@@ -161,7 +161,6 @@ namespace zlp {
         if (!editor_on_) {
             displayed_gain_.store(1.0, std::memory_order::relaxed);
         }
-        sgc_on_ = a_sgc_on_.load(std::memory_order::relaxed);
     }
 
     void Controller::process(const std::array<float*, 4>& buffer, const size_t num_samples, const bool is_bypass) {
@@ -1251,21 +1250,22 @@ namespace zlp {
     void Controller::updateSpecResponse() {
         bool channel_needs_update = false;
         for (const auto& band : on_bands_) {
-            const auto to_update_base = to_update_bases_[band] || to_update_empty_bases_[band].check();
-            if (to_update_base) {
-                const auto paras = getEffectiveFilterParameters(emptys_[band], sample_rate_);
-                if (c_solo_on_ && c_solo_idx_ == band) {
-                    updateSoloFilter<false>(paras);
+            const auto empty_base_changed = to_update_empty_bases_[band].check();
+            const auto target_changed = to_update_empty_targets_[band].check();
+            const auto base_changed = to_update_bases_[band] || empty_base_changed;
+            if (base_changed || (target_changed && dynamic_on_[band])) {
+                auto paras = getEffectiveFilterParameters(emptys_[band], sample_rate_);
+                if (base_changed) {
+                    if (c_solo_on_ && c_solo_idx_ == band) {
+                        updateSoloFilter<false>(paras);
+                    }
+                    spec_response_[band].updateBaseResponse(paras, ideal_, ws_);
+                    sgc_values_[band] = zldsp::filter::getGainCompensation(paras);
+                    const auto lrms = static_cast<size_t>(lrms_[band]);
+                    to_update_channel_static_[lrms] = true;
+                    channel_needs_update = true;
                 }
-                spec_response_[band].updateBaseResponse(paras, ideal_, ws_);
-                sgc_values_[band] = zldsp::filter::getGainCompensation(paras);
-                const auto lrms = static_cast<size_t>(lrms_[band]);
-                to_update_channel_static_[lrms] = true;
-                channel_needs_update = true;
-            }
-            if (to_update_base || to_update_empty_targets_[band].check()) {
                 if (dynamic_on_[band]) {
-                    auto paras = getEffectiveFilterParameters(emptys_[band], sample_rate_);
                     paras.gain = static_cast<double>(empty_target_gains_[band].load(std::memory_order::relaxed));
                     spec_response_[band].updateDiffResponse(paras, ideal_, ws_);
                     const auto lrms = static_cast<size_t>(lrms_[band]);
@@ -1300,6 +1300,7 @@ namespace zlp {
                 update_channel(static_cast<size_t>(lrms));
                 lrms_[band] = lrms;
                 to_update_channel_data_.signal();
+                to_update_sgc_on_.signal();
             }
             channel_datas_[static_cast<size_t>(lrms)].bands.emplace_back(band);
             if (dynamic_on_[band]) {
