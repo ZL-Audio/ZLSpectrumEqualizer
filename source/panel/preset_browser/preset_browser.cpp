@@ -24,6 +24,10 @@ namespace zlpanel {
                 .getChildFile(JucePlugin_Name)
                 .getChildFile("Presets");
         }
+
+        bool isVisibleFileName(const juce::String& name) {
+            return name.isNotEmpty() && !name.startsWithChar('.');
+        }
     }
 
     PresetBrowser::PresetBrowser(PluginProcessor& processor, zlgui::UIBase& base) :
@@ -298,7 +302,7 @@ namespace zlpanel {
     void PresetBrowser::createGroup() {
         const auto requested_name = group_name_editor_.getText().trim();
         const auto legal_name = juce::File::createLegalFileName(requested_name);
-        if (legal_name.isEmpty() || legal_name.equalsIgnoreCase(kAllPresetsGroup)) {
+        if (!isVisibleFileName(legal_name) || legal_name.equalsIgnoreCase(kAllPresetsGroup)) {
             showError("Enter a valid group name.");
             return;
         }
@@ -350,12 +354,12 @@ namespace zlpanel {
     }
 
     void PresetBrowser::savePreset() {
-        auto requested_name = preset_name_editor_.getText().trim();
+        const auto requested_name = preset_name_editor_.getText().trim();
         auto legal_name = juce::File::createLegalFileName(requested_name);
         if (legal_name.endsWithIgnoreCase(kPresetExtension)) {
             legal_name = legal_name.dropLastCharacters(juce::String{kPresetExtension}.length());
         }
-        if (legal_name.isEmpty()) {
+        if (!isVisibleFileName(legal_name)) {
             showError("Enter a preset name.");
             return;
         }

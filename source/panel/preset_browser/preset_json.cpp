@@ -13,6 +13,19 @@ namespace zlpanel {
     namespace {
         constexpr auto kPresetFormat = "ZLSpectrumEqualizerPreset";
         constexpr auto kStateType = "ZLSpectrumEqualizerParaState";
+        constexpr auto kParameterStateType = "ZLSpectrumEqualizerParameters";
+        constexpr auto kNAParameterStateType = "ZLSpectrumEqualizerNAParameters";
+
+        juce::Result validateProcessorState(const juce::ValueTree& state) {
+            if (!state.isValid() || !state.hasType(kStateType)) {
+                return juce::Result::fail("Preset does not contain the expected processor state");
+            }
+            if (!state.getChildWithName(kParameterStateType).isValid() ||
+                !state.getChildWithName(kNAParameterStateType).isValid()) {
+                return juce::Result::fail("Preset processor state is incomplete");
+            }
+            return juce::Result::ok();
+        }
     }
 
     juce::Result PresetJson::write(const juce::File& file, const juce::MemoryBlock& processor_state) {
@@ -27,8 +40,8 @@ namespace zlpanel {
         }
 
         const auto state = juce::ValueTree::fromXml(*xml);
-        if (!state.isValid()) {
-            return juce::Result::fail("Processor state could not be converted");
+        if (const auto result = validateProcessorState(state); result.failed()) {
+            return juce::Result::fail("Processor state is incomplete");
         }
 
         auto* document = new juce::DynamicObject();
@@ -58,8 +71,8 @@ namespace zlpanel {
         if (const auto result = jsonToValueTree(object->getProperty("state"), state); result.failed()) {
             return result;
         }
-        if (!state.hasType(kStateType)) {
-            return juce::Result::fail("Preset does not contain the expected processor state");
+        if (const auto result = validateProcessorState(state); result.failed()) {
+            return result;
         }
 
         const auto xml = state.createXml();
