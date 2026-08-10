@@ -9,6 +9,7 @@
 
 #include "warning_overlay.hpp"
 #include "preset_style.hpp"
+#include "../helper/helper.hpp"
 
 namespace zlpanel {
     WarningOverlay::WarningOverlay(zlgui::UIBase& base) :
@@ -16,13 +17,18 @@ namespace zlpanel {
         setOpaque(false);
         setInterceptsMouseClicks(true, true);
         setWantsKeyboardFocus(true);
-        setVisible(false);
     }
 
     void WarningOverlay::paint(juce::Graphics& g) {
-        g.fillAll(juce::Colours::black.withAlpha(.7f));
-        const auto card = getCardBounds().toFloat();
         const auto font_size = base_.getFontSize();
+        const auto padding = getPaddingSize(font_size);
+        const auto bound = getLocalBounds().reduced(padding);
+        juce::Path path;
+        path.addRoundedRectangle(bound.toFloat(), static_cast<float>(padding));
+        g.setColour(base_.getBackgroundColour().withAlpha(.85f));
+        g.fillPath(path);
+
+        const auto card = getCardBounds().toFloat();
         const auto corner = font_size * .65f;
         juce::DropShadow{base_.getDarkShadowColour().withAlpha(.85f),
                          juce::roundToInt(font_size), {0, juce::roundToInt(font_size * .24f)}}

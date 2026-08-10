@@ -27,7 +27,6 @@ namespace zlpanel {
         const juce::DropShadow shadow{base_.getTextColour().withAlpha(.5f), padding, {0, 0}};
         shadow.drawForPath(g, path);
         g.setColour(preset_style::surfaceColour(base_.getBackgroundColour(), base_.getTextColour()));
-
         g.fillPath(path);
 
         g.setColour(base_.getBackgroundColour());
