@@ -182,9 +182,11 @@ jobs:
       - name: Generate WiX (Windows)
         if: ${{ runner.os == 'Windows' }}
         shell: bash
+        env:
+          WIX_ARCH: ${{ matrix.wix_arch }}
         run: |
           python3 -u packaging/packager_Windows_WiX.py
-          cat "packaging\installer.wxs"
+          cat "packaging/installer.wxs"
 
       - name: Generate Installer (Windows)
         if: ${{ runner.os == 'Windows' }}

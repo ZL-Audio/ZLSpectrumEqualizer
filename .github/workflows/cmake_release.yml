@@ -127,13 +127,20 @@ jobs:
             unzip -q "temp_dl/${{ matrix.name }}.zip" -d "aax_releases"
             ls -R aax_releases/
           else
-            echo "AAX not found. Skipping extraction."
+            echo "Expected AAX release was not found for ${{ matrix.name }}." >&2
+            exit 1
           fi
 
       - name: Set additional env vars for next steps
         shell: bash
         run: |
-          echo "AAX_PATH=aax_releases/${{ matrix.name }}/${{ env.PRODUCT_NAME }}.aaxplugin" >> $GITHUB_ENV
+          aax_path="aax_releases/${{ matrix.name }}/${{ env.PRODUCT_NAME }}.aaxplugin"
+          if [[ -e "$aax_path" ]]; then
+            echo "AAX_PATH=$aax_path" >> $GITHUB_ENV
+          elif [[ "${{ matrix.have_aax }}" == "true" ]]; then
+            echo "Expected AAX artifact is missing: $aax_path" >&2
+            exit 1
+          fi
           echo "ARTIFACT_NAME=${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-${{ matrix.name }}" >> $GITHUB_ENV
 
       - name: Check dependencies
@@ -206,9 +213,11 @@ jobs:
       - name: Generate WiX (Windows)
         if: ${{ runner.os == 'Windows' }}
         shell: bash
+        env:
+          WIX_ARCH: ${{ matrix.wix_arch }}
         run: |
           python3 -u packaging/packager_Windows_WiX.py
-          cat "packaging\installer.wxs"
+          cat "packaging/installer.wxs"
 
       - name: Generate Installer (Windows)
         if: ${{ runner.os == 'Windows' }}
