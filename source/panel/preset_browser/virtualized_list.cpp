@@ -11,8 +11,6 @@
 
 #include <cmath>
 
-#include "preset_style.hpp"
-
 namespace zlpanel {
     VirtualizedList::VirtualizedList(zlgui::UIBase& base) : base_(base) {
         row_height_ = juce::roundToInt(base_.getFontSize() * 1.9f);
@@ -28,10 +26,6 @@ namespace zlpanel {
     }
 
     void VirtualizedList::paint(juce::Graphics& g) {
-        const auto corner = base_.getFontSize() * .45f;
-        g.setColour(preset_style::surfaceColour(base_.getBackgroundColour(), base_.getTextColour()));
-        g.fillRoundedRectangle(getLocalBounds().toFloat(), corner);
-
         const auto content = getContentBounds();
         if (row_count_ <= 0 || content.isEmpty()) {
             return;

@@ -34,10 +34,11 @@ namespace zlpanel {
         processor_(processor),
         base_(base),
         presets_directory_(getPresetsDirectory()),
+        background_(base),
         delete_drawable_(juce::Drawable::createFromImageData(BinaryData::trash_svg,
                                                              BinaryData::trash_svgSize)),
         close_drawable_(juce::Drawable::createFromImageData(BinaryData::close_svg,
-                                                            BinaryData::close_svgSize)),
+                                                             BinaryData::close_svgSize)),
         delete_group_button_(base, delete_drawable_.get(), nullptr, ""),
         delete_preset_button_(base, delete_drawable_.get(), nullptr, ""),
         close_button_(base, close_drawable_.get(), nullptr, ""),
@@ -52,6 +53,9 @@ namespace zlpanel {
         setOpaque(false);
         setInterceptsMouseClicks(true, true);
 
+        background_.setBufferedToImage(true);
+        addAndMakeVisible(background_);
+
         for (auto* label : {&group_label_, &preset_label_}) {
             label->setJustificationType(juce::Justification::centredLeft);
             label->setBufferedToImage(true);
@@ -59,7 +63,7 @@ namespace zlpanel {
         }
         configureEditor(search_editor_, "Search Presets");
         configureEditor(group_name_editor_, "New Group");
-        configureEditor(preset_name_editor_, "New Preset (Enter)");
+        configureEditor(preset_name_editor_, "New Preset (Enter to Save)");
         search_editor_.onTextChange = [this]() { refreshPresets(); };
         group_name_editor_.onReturnKey = [this]() {
             createGroup();
@@ -95,26 +99,16 @@ namespace zlpanel {
 
         base_.getPanelValueTree().addListener(this);
         base_.setPanelProperty(zlgui::PanelSettingIdx::kPresetBrowser, 0.f);
-        setVisible(false);
 
         applyColours();
         refresh();
         setBufferedToImage(true);
+
+        setWantsKeyboardFocus(true);
     }
 
     PresetBrowser::~PresetBrowser() {
         base_.getPanelValueTree().removeListener(this);
-    }
-
-    void PresetBrowser::paint(juce::Graphics& g) {
-        const auto font_size = base_.getFontSize();
-        const auto corner = font_size * .7f;
-        const auto outline = font_size * .08f;
-        const auto bounds = getLocalBounds().toFloat().reduced(outline);
-        g.setColour(base_.getBackgroundColour().withAlpha(preset_style::kBackgroundAlpha));
-        g.fillRoundedRectangle(bounds, corner);
-        g.setColour(base_.getDarkShadowColour().withAlpha(preset_style::kBackgroundAlpha));
-        g.drawRoundedRectangle(bounds, corner, outline);
     }
 
     void PresetBrowser::resized() {
@@ -163,8 +157,17 @@ namespace zlpanel {
         group_name_editor_.setBounds(group_footer);
         preset_name_editor_.setBounds(footer);
 
+        background_.setBounds(getLocalBounds());
+        background_.setSurfaceBounds({
+            search_editor_.getBounds(),
+            group_list_.getBounds(),
+            preset_list_.getBounds(),
+            group_name_editor_.getBounds(),
+            preset_name_editor_.getBounds()
+        });
+
         const auto editor_top_inset = juce::roundToInt(font_size * .16f);
-        search_editor_.setIndents(juce::roundToInt(font_size * .72f), editor_top_inset);
+        search_editor_.setIndents(column_text_inset, editor_top_inset);
         group_name_editor_.setIndents(column_text_inset, editor_top_inset);
         preset_name_editor_.setIndents(column_text_inset, editor_top_inset);
         group_label_.setBorderSize({0, column_text_inset, 0, 0});
@@ -186,6 +189,7 @@ namespace zlpanel {
 
     void PresetBrowser::lookAndFeelChanged() {
         applyColours();
+        background_.repaint();
         repaint();
     }
 
@@ -372,7 +376,7 @@ namespace zlpanel {
             return;
         }
 
-        warning_overlay_.show("A preset named \"" + legal_name + "\" already exists in " + group + ".",
+        warning_overlay_.show("A preset named \"" + legal_name + "\" already exists in \"" + group + "\".",
                               "Replace", true, [this, file]() { writePreset(file); });
     }
 

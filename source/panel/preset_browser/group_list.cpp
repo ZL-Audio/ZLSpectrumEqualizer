@@ -29,15 +29,8 @@ namespace zlpanel {
         const auto font_size = getBase().getFontSize();
         auto card = bounds.toFloat().reduced(font_size * .16f);
         if (selected || hovered) {
-            g.setColour(getBase().getTextColour().withAlpha(selected ? .115f : .05f));
+            g.setColour(getBase().getTextColour().withAlpha(selected ? .105f : .045f));
             g.fillRoundedRectangle(card, font_size * .35f);
-        }
-        if (selected) {
-            const auto accent_width = font_size * .24f;
-            auto accent = card.removeFromLeft(accent_width)
-                .withSizeKeepingCentre(accent_width, card.getHeight() * .48f);
-            g.setColour(getBase().getTextColour().withAlpha(.72f));
-            g.fillRoundedRectangle(accent, font_size * .12f);
         }
 
         g.setColour(getBase().getTextColour().withAlpha(selected ? .95f : .68f));

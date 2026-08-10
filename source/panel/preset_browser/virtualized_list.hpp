@@ -71,8 +71,10 @@ namespace zlpanel {
 
         zlgui::UIBase& getBase() const;
 
-    private:
+    protected:
         zlgui::UIBase& base_;
+
+    private:
         juce::ScrollBar scroll_bar_{true};
         int row_count_{0};
         int row_height_{1};

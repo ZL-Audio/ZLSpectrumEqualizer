@@ -15,6 +15,7 @@
 #include "../../gui/gui.hpp"
 
 #include "group_list.hpp"
+#include "preset_browser_background.hpp"
 #include "preset_entry.hpp"
 #include "preset_json.hpp"
 #include "preset_list.hpp"
@@ -28,8 +29,6 @@ namespace zlpanel {
         explicit PresetBrowser(PluginProcessor& processor, zlgui::UIBase& base);
 
         ~PresetBrowser() override;
-
-        void paint(juce::Graphics& g) override;
 
         void resized() override;
 
@@ -47,6 +46,8 @@ namespace zlpanel {
         PluginProcessor& processor_;
         zlgui::UIBase& base_;
         const juce::File presets_directory_;
+
+        PresetBrowserBackground background_;
 
         std::unique_ptr<juce::Drawable> delete_drawable_;
         std::unique_ptr<juce::Drawable> close_drawable_;

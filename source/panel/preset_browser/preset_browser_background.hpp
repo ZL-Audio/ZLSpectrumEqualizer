@@ -9,18 +9,23 @@
 
 #pragma once
 
+#include <vector>
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../gui/interface_definitions.hpp"
+#include "../../gui/gui.hpp"
 
 namespace zlpanel {
-    class RoundedTextEditor final : public juce::TextEditor {
+    class PresetBrowserBackground final : public juce::Component {
     public:
-        explicit RoundedTextEditor(zlgui::UIBase& base);
+        explicit PresetBrowserBackground(zlgui::UIBase& base);
 
-        void lookAndFeelChanged() override;
+        void paint(juce::Graphics& g) override;
+
+        void setSurfaceBounds(std::vector<juce::Rectangle<int>> bounds);
 
     private:
         zlgui::UIBase& base_;
+        std::vector<juce::Rectangle<int>> surface_bounds_;
     };
 }
