@@ -18,6 +18,9 @@ namespace zlpanel {
         output_label_(p, base),
         analyzer_label_(p, base),
         spec_setting_label_(p, base, tooltip_helper),
+        preset_drawable_(juce::Drawable::createFromImageData(BinaryData::preset_svg,
+                                                             BinaryData::preset_svgSize)),
+        preset_button_(base, preset_drawable_.get(), nullptr, ""),
         bypass_drawable_(juce::Drawable::createFromImageData(BinaryData::bypass_svg,
                                                              BinaryData::bypass_svgSize)),
         bypass_button_(base, bypass_drawable_.get(), bypass_drawable_.get(),
@@ -42,6 +45,14 @@ namespace zlpanel {
         bypass_button_.setImageAlpha(1.f, 1.f, .5f, .75f);
         bypass_button_.setBufferedToImage(true);
         addAndMakeVisible(bypass_button_);
+
+        preset_button_.setImageAlpha(.5f, .75f);
+        preset_button_.setBufferedToImage(true);
+        preset_button_.getButton().setTitle("Open preset browser");
+        preset_button_.getButton().onClick = [this]() {
+            base_.setPanelProperty(zlgui::PanelSettingIdx::kPresetBrowser, 1.f);
+        };
+        addAndMakeVisible(preset_button_);
 
         ext_button_.getButton().onClick = [this]() {
             if (ext_button_.getToggleState()) {
@@ -82,6 +93,10 @@ namespace zlpanel {
         {
             const auto left_pad = bound.getX();
             const auto t_width = 6 * padding + 3 * (slider_width / 2) - left_pad;
+            bound.removeFromLeft(padding);
+            preset_button_.setBounds(bound.removeFromLeft(bound.getHeight()));
+            preset_button_.getButton().setEdgeIndent(0);
+            bound.removeFromLeft(padding);
             analyzer_label_.setBounds(bound.getX(), 0, t_width, getHeight());
             bound.removeFromLeft(t_width);
         }

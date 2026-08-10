@@ -63,7 +63,8 @@ namespace zlpanel {
 
         const auto analyzer_width = analyzer_panel_.getIdealWidth();
         const auto analyzer_height = analyzer_panel_.getIdealHeight();
-        analyzer_panel_.setBounds(0, 0, analyzer_width, analyzer_height);
+        analyzer_panel_.setBounds(getButtonSize(font_size) + 2 * padding, 0,
+                                  analyzer_width, analyzer_height);
 
         const auto spec_setting_width = spec_setting_panel_.getIdealWidth();
         const auto spec_setting_height = spec_setting_panel_.getIdealHeight();

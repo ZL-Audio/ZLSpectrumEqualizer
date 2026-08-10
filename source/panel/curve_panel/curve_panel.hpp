@@ -54,7 +54,6 @@ namespace zlpanel {
             return output_panel_;
         }
 
-
     private:
         zlgui::UIBase& base_;
         BackgroundPanel background_panel_;

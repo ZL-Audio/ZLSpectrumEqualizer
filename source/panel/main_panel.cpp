@@ -17,6 +17,7 @@ namespace zlpanel {
         curve_panel_(p, base, tooltip_helper_),
         control_panel_(p, base, tooltip_helper_),
         top_panel_(p, base, tooltip_helper_),
+        preset_browser_(p, base),
         ui_setting_panel_(p, base_),
         tooltip_laf_(base_) {
         juce::ignoreUnused(base_);
@@ -36,6 +37,9 @@ namespace zlpanel {
         addAndMakeVisible(control_panel_);
         addAndMakeVisible(top_panel_);
         addChildComponent(ui_setting_panel_);
+        preset_browser_.setBufferedToImage(true);
+        addChildComponent(preset_browser_);
+        preset_browser_.toFront(false);
     }
 
     MainPanel::~MainPanel() {
@@ -61,6 +65,7 @@ namespace zlpanel {
             ? max_font_size * base_.getFontScale()
             : std::clamp(base_.getStaticFontSize(), min_font_size, max_font_size);
         base_.setFontSize(font_size);
+        const auto main_bound = bound;
         // set control panel bound
         auto control_bound = bound;
         control_bound.removeFromBottom(getBottomPadding(base_.getFontSize()));
@@ -70,6 +75,13 @@ namespace zlpanel {
         ui_setting_panel_.setBounds(bound);
         top_panel_.setBounds(bound.removeFromTop(top_panel_.getIdealHeight()));
         curve_panel_.setBounds(bound);
+
+        const auto padding = getPaddingSize(font_size);
+        const auto preset_width = juce::jmax(0, juce::jmin(preset_browser_.getIdealWidth(),
+                                                           main_bound.getWidth() - 4 * padding));
+        const auto preset_height = juce::jmax(0, juce::jmin(preset_browser_.getIdealHeight(),
+                                                            main_bound.getHeight() - 4 * padding));
+        preset_browser_.setBounds(main_bound.withSizeKeepingCentre(preset_width, preset_height));
     }
 
     void MainPanel::repaintCallBack(const double time_stamp) {

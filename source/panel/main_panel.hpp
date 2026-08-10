@@ -11,6 +11,7 @@
 
 #include "control_panel/control_panel.hpp"
 #include "curve_panel/curve_panel.hpp"
+#include "preset_browser/preset_browser.hpp"
 #include "top_panel/top_panel.hpp"
 #include "ui_setting_panel/ui_setting_panel.hpp"
 
@@ -53,6 +54,7 @@ namespace zlpanel {
         CurvePanel curve_panel_;
         ControlPanel control_panel_;
         TopPanel top_panel_;
+        PresetBrowser preset_browser_;
         UISettingPanel ui_setting_panel_;
 
         zlgui::tooltip::TooltipLookAndFeel tooltip_laf_;
