@@ -236,7 +236,8 @@ namespace zlpanel {
             drag_offset_ = event.y - thumb.getY();
         } else {
             const auto direction = event.y < thumb.getY() ? -1.0 : 1.0;
-            setViewPosition(view_position_ + direction * static_cast<double>(getContentBounds().getHeight()) * .85);
+            requestViewPosition(target_view_position_ +
+                                direction * static_cast<double>(getContentBounds().getHeight()) * .85);
         }
         repaint(getScrollTrackBounds());
     }
@@ -249,8 +250,8 @@ namespace zlpanel {
         const auto thumb = getScrollThumbBounds();
         const auto travel = juce::jmax(1, track.getHeight() - thumb.getHeight());
         const auto thumb_position = juce::jlimit(0, travel, event.y - drag_offset_ - track.getY());
-        setViewPosition(getMaximumViewPosition() * static_cast<double>(thumb_position) /
-                        static_cast<double>(travel));
+        requestViewPosition(getMaximumViewPosition() * static_cast<double>(thumb_position) /
+                            static_cast<double>(travel));
     }
 
     void UISettingViewport::mouseUp(const juce::MouseEvent&) {
@@ -266,34 +267,34 @@ namespace zlpanel {
             return;
         }
         const auto multiplier = wheel.isSmooth ? 4.5 : 3.0;
-        setViewPosition(view_position_ - static_cast<double>(wheel.deltaY) *
-                        static_cast<double>(base_.getFontSize()) * multiplier);
+        requestViewPosition(target_view_position_ - static_cast<double>(wheel.deltaY) *
+                            static_cast<double>(base_.getFontSize()) * multiplier);
     }
 
     bool UISettingViewport::keyPressed(const juce::KeyPress& key) {
         const auto visible_height = static_cast<double>(getContentBounds().getHeight());
         if (key == juce::KeyPress::upKey) {
-            setViewPosition(view_position_ - base_.getFontSize() * 2.5);
+            requestViewPosition(target_view_position_ - base_.getFontSize() * 2.5);
             return true;
         }
         if (key == juce::KeyPress::downKey) {
-            setViewPosition(view_position_ + base_.getFontSize() * 2.5);
+            requestViewPosition(target_view_position_ + base_.getFontSize() * 2.5);
             return true;
         }
         if (key == juce::KeyPress::pageUpKey) {
-            setViewPosition(view_position_ - visible_height * .85);
+            requestViewPosition(target_view_position_ - visible_height * .85);
             return true;
         }
         if (key == juce::KeyPress::pageDownKey) {
-            setViewPosition(view_position_ + visible_height * .85);
+            requestViewPosition(target_view_position_ + visible_height * .85);
             return true;
         }
         if (key == juce::KeyPress::homeKey) {
-            setViewPosition(0.0);
+            requestViewPosition(0.0);
             return true;
         }
         if (key == juce::KeyPress::endKey) {
-            setViewPosition(getMaximumViewPosition());
+            requestViewPosition(getMaximumViewPosition());
             return true;
         }
         return false;
@@ -306,18 +307,22 @@ namespace zlpanel {
             }
             viewed_component_ = component;
             view_position_ = 0.0;
+            target_view_position_ = 0.0;
+            scroll_update_pending_ = false;
             if (viewed_component_ != nullptr) {
                 addAndMakeVisible(viewed_component_);
             }
         }
         content_height_ = juce::jmax(0, content_height);
-        setViewPosition(view_position_);
+        setViewPosition(target_view_position_);
         updateViewedComponentBounds();
         repaint();
     }
 
     void UISettingViewport::setViewPosition(const double position) {
         const auto next_position = juce::jlimit(0.0, getMaximumViewPosition(), position);
+        target_view_position_ = next_position;
+        scroll_update_pending_ = false;
         if (std::abs(next_position - view_position_) > .01) {
             view_position_ = next_position;
             updateViewedComponentBounds();
@@ -328,7 +333,21 @@ namespace zlpanel {
     }
 
     double UISettingViewport::getViewPosition() const {
-        return view_position_;
+        return target_view_position_;
+    }
+
+    void UISettingViewport::flushPendingScroll() {
+        if (!scroll_update_pending_) {
+            return;
+        }
+        scroll_update_pending_ = false;
+        const auto next_position = juce::jlimit(0.0, getMaximumViewPosition(), target_view_position_);
+        target_view_position_ = next_position;
+        if (std::abs(next_position - view_position_) > .01) {
+            view_position_ = next_position;
+            updateViewedComponentBounds();
+            repaint();
+        }
     }
 
     juce::Rectangle<int> UISettingViewport::getContentBounds() const {
@@ -375,6 +394,12 @@ namespace zlpanel {
     bool UISettingViewport::needsScrollBar() const {
         const auto inset = juce::roundToInt(base_.getFontSize() * .28f);
         return content_height_ > juce::jmax(0, getHeight() - 2 * inset);
+    }
+
+    void UISettingViewport::requestViewPosition(const double position) {
+        const auto next_position = juce::jlimit(0.0, getMaximumViewPosition(), position);
+        target_view_position_ = next_position;
+        scroll_update_pending_ = std::abs(target_view_position_ - view_position_) > .01;
     }
 
     void UISettingViewport::updateViewedComponentBounds() {

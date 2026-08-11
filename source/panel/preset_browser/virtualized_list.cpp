@@ -96,8 +96,8 @@ namespace zlpanel {
             return;
         }
         const auto multiplier = wheel.isSmooth ? 4.5 : 3.0;
-        setScrollPosition(scroll_position_ - static_cast<double>(wheel.deltaY) *
-                          static_cast<double>(row_height_) * multiplier);
+        requestScrollPosition(target_scroll_position_ - static_cast<double>(wheel.deltaY) *
+                              static_cast<double>(row_height_) * multiplier);
     }
 
     void VirtualizedList::lookAndFeelChanged() {
@@ -143,6 +143,23 @@ namespace zlpanel {
         }
     }
 
+    void VirtualizedList::flushPendingScroll() {
+        if (!scroll_update_pending_) {
+            return;
+        }
+        scroll_update_pending_ = false;
+        const auto maximum = juce::jmax(0.0, static_cast<double>(row_count_) *
+                                             static_cast<double>(row_height_) -
+                                             static_cast<double>(getContentBounds().getHeight()));
+        const auto next_position = juce::jlimit(0.0, maximum, target_scroll_position_);
+        target_scroll_position_ = next_position;
+        if (std::abs(next_position - scroll_position_) > .01) {
+            scroll_position_ = next_position;
+            scroll_bar_.setCurrentRangeStart(scroll_position_, juce::dontSendNotification);
+            repaint();
+        }
+    }
+
     zlgui::UIBase& VirtualizedList::getBase() const {
         return base_;
     }
@@ -171,11 +188,21 @@ namespace zlpanel {
                                              static_cast<double>(row_height_) -
                                              static_cast<double>(getContentBounds().getHeight()));
         const auto next_position = juce::jlimit(0.0, maximum, position);
+        target_scroll_position_ = next_position;
+        scroll_update_pending_ = false;
         if (std::abs(next_position - scroll_position_) > .01) {
             scroll_position_ = next_position;
             scroll_bar_.setCurrentRangeStart(scroll_position_, juce::dontSendNotification);
             repaint();
         }
+    }
+
+    void VirtualizedList::requestScrollPosition(const double position) {
+        const auto maximum = juce::jmax(0.0, static_cast<double>(row_count_) *
+                                             static_cast<double>(row_height_) -
+                                             static_cast<double>(getContentBounds().getHeight()));
+        target_scroll_position_ = juce::jlimit(0.0, maximum, position);
+        scroll_update_pending_ = std::abs(target_scroll_position_ - scroll_position_) > .01;
     }
 
     void VirtualizedList::updateScrollRange() {
@@ -186,11 +213,13 @@ namespace zlpanel {
         scroll_bar_.setVisible(needs_scrollbar);
         scroll_bar_.setRangeLimits(0.0, juce::jmax(total_height, visible_height));
         scroll_position_ = juce::jlimit(0.0, juce::jmax(0.0, total_height - visible_height), scroll_position_);
+        target_scroll_position_ = juce::jlimit(0.0, juce::jmax(0.0, total_height - visible_height),
+                                               target_scroll_position_);
+        scroll_update_pending_ = std::abs(target_scroll_position_ - scroll_position_) > .01;
         scroll_bar_.setCurrentRange(scroll_position_, visible_height, juce::dontSendNotification);
     }
 
     void VirtualizedList::scrollBarMoved(juce::ScrollBar*, const double new_range_start) {
-        scroll_position_ = new_range_start;
-        repaint();
+        requestScrollPosition(new_range_start);
     }
 }

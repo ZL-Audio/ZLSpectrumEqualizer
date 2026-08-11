@@ -38,6 +38,8 @@ namespace zlpanel {
 
         void refresh();
 
+        void flushPendingScroll();
+
         int getIdealWidth() const;
 
         int getIdealHeight() const;

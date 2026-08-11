@@ -112,11 +112,15 @@ namespace zlpanel {
 
         [[nodiscard]] double getViewPosition() const;
 
+        void flushPendingScroll();
+
     private:
         zlgui::UIBase& base_;
         juce::Component* viewed_component_{nullptr};
         int content_height_{0};
         double view_position_{0.0};
+        double target_view_position_{0.0};
+        bool scroll_update_pending_{false};
         bool scroll_bar_hovered_{false};
         bool scroll_bar_dragging_{false};
         int drag_offset_{0};
@@ -130,6 +134,8 @@ namespace zlpanel {
         [[nodiscard]] double getMaximumViewPosition() const;
 
         [[nodiscard]] bool needsScrollBar() const;
+
+        void requestViewPosition(double position);
 
         void updateViewedComponentBounds();
     };

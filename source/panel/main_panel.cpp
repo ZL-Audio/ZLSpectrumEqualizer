@@ -101,6 +101,12 @@ namespace zlpanel {
                 control_panel_.updateBand();
                 curve_panel_.updateBand();
             }
+            if (ui_setting_panel_.isVisible()) {
+                ui_setting_panel_.flushPendingScroll();
+            }
+            if (preset_browser_.isVisible()) {
+                preset_browser_.flushPendingScroll();
+            }
             curve_panel_.repaintCallBack();
             control_panel_.repaintCallBack();
             const auto c_refresh_rate = refresh_handler_.getActualRefreshRate();

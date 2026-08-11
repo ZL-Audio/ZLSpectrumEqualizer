@@ -113,6 +113,10 @@ namespace zlpanel {
         other_panel_.loadSetting();
     }
 
+    void UISettingPanel::flushPendingScroll() {
+        view_port_.flushPendingScroll();
+    }
+
     int UISettingPanel::getIdealWidth() const {
         return juce::roundToInt(base_.getFontSize() * 50.f);
     }

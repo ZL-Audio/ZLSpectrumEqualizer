@@ -29,6 +29,8 @@ namespace zlpanel {
 
         void loadSetting();
 
+        void flushPendingScroll();
+
         [[nodiscard]] int getIdealWidth() const;
 
         [[nodiscard]] int getIdealHeight() const;

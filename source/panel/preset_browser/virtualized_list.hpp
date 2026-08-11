@@ -61,6 +61,8 @@ namespace zlpanel {
 
         void scrollToRow(int row);
 
+        void flushPendingScroll();
+
     protected:
         virtual void paintRow(juce::Graphics& g, int row, juce::Rectangle<int> bounds,
                               bool selected, bool hovered) = 0;
@@ -82,12 +84,16 @@ namespace zlpanel {
         int hovered_row_{-1};
         int mouse_down_row_{-1};
         double scroll_position_{0.0};
+        double target_scroll_position_{0.0};
+        bool scroll_update_pending_{false};
 
         juce::Rectangle<int> getContentBounds() const;
 
         int getRowAt(juce::Point<int> position) const;
 
         void setScrollPosition(double position);
+
+        void requestScrollPosition(double position);
 
         void updateScrollRange();
 

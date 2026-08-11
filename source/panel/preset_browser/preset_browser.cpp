@@ -102,7 +102,6 @@ namespace zlpanel {
 
         applyColours();
         refresh();
-        setBufferedToImage(true);
 
         setWantsKeyboardFocus(true);
     }
@@ -208,6 +207,11 @@ namespace zlpanel {
         refreshGroups();
         refreshPresetCache();
         refreshPresets();
+    }
+
+    void PresetBrowser::flushPendingScroll() {
+        group_list_.flushPendingScroll();
+        preset_list_.flushPendingScroll();
     }
 
     int PresetBrowser::getIdealWidth() const {
