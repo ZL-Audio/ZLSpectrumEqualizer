@@ -72,11 +72,16 @@ namespace zlpanel {
         control_bound = control_bound.removeFromBottom(control_panel_.getIdealHeight());
         control_bound = control_bound.withSizeKeepingCentre(control_panel_.getIdealWidth(), control_bound.getHeight());
         control_panel_.setBounds(control_bound);
-        ui_setting_panel_.setBounds(bound);
         top_panel_.setBounds(bound.removeFromTop(top_panel_.getIdealHeight()));
         curve_panel_.setBounds(bound);
 
         const auto padding = getPaddingSize(font_size);
+        const auto setting_width = juce::jmax(0, juce::jmin(ui_setting_panel_.getIdealWidth(),
+                                                            main_bound.getWidth() - 4 * padding));
+        const auto setting_height = juce::jmax(0, juce::jmin(ui_setting_panel_.getIdealHeight(),
+                                                             main_bound.getHeight() - 4 * padding));
+        ui_setting_panel_.setBounds(main_bound.withSizeKeepingCentre(setting_width, setting_height));
+
         const auto preset_width = juce::jmax(0, juce::jmin(preset_browser_.getIdealWidth(),
                                                            main_bound.getWidth() - 4 * padding));
         const auto preset_height = juce::jmax(0, juce::jmin(preset_browser_.getIdealHeight(),
@@ -110,8 +115,10 @@ namespace zlpanel {
         if (base_.isPanelIdentifier(zlgui::PanelSettingIdx::kUISettingPanel, property)) {
             const auto ui_setting_visibility = static_cast<bool>(
                 base_.getPanelProperty(zlgui::PanelSettingIdx::kUISettingPanel));
-            curve_panel_.setVisible(!ui_setting_visibility);
             ui_setting_panel_.setVisible(ui_setting_visibility);
+            if (ui_setting_visibility) {
+                ui_setting_panel_.toFront(false);
+            }
         }
     }
 
