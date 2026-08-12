@@ -96,7 +96,7 @@ namespace zlpanel {
             const auto t_width = 6 * padding + 3 * (slider_width / 2) - left_pad;
             bound.removeFromLeft(padding);
             preset_button_.setBounds(bound.removeFromLeft(bound.getHeight()));
-            preset_button_.getButton().setEdgeIndent(0);
+            preset_button_.getButton().setEdgeIndent(static_cast<int>(std::round(font_size * .15f)));
             bound.removeFromLeft(padding);
             analyzer_label_.setBounds(bound.getX(), 0, t_width, getHeight());
             bound.removeFromLeft(t_width);

@@ -38,10 +38,13 @@ namespace zlpanel {
         delete_drawable_(juce::Drawable::createFromImageData(BinaryData::trash_svg,
                                                              BinaryData::trash_svgSize)),
         close_drawable_(juce::Drawable::createFromImageData(BinaryData::close_svg,
-                                                             BinaryData::close_svgSize)),
+                                                            BinaryData::close_svgSize)),
+        folder_open_drawable_(juce::Drawable::createFromImageData(BinaryData::folder_open_svg,
+                                                                  BinaryData::folder_open_svgSize)),
         delete_group_button_(base, delete_drawable_.get(), nullptr, ""),
         delete_preset_button_(base, delete_drawable_.get(), nullptr, ""),
         close_button_(base, close_drawable_.get(), nullptr, ""),
+        folder_open_button_(base, folder_open_drawable_.get(), nullptr, ""),
         group_label_({}, "Groups"),
         preset_label_({}, "Presets"),
         search_editor_(base),
@@ -80,18 +83,22 @@ namespace zlpanel {
         addAndMakeVisible(group_list_);
         addAndMakeVisible(preset_list_);
 
-        for (auto* button : {&delete_group_button_, &delete_preset_button_, &close_button_}) {
+        for (auto* button : {&delete_group_button_, &delete_preset_button_, &close_button_, &folder_open_button_}) {
             button->setImageAlpha(.55f, 1.f);
             button->setBufferedToImage(true);
             addAndMakeVisible(button);
         }
-        delete_group_button_.getButton().setTitle("Delete group");
-        delete_preset_button_.getButton().setTitle("Delete preset");
-        close_button_.getButton().setTitle("Close preset browser");
-        delete_group_button_.getButton().onClick = [this]() { deleteSelectedGroup(); };
-        delete_preset_button_.getButton().onClick = [this]() { deleteSelectedPreset(); };
+        delete_group_button_.getButton().onClick = [this]() {
+            deleteSelectedGroup();
+        };
+        delete_preset_button_.getButton().onClick = [this]() {
+            deleteSelectedPreset();
+        };
         close_button_.getButton().onClick = [this]() {
             base_.setPanelProperty(zlgui::PanelSettingIdx::kPresetBrowser, 0.f);
+        };
+        folder_open_button_.getButton().onClick = [this]() {
+            revealFolder();
         };
 
         addChildComponent(warning_overlay_);
@@ -134,6 +141,8 @@ namespace zlpanel {
         header.removeFromLeft(padding);
         delete_group_button_.setBounds(group_header.removeFromRight(button_size));
         group_header.removeFromRight(padding / 2);
+        folder_open_button_.setBounds(group_header.removeFromRight(button_size));
+        folder_open_button_.getButton().setEdgeIndent(static_cast<int>(std::round(font_size * .15f)));
         group_label_.setBounds(group_header);
 
         close_button_.setBounds(header.removeFromRight(button_size));
@@ -532,5 +541,13 @@ namespace zlpanel {
             return selected->group;
         }
         return kDefaultGroup;
+    }
+
+    void PresetBrowser::revealFolder() {
+        if (presets_directory_.isDirectory()) {
+            presets_directory_.revealToUser();
+        } else {
+            showError("Could not open the preset directory.");
+        }
     }
 }
