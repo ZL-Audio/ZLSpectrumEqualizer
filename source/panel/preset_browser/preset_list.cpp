@@ -11,7 +11,7 @@
 
 #include <algorithm>
 
-#include "preset_style.hpp"
+#include "../helper/popup_style.hpp"
 
 namespace zlpanel {
     PresetList::PresetList(zlgui::UIBase& base) : VirtualizedList(base) {
@@ -48,7 +48,7 @@ namespace zlpanel {
         }
 
         auto text_bounds = bounds.reduced(preset_list_layout::rowTextInset(font_size), 0);
-        g.setFont(juce::FontOptions{preset_style::textFontSize(font_size)});
+        g.setFont(juce::FontOptions{popup_style::textFontSize(font_size)});
         if (show_groups_) {
             auto group_bounds = text_bounds.removeFromRight(juce::jmin(text_bounds.getWidth() / 3,
                                                                        juce::roundToInt(font_size * 10.f)));

@@ -13,7 +13,7 @@
 #include <utility>
 
 #include "../helper/helper.hpp"
-#include "../preset_browser/preset_style.hpp"
+#include "../helper/popup_style.hpp"
 
 namespace zlpanel {
     UISettingText::UISettingText(zlgui::UIBase& base, juce::String text,
@@ -34,7 +34,6 @@ namespace zlpanel {
 
     UISettingPanelBackground::UISettingPanelBackground(zlgui::UIBase& base) : base_(base) {
         setInterceptsMouseClicks(false, false);
-        setAlpha(preset_style::kBackgroundAlpha);
     }
 
     void UISettingPanelBackground::paint(juce::Graphics& g) {
@@ -46,7 +45,7 @@ namespace zlpanel {
 
         const juce::DropShadow shadow{base_.getTextColour().withAlpha(.5f), padding, {0, 0}};
         shadow.drawForPath(g, path);
-        g.setColour(preset_style::surfaceColour(base_.getBackgroundColour(), base_.getTextColour()));
+        g.setColour(popup_style::surfaceColour(base_.getBackgroundColour(), base_.getTextColour()));
         g.fillPath(path);
 
         g.setColour(base_.getBackgroundColour());
@@ -67,7 +66,7 @@ namespace zlpanel {
 
     void UISettingTabBar::paint(juce::Graphics& g) {
         const auto font_size = base_.getFontSize();
-        g.setFont(juce::FontOptions{preset_style::textFontSize(font_size)});
+        g.setFont(juce::FontOptions{popup_style::textFontSize(font_size)});
 
         for (auto index = 0; index < static_cast<int>(tab_names_.size()); ++index) {
             const auto selected = index == selected_index_;

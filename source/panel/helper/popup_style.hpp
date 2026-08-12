@@ -11,7 +11,7 @@
 
 #include <juce_graphics/juce_graphics.h>
 
-namespace zlpanel::preset_style {
+namespace zlpanel::popup_style {
     static constexpr auto kTextScale = 1.5f;
     static constexpr auto kBackgroundAlpha = .9f;
     static constexpr auto kSurfaceTint = .05f;
@@ -21,6 +21,6 @@ namespace zlpanel::preset_style {
     }
 
     inline juce::Colour surfaceColour(const juce::Colour background, const juce::Colour text) {
-        return background.interpolatedWith(text, kSurfaceTint).withAlpha(kBackgroundAlpha);
+        return background.interpolatedWith(text, kSurfaceTint);
     }
 }

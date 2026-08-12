@@ -12,7 +12,7 @@
 #include <algorithm>
 
 #include "BinaryData.h"
-#include "preset_style.hpp"
+#include "../helper/popup_style.hpp"
 
 namespace zlpanel {
     namespace {
@@ -172,12 +172,12 @@ namespace zlpanel {
         group_label_.setBorderSize({0, column_text_inset, 0, 0});
         preset_label_.setBorderSize({0, column_text_inset, 0, 0});
 
-        const juce::FontOptions editor_font{preset_style::textFontSize(font_size)};
+        const juce::FontOptions editor_font{popup_style::textFontSize(font_size)};
         for (auto* editor : {&search_editor_, &group_name_editor_, &preset_name_editor_}) {
             editor->setFont(editor_font);
             editor->applyFontToAllText(editor_font);
         }
-        const juce::FontOptions heading_font{preset_style::textFontSize(font_size)};
+        const juce::FontOptions heading_font{popup_style::textFontSize(font_size)};
         group_label_.setFont(heading_font);
         preset_label_.setFont(heading_font);
         group_list_.setRowHeight(row_height);

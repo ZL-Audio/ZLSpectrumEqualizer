@@ -8,13 +8,13 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "preset_browser_background.hpp"
-#include "preset_style.hpp"
 #include "../helper/helper.hpp"
+#include "../helper/popup_style.hpp"
 
 namespace zlpanel {
     PresetBrowserBackground::PresetBrowserBackground(zlgui::UIBase& base) : base_(base) {
         setInterceptsMouseClicks(false, false);
-        setAlpha(preset_style::kBackgroundAlpha);
+        setAlpha(popup_style::kBackgroundAlpha);
     }
 
     void PresetBrowserBackground::paint(juce::Graphics& g) {
@@ -26,7 +26,7 @@ namespace zlpanel {
 
         const juce::DropShadow shadow{base_.getTextColour().withAlpha(.5f), padding, {0, 0}};
         shadow.drawForPath(g, path);
-        g.setColour(preset_style::surfaceColour(base_.getBackgroundColour(), base_.getTextColour()));
+        g.setColour(popup_style::surfaceColour(base_.getBackgroundColour(), base_.getTextColour()));
         g.fillPath(path);
 
         g.setColour(base_.getBackgroundColour());

@@ -8,7 +8,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "warning_overlay.hpp"
-#include "preset_style.hpp"
+#include "../helper/popup_style.hpp"
 #include "../helper/helper.hpp"
 
 namespace zlpanel {
@@ -33,13 +33,13 @@ namespace zlpanel {
         juce::DropShadow{base_.getDarkShadowColour().withAlpha(.85f),
                          juce::roundToInt(font_size), {0, juce::roundToInt(font_size * .24f)}}
             .drawForRectangle(g, card.toNearestInt());
-        g.setColour(base_.getBackgroundColour().withAlpha(preset_style::kBackgroundAlpha));
+        g.setColour(base_.getBackgroundColour().withAlpha(popup_style::kBackgroundAlpha));
         g.fillRoundedRectangle(card, corner);
         g.setColour(base_.getTextColour().withAlpha(.12f));
         g.drawRoundedRectangle(card, corner, font_size * .08f);
 
         g.setColour(base_.getTextInactiveColour());
-        g.setFont(juce::FontOptions{preset_style::textFontSize(font_size)});
+        g.setFont(juce::FontOptions{popup_style::textFontSize(font_size)});
         g.drawFittedText(message_, getMessageBounds(), juce::Justification::topLeft, 3, 1.f);
 
         if (show_cancel_) {
@@ -188,7 +188,7 @@ namespace zlpanel {
         const auto font_size = base_.getFontSize();
         g.fillRoundedRectangle(bounds.toFloat(), font_size * .4f);
         g.setColour(base_.getTextColour());
-        g.setFont(juce::FontOptions{preset_style::textFontSize(font_size)});
+        g.setFont(juce::FontOptions{popup_style::textFontSize(font_size)});
         g.drawFittedText(text, bounds.reduced(juce::roundToInt(font_size * .5f), 0),
                          juce::Justification::centred, 1);
     }

@@ -8,7 +8,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "group_list.hpp"
-#include "preset_style.hpp"
+#include "../helper/popup_style.hpp"
 
 namespace zlpanel {
     GroupList::GroupList(zlgui::UIBase& base) : VirtualizedList(base) {
@@ -34,7 +34,7 @@ namespace zlpanel {
         }
 
         g.setColour(getBase().getTextColour().withAlpha(selected ? .95f : .68f));
-        g.setFont(juce::FontOptions{preset_style::textFontSize(font_size)});
+        g.setFont(juce::FontOptions{popup_style::textFontSize(font_size)});
         g.drawFittedText(groups_[row], bounds.reduced(preset_list_layout::rowTextInset(font_size), 0),
                          juce::Justification::centredLeft, 1);
     }
