@@ -18,16 +18,16 @@ namespace zlpanel {
         output_label_(p, base),
         analyzer_label_(p, base),
         spec_setting_label_(p, base, tooltip_helper),
-        preset_drawable_(juce::Drawable::createFromImageData(BinaryData::preset_svg,
-                                                             BinaryData::preset_svgSize)),
+        preset_drawable_(juce::Drawable::createFromImageData(BinaryData::collections_bookmark_svg,
+                                                             BinaryData::collections_bookmark_svgSize)),
         preset_button_(base, preset_drawable_.get(), nullptr, ""),
         bypass_drawable_(juce::Drawable::createFromImageData(BinaryData::bypass_svg,
                                                              BinaryData::bypass_svgSize)),
         bypass_button_(base, bypass_drawable_.get(), bypass_drawable_.get(),
                        tooltip_helper.getToolTipText(multilingual::kBypass)),
         bypass_attach_(bypass_button_.getButton(), p.parameters_, zlp::PBypass::kID, updater_),
-        ext_drawable_(juce::Drawable::createFromImageData(BinaryData::externalside_svg,
-                                                          BinaryData::externalside_svgSize)),
+        ext_drawable_(juce::Drawable::createFromImageData(BinaryData::external_side_svg,
+                                                          BinaryData::external_side_svgSize)),
         ext_button_(base, ext_drawable_.get(), ext_drawable_.get(),
                     tooltip_helper.getToolTipText(multilingual::kExternalSideChain)),
         ext_attach_(ext_button_.getButton(), p.parameters_, zlp::PExtSide::kID, updater_) {
@@ -50,7 +50,8 @@ namespace zlpanel {
         preset_button_.setBufferedToImage(true);
         preset_button_.getButton().setTitle("Open preset browser");
         preset_button_.getButton().onClick = [this]() {
-            base_.setPanelProperty(zlgui::PanelSettingIdx::kPresetBrowser, 1.f);
+            const auto preset_open = static_cast<float>(base_.getPanelProperty(zlgui::PanelSettingIdx::kPresetBrowser));
+            base_.setPanelProperty(zlgui::PanelSettingIdx::kPresetBrowser, preset_open < .5f ? 1.f : 0.f);
         };
         addAndMakeVisible(preset_button_);
 
