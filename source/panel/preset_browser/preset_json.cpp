@@ -9,19 +9,18 @@
 
 #include "preset_json.hpp"
 
+#include "../../state/state_schema.hpp"
+
 namespace zlpanel {
     namespace {
         constexpr auto kPresetFormat = "ZLSpectrumEqualizerPreset";
-        constexpr auto kStateType = "ZLSpectrumEqualizerParaState";
-        constexpr auto kParameterStateType = "ZLSpectrumEqualizerParameters";
-        constexpr auto kNAParameterStateType = "ZLSpectrumEqualizerNAParameters";
 
         juce::Result validateProcessorState(const juce::ValueTree& state) {
-            if (!state.isValid() || !state.hasType(kStateType)) {
+            if (!state.isValid() || !state.hasType(zlstate::schema::kProcessorState)) {
                 return juce::Result::fail("Preset does not contain the expected processor state");
             }
-            if (!state.getChildWithName(kParameterStateType).isValid() ||
-                !state.getChildWithName(kNAParameterStateType).isValid()) {
+            if (!state.getChildWithName(zlstate::schema::kParameterState).isValid() ||
+                !state.getChildWithName(zlstate::schema::kNonAutomatableState).isValid()) {
                 return juce::Result::fail("Preset processor state is incomplete");
             }
             return juce::Result::ok();
@@ -35,7 +34,7 @@ namespace zlpanel {
 
         const auto xml = juce::AudioProcessor::getXmlFromBinary(processor_state.getData(),
                                                                  static_cast<int>(processor_state.getSize()));
-        if (xml == nullptr || !xml->hasTagName(kStateType)) {
+        if (xml == nullptr || !xml->hasTagName(zlstate::schema::kProcessorState)) {
             return juce::Result::fail("Processor state is invalid");
         }
 

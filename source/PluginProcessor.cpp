@@ -13,6 +13,25 @@
 
 #include "PluginEditor.h"
 
+namespace {
+    juce::ValueTree copyWithType(const juce::ValueTree& source, const juce::Identifier& type) {
+        if (!source.isValid()) {
+            return {};
+        }
+
+        juce::ValueTree result(type);
+        result.copyPropertiesAndChildrenFrom(source, nullptr);
+        return result;
+    }
+
+    juce::ValueTree getChildWithLegacyFallback(const juce::ValueTree& parent,
+                                               const juce::Identifier& type,
+                                               const juce::Identifier& legacy_type) {
+        const auto child = parent.getChildWithName(type);
+        return child.isValid() ? child : parent.getChildWithName(legacy_type);
+    }
+}
+
 //==============================================================================
 PluginProcessor::PluginProcessor() :
     AudioProcessor(BusesProperties()
@@ -22,10 +41,10 @@ PluginProcessor::PluginProcessor() :
         ),
     dummy_processor_(),
     parameters_(*this, nullptr,
-                juce::Identifier("ZLSpectrumEqualizerParameters"),
+                juce::Identifier(zlstate::schema::kParameterState),
                 zlp::getParameterLayout()),
     parameters_NA_(dummy_processor_, nullptr,
-                   juce::Identifier("ZLSpectrumEqualizerNAParameters"),
+                   juce::Identifier(zlstate::schema::kNonAutomatableState),
                    zlstate::getNAParameterLayout()),
     controller_(*this),
     a_bypass_(*parameters_.getRawParameterValue(zlp::PBypass::kID)) {
@@ -128,11 +147,10 @@ bool PluginProcessor::hasEditor() const {
 
 juce::AudioProcessorEditor* PluginProcessor::createEditor() {
     return new PluginEditor(*this);
-    // return new juce::GenericAudioProcessorEditor(*this);
 }
 
 void PluginProcessor::getStateInformation(juce::MemoryBlock& dest_data) {
-    auto temp_tree = juce::ValueTree("ZLSpectrumEqualizerParaState");
+    auto temp_tree = juce::ValueTree(zlstate::schema::kProcessorState);
     temp_tree.appendChild(parameters_.copyState(), nullptr);
     temp_tree.appendChild(parameters_NA_.copyState(), nullptr);
     const std::unique_ptr<juce::XmlElement> xml(temp_tree.createXml());
@@ -141,11 +159,29 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& dest_data) {
 
 void PluginProcessor::setStateInformation(const void* data, const int size_in_bytes) {
     std::unique_ptr<juce::XmlElement> xml_state(getXmlFromBinary(data, size_in_bytes));
-    if (xml_state != nullptr && xml_state->hasTagName("ZLSpectrumEqualizerParaState")) {
-        const auto temp_tree = juce::ValueTree::fromXml(*xml_state);
-        parameters_.replaceState(temp_tree.getChildWithName(parameters_.state.getType()));
-        parameters_NA_.replaceState(temp_tree.getChildWithName(parameters_NA_.state.getType()));
+    if (xml_state == nullptr ||
+        (!xml_state->hasTagName(zlstate::schema::kProcessorState) &&
+            !xml_state->hasTagName(zlstate::schema::legacy::kProcessorState))) {
+        return;
     }
+
+    const auto temp_tree = juce::ValueTree::fromXml(*xml_state);
+    const auto parameter_state = getChildWithLegacyFallback(
+        temp_tree,
+        juce::Identifier(zlstate::schema::kParameterState),
+        juce::Identifier(zlstate::schema::legacy::kParameterState));
+    const auto non_automatable_state = getChildWithLegacyFallback(
+        temp_tree,
+        juce::Identifier(zlstate::schema::kNonAutomatableState),
+        juce::Identifier(zlstate::schema::legacy::kNonAutomatableState));
+    if (!parameter_state.isValid() || !non_automatable_state.isValid()) {
+        return;
+    }
+
+    parameters_.replaceState(copyWithType(parameter_state,
+                                          juce::Identifier(zlstate::schema::kParameterState)));
+    parameters_NA_.replaceState(copyWithType(non_automatable_state,
+                                             juce::Identifier(zlstate::schema::kNonAutomatableState)));
 }
 
 void PluginProcessor::updateChannelLayout() {

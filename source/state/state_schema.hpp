@@ -9,7 +9,16 @@
 
 #pragma once
 
-#include "dummy_processor.hpp"
-#include "property.hpp"
-#include "state_definitions.hpp"
-#include "state_schema.hpp"
+namespace zlstate::schema {
+    inline constexpr auto kProcessorState = "ParaState";
+    inline constexpr auto kParameterState = "Para";
+    inline constexpr auto kNonAutomatableState = "State";
+    inline constexpr auto kUISettings = "UISetting";
+
+    namespace legacy {
+        inline constexpr auto kProcessorState = "ZLSpectrumEqualizerParaState";
+        inline constexpr auto kParameterState = "ZLSpectrumEqualizerParameters";
+        inline constexpr auto kNonAutomatableState = "ZLSpectrumEqualizerNAParameters";
+        inline constexpr auto kUISettings = "ZLSpectrumEqualizerState";
+    }
+}

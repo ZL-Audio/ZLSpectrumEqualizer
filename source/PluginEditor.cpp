@@ -15,7 +15,7 @@ PluginEditor::PluginEditor(PluginProcessor& p) :
     AudioProcessorEditor(&p),
     p_ref_(p),
     state_(dummy_processor_, nullptr,
-           juce::Identifier("ZLSpectrumEqualizerState"),
+           juce::Identifier(zlstate::schema::kUISettings),
            zlstate::getStateParameterLayout()),
     property_(state_),
     base_(state_),
