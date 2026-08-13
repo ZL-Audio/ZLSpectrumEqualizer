@@ -7,35 +7,36 @@
 //
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
-#include "preset_browser_background.hpp"
-#include "../helper/helper.hpp"
-#include "../helper/popup_style.hpp"
+#include "panel_surface_background.hpp"
 
-namespace zlpanel {
-    PresetBrowserBackground::PresetBrowserBackground(zlgui::UIBase& base) : base_(base) {
+#include <utility>
+
+#include "popup_style.hpp"
+
+namespace zlgui::popup {
+    PanelSurfaceBackground::PanelSurfaceBackground(UIBase& base, const float alpha) : base_(base) {
         setInterceptsMouseClicks(false, false);
-        setAlpha(popup_style::kBackgroundAlpha);
+        setAlpha(alpha);
     }
 
-    void PresetBrowserBackground::paint(juce::Graphics& g) {
-        const auto font_size = base_.getFontSize();
-        const auto padding = getPaddingSize(font_size);
+    void PanelSurfaceBackground::paint(juce::Graphics& g) {
+        const auto padding = paddingSize(base_.getFontSize());
         const auto bound = getLocalBounds().reduced(padding);
         juce::Path path;
         path.addRoundedRectangle(bound.toFloat(), static_cast<float>(padding));
 
         const juce::DropShadow shadow{base_.getTextColour().withAlpha(.5f), padding, {0, 0}};
         shadow.drawForPath(g, path);
-        g.setColour(popup_style::surfaceColour(base_.getBackgroundColour(), base_.getTextColour()));
+        g.setColour(surfaceColour(base_.getBackgroundColour(), base_.getTextColour()));
         g.fillPath(path);
 
         g.setColour(base_.getBackgroundColour());
         for (const auto& surface_bound : surface_bounds_) {
-            g.fillRoundedRectangle(surface_bound.toFloat(), static_cast<float>(padding) * 0.75f);
+            g.fillRoundedRectangle(surface_bound.toFloat(), static_cast<float>(padding) * .75f);
         }
     }
 
-    void PresetBrowserBackground::setSurfaceBounds(std::vector<juce::Rectangle<int>> bounds) {
+    void PanelSurfaceBackground::setSurfaceBounds(std::vector<juce::Rectangle<int>> bounds) {
         surface_bounds_ = std::move(bounds);
         repaint();
     }

@@ -12,7 +12,8 @@
 #include <algorithm>
 
 #include "BinaryData.h"
-#include "../helper/popup_style.hpp"
+#include "../../gui/popup/popup_style.hpp"
+#include "preset_list_layout.hpp"
 
 namespace zlpanel {
     namespace {
@@ -34,7 +35,7 @@ namespace zlpanel {
         processor_(processor),
         base_(base),
         presets_directory_(getPresetsDirectory()),
-        background_(base),
+        background_(base, zlgui::popup::kBackgroundAlpha),
         delete_drawable_(juce::Drawable::createFromImageData(BinaryData::trash_svg,
                                                              BinaryData::trash_svgSize)),
         close_drawable_(juce::Drawable::createFromImageData(BinaryData::close_svg,
@@ -181,12 +182,12 @@ namespace zlpanel {
         group_label_.setBorderSize({0, column_text_inset, 0, 0});
         preset_label_.setBorderSize({0, column_text_inset, 0, 0});
 
-        const juce::FontOptions editor_font{popup_style::textFontSize(font_size)};
+        const juce::FontOptions editor_font{zlgui::popup::textFontSize(font_size)};
         for (auto* editor : {&search_editor_, &group_name_editor_, &preset_name_editor_}) {
             editor->setFont(editor_font);
             editor->applyFontToAllText(editor_font);
         }
-        const juce::FontOptions heading_font{popup_style::textFontSize(font_size)};
+        const juce::FontOptions heading_font{zlgui::popup::textFontSize(font_size)};
         group_label_.setFont(heading_font);
         preset_label_.setFont(heading_font);
         group_list_.setRowHeight(row_height);

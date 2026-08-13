@@ -9,23 +9,20 @@
 
 #pragma once
 
-#include <vector>
-
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../gui/gui.hpp"
+#include "../../gui/scrolling/virtualized_list.hpp"
 
-namespace zlpanel {
-    class PresetBrowserBackground final : public juce::Component {
-    public:
-        explicit PresetBrowserBackground(zlgui::UIBase& base);
+namespace zlpanel::preset_list_layout {
+    inline int contentInset(const float font_size) {
+        return juce::roundToInt(font_size * zlgui::scrolling::VirtualizedList::kDefaultContentInsetScale);
+    }
 
-        void paint(juce::Graphics& g) override;
+    inline int rowTextInset(const float font_size) {
+        return juce::roundToInt(font_size * .96f);
+    }
 
-        void setSurfaceBounds(std::vector<juce::Rectangle<int>> bounds);
-
-    private:
-        zlgui::UIBase& base_;
-        std::vector<juce::Rectangle<int>> surface_bounds_;
-    };
+    inline int columnTextInset(const float font_size) {
+        return contentInset(font_size) + rowTextInset(font_size);
+    }
 }

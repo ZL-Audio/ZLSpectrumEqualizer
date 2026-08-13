@@ -11,10 +11,11 @@
 
 #include <algorithm>
 
-#include "../helper/popup_style.hpp"
+#include "../../gui/popup/popup_style.hpp"
+#include "preset_list_layout.hpp"
 
 namespace zlpanel {
-    PresetList::PresetList(zlgui::UIBase& base) : VirtualizedList(base) {
+    PresetList::PresetList(zlgui::UIBase& base) : zlgui::scrolling::VirtualizedList(base) {
     }
 
     void PresetList::setPresets(const std::vector<PresetEntry>& presets, const juce::File& selected_file,
@@ -41,14 +42,11 @@ namespace zlpanel {
 
         const auto& preset = (*presets_)[static_cast<size_t>(row)];
         const auto font_size = getBase().getFontSize();
-        const auto card = bounds.toFloat().reduced(font_size * .16f);
-        if (selected || hovered) {
-            g.setColour(getBase().getTextColour().withAlpha(selected ? .105f : .045f));
-            g.fillRoundedRectangle(card, font_size * .35f);
-        }
+        zlgui::popup::paintSelectableCard(g, bounds, getBase().getTextColour(), font_size,
+                                          selected, hovered);
 
         auto text_bounds = bounds.reduced(preset_list_layout::rowTextInset(font_size), 0);
-        g.setFont(juce::FontOptions{popup_style::textFontSize(font_size)});
+        g.setFont(juce::FontOptions{zlgui::popup::textFontSize(font_size)});
         if (show_groups_) {
             auto group_bounds = text_bounds.removeFromRight(juce::jmin(text_bounds.getWidth() / 3,
                                                                        juce::roundToInt(font_size * 10.f)));

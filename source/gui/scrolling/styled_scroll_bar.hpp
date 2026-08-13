@@ -9,27 +9,26 @@
 
 #pragma once
 
-#include <functional>
+#include <memory>
 
-#include "../../gui/scrolling/virtualized_list.hpp"
+#include <juce_gui_basics/juce_gui_basics.h>
 
-namespace zlpanel {
-    class GroupList final : public zlgui::scrolling::VirtualizedList {
+#include "../interface_definitions.hpp"
+
+namespace zlgui::scrolling {
+    class StyledScrollBar final : public juce::ScrollBar {
     public:
-        explicit GroupList(zlgui::UIBase& base);
+        explicit StyledScrollBar(UIBase& base, bool is_vertical = true);
 
-        void setGroups(const juce::StringArray& groups, const juce::String& selected_group);
+        ~StyledScrollBar() override;
 
-        std::function<void(const juce::String&)> onGroupSelected;
+        [[nodiscard]] static int getThickness(float font_size);
+
+        [[nodiscard]] static int getContentGap(float font_size);
 
     private:
-        juce::StringArray groups_;
+        class LookAndFeel;
 
-        void paintRow(juce::Graphics& g, int row, juce::Rectangle<int> bounds,
-                      bool selected, bool hovered) override;
-
-        void rowClicked(int row) override;
-
-        void rowDoubleClicked(int row) override;
+        std::unique_ptr<LookAndFeel> look_and_feel_;
     };
 }

@@ -13,10 +13,10 @@
 #include <vector>
 
 #include "preset_entry.hpp"
-#include "virtualized_list.hpp"
+#include "../../gui/scrolling/virtualized_list.hpp"
 
 namespace zlpanel {
-    class PresetList final : public VirtualizedList {
+    class PresetList final : public zlgui::scrolling::VirtualizedList {
     public:
         explicit PresetList(zlgui::UIBase& base);
 

@@ -18,9 +18,9 @@ namespace zlpanel {
         other_panel_(p, base),
         credit_panel_(base),
         background_(base),
-        version_text_(base, juce::String(ZL_PLUGIN_CURRENT_VERSION) + " " +
-                      juce::String(ZL_PLUGIN_CURRENT_HASH), 1.125f, .45f,
-                      juce::Justification::centred),
+        version_text_laf_(base),
+        version_text_({}, juce::String(ZL_PLUGIN_CURRENT_VERSION) + " " +
+                      juce::String(ZL_PLUGIN_CURRENT_HASH)),
         tab_bar_(base),
         view_port_(base),
         save_drawable_(juce::Drawable::createFromImageData(BinaryData::save_svg, BinaryData::save_svgSize)),
@@ -37,6 +37,11 @@ namespace zlpanel {
 
         background_.setBufferedToImage(true);
         addAndMakeVisible(background_);
+        version_text_laf_.setFontScale(1.125f);
+        version_text_.setJustificationType(juce::Justification::centred);
+        version_text_.setLookAndFeel(&version_text_laf_);
+        version_text_.setAlpha(.45f);
+        version_text_.setInterceptsMouseClicks(false, false);
         version_text_.setBufferedToImage(true);
         addAndMakeVisible(version_text_);
         addAndMakeVisible(tab_bar_);
@@ -67,6 +72,7 @@ namespace zlpanel {
 
     UISettingPanel::~UISettingPanel() {
         view_port_.setViewedComponent(nullptr, 0);
+        version_text_.setLookAndFeel(nullptr);
     }
 
     void UISettingPanel::resized() {

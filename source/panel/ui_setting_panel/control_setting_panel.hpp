@@ -32,8 +32,6 @@ namespace zlpanel {
 
         void resized() override;
 
-        void mouseDown(const juce::MouseEvent &event) override;
-
     private:
         PluginProcessor &p_ref_;
         zlgui::UIBase &base_;
@@ -54,7 +52,6 @@ namespace zlpanel {
         std::array<zlgui::combobox::CompactCombobox, 6> action_mouse_boxes_;
         std::array<zlgui::combobox::CompactCombobox, 6> action_key_boxes_;
 
-        juce::Label import_label_, export_label_;
         std::unique_ptr<juce::FileChooser> chooser_;
         inline auto static const kSettingDirectory =
                 juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
@@ -62,9 +59,5 @@ namespace zlpanel {
                 .getChildFile("Presets")
                 .getChildFile(JucePlugin_Manufacturer)
                 .getChildFile("Shared Settings");
-
-        void importControls();
-
-        void exportControls();
     };
 }

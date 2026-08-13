@@ -8,10 +8,11 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "group_list.hpp"
-#include "../helper/popup_style.hpp"
+#include "../../gui/popup/popup_style.hpp"
+#include "preset_list_layout.hpp"
 
 namespace zlpanel {
-    GroupList::GroupList(zlgui::UIBase& base) : VirtualizedList(base) {
+    GroupList::GroupList(zlgui::UIBase& base) : zlgui::scrolling::VirtualizedList(base) {
     }
 
     void GroupList::setGroups(const juce::StringArray& groups, const juce::String& selected_group) {
@@ -27,14 +28,11 @@ namespace zlpanel {
         }
 
         const auto font_size = getBase().getFontSize();
-        auto card = bounds.toFloat().reduced(font_size * .16f);
-        if (selected || hovered) {
-            g.setColour(getBase().getTextColour().withAlpha(selected ? .105f : .045f));
-            g.fillRoundedRectangle(card, font_size * .35f);
-        }
+        zlgui::popup::paintSelectableCard(g, bounds, getBase().getTextColour(), font_size,
+                                          selected, hovered);
 
         g.setColour(getBase().getTextColour().withAlpha(selected ? .95f : .68f));
-        g.setFont(juce::FontOptions{popup_style::textFontSize(font_size)});
+        g.setFont(juce::FontOptions{zlgui::popup::textFontSize(font_size)});
         g.drawFittedText(groups_[row], bounds.reduced(preset_list_layout::rowTextInset(font_size), 0),
                          juce::Justification::centredLeft, 1);
     }

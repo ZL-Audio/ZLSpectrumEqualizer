@@ -9,27 +9,23 @@
 
 #pragma once
 
-#include <functional>
+#include <vector>
 
-#include "../../gui/scrolling/virtualized_list.hpp"
+#include <juce_gui_basics/juce_gui_basics.h>
 
-namespace zlpanel {
-    class GroupList final : public zlgui::scrolling::VirtualizedList {
+#include "../interface_definitions.hpp"
+
+namespace zlgui::popup {
+    class PanelSurfaceBackground final : public juce::Component {
     public:
-        explicit GroupList(zlgui::UIBase& base);
+        explicit PanelSurfaceBackground(UIBase& base, float alpha = 1.f);
 
-        void setGroups(const juce::StringArray& groups, const juce::String& selected_group);
+        void paint(juce::Graphics& g) override;
 
-        std::function<void(const juce::String&)> onGroupSelected;
+        void setSurfaceBounds(std::vector<juce::Rectangle<int>> bounds);
 
     private:
-        juce::StringArray groups_;
-
-        void paintRow(juce::Graphics& g, int row, juce::Rectangle<int> bounds,
-                      bool selected, bool hovered) override;
-
-        void rowClicked(int row) override;
-
-        void rowDoubleClicked(int row) override;
+        UIBase& base_;
+        std::vector<juce::Rectangle<int>> surface_bounds_;
     };
 }

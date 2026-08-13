@@ -17,6 +17,9 @@
 #include "other_ui_setting_panel.hpp"
 #include "credit_panel.hpp"
 #include "ui_setting_components.hpp"
+#include "../../gui/label/name_look_and_feel.hpp"
+#include "../../gui/popup/panel_surface_background.hpp"
+#include "../../gui/scrolling/scrollable_viewport.hpp"
 
 namespace zlpanel {
     class UISettingPanel final : public juce::Component {
@@ -44,10 +47,11 @@ namespace zlpanel {
         OtherUISettingPanel other_panel_;
         CreditPanel credit_panel_;
 
-        UISettingPanelBackground background_;
-        UISettingText version_text_;
+        zlgui::popup::PanelSurfaceBackground background_;
+        zlgui::label::NameLookAndFeel version_text_laf_;
+        juce::Label version_text_;
         UISettingTabBar tab_bar_;
-        UISettingViewport view_port_;
+        zlgui::scrolling::ScrollableViewport view_port_;
 
         const std::unique_ptr<juce::Drawable> save_drawable_, close_drawable_, reset_drawable_;
         zlgui::button::ClickButton save_button_, close_button_, reset_button_;

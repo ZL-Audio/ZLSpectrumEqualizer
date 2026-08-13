@@ -11,10 +11,11 @@
 
 #include <cmath>
 
-namespace zlpanel {
-    VirtualizedList::VirtualizedList(zlgui::UIBase& base) : base_(base) {
+namespace zlgui::scrolling {
+    VirtualizedList::VirtualizedList(UIBase& base, const float content_inset_scale) :
+        base_(base), scroll_bar_(base),
+        content_inset_scale_(juce::jmax(0.f, content_inset_scale)) {
         row_height_ = juce::roundToInt(base_.getFontSize() * 1.9f);
-        scroll_bar_.setAutoHide(true);
         scroll_bar_.addListener(this);
         addAndMakeVisible(scroll_bar_);
         setMouseCursor(juce::MouseCursor::PointingHandCursor);
@@ -31,13 +32,14 @@ namespace zlpanel {
             return;
         }
 
+        const auto scroll_position = scroll_model_.getPosition();
         const auto first_row = juce::jlimit(0, row_count_ - 1,
-                                            static_cast<int>(std::floor(scroll_position_ /
+                                            static_cast<int>(std::floor(scroll_position /
                                                                         static_cast<double>(row_height_))));
         const auto last_row = juce::jlimit(first_row, row_count_ - 1,
-                                           static_cast<int>(std::ceil((scroll_position_ + content.getHeight()) /
+                                           static_cast<int>(std::ceil((scroll_position + content.getHeight()) /
                                                                       static_cast<double>(row_height_))));
-        const auto y_offset = content.getY() - juce::roundToInt(scroll_position_);
+        const auto y_offset = content.getY() - juce::roundToInt(scroll_position);
 
         juce::Graphics::ScopedSaveState state{g};
         g.reduceClipRegion(content);
@@ -49,7 +51,7 @@ namespace zlpanel {
     }
 
     void VirtualizedList::resized() {
-        const auto thickness = juce::roundToInt(base_.getFontSize() * .5f);
+        const auto thickness = StyledScrollBar::getThickness(base_.getFontSize());
         scroll_bar_.setBounds(getLocalBounds().removeFromRight(thickness));
         updateScrollRange();
     }
@@ -91,19 +93,16 @@ namespace zlpanel {
 
     void VirtualizedList::mouseWheelMove(const juce::MouseEvent&,
                                          const juce::MouseWheelDetails& wheel) {
-        if (static_cast<double>(row_count_) * static_cast<double>(row_height_) <=
-            static_cast<double>(getContentBounds().getHeight())) {
+        if (getMaximumScrollPosition() <= 0.0) {
             return;
         }
         const auto multiplier = wheel.isSmooth ? 4.5 : 3.0;
-        requestScrollPosition(target_scroll_position_ - static_cast<double>(wheel.deltaY) *
+        requestScrollPosition(scroll_model_.getTargetPosition() - static_cast<double>(wheel.deltaY) *
                               static_cast<double>(row_height_) * multiplier);
     }
 
     void VirtualizedList::lookAndFeelChanged() {
-        scroll_bar_.setColour(juce::ScrollBar::thumbColourId, base_.getTextColour().withAlpha(.2f));
-        scroll_bar_.setColour(juce::ScrollBar::trackColourId, juce::Colours::transparentBlack);
-        scroll_bar_.setColour(juce::ScrollBar::backgroundColourId, juce::Colours::transparentBlack);
+        scroll_bar_.repaint();
         repaint();
     }
 
@@ -136,39 +135,33 @@ namespace zlpanel {
         const auto visible_height = getContentBounds().getHeight();
         const auto row_top = row * row_height_;
         const auto row_bottom = row_top + row_height_;
-        if (row_top < scroll_position_) {
+        if (row_top < scroll_model_.getPosition()) {
             setScrollPosition(static_cast<double>(row_top));
-        } else if (row_bottom > scroll_position_ + visible_height) {
+        } else if (row_bottom > scroll_model_.getPosition() + visible_height) {
             setScrollPosition(static_cast<double>(row_bottom - visible_height));
         }
     }
 
     void VirtualizedList::flushPendingScroll() {
-        if (!scroll_update_pending_) {
-            return;
-        }
-        scroll_update_pending_ = false;
-        const auto maximum = juce::jmax(0.0, static_cast<double>(row_count_) *
-                                             static_cast<double>(row_height_) -
-                                             static_cast<double>(getContentBounds().getHeight()));
-        const auto next_position = juce::jlimit(0.0, maximum, target_scroll_position_);
-        target_scroll_position_ = next_position;
-        if (std::abs(next_position - scroll_position_) > .01) {
-            scroll_position_ = next_position;
-            scroll_bar_.setCurrentRangeStart(scroll_position_, juce::dontSendNotification);
+        if (scroll_model_.flush(getMaximumScrollPosition())) {
+            scroll_bar_.setCurrentRangeStart(scroll_model_.getPosition(), juce::dontSendNotification);
             repaint();
         }
     }
 
-    zlgui::UIBase& VirtualizedList::getBase() const {
+    UIBase& VirtualizedList::getBase() const {
         return base_;
+    }
+
+    int VirtualizedList::getContentInset() const {
+        return juce::roundToInt(base_.getFontSize() * content_inset_scale_);
     }
 
     juce::Rectangle<int> VirtualizedList::getContentBounds() const {
         const auto font_size = base_.getFontSize();
-        auto bounds = getLocalBounds().reduced(preset_list_layout::contentInset(font_size));
+        auto bounds = getLocalBounds().reduced(getContentInset());
         if (scroll_bar_.isVisible()) {
-            bounds.removeFromRight(scroll_bar_.getWidth() + juce::roundToInt(font_size * .16f));
+            bounds.removeFromRight(scroll_bar_.getWidth() + StyledScrollBar::getContentGap(font_size));
         }
         return bounds;
     }
@@ -178,45 +171,38 @@ namespace zlpanel {
         if (!content.contains(position) || row_count_ <= 0) {
             return -1;
         }
-        const auto row = static_cast<int>((static_cast<double>(position.y - content.getY()) + scroll_position_) /
+        const auto row = static_cast<int>((static_cast<double>(position.y - content.getY()) +
+                                           scroll_model_.getPosition()) /
                                           static_cast<double>(row_height_));
         return juce::isPositiveAndBelow(row, row_count_) ? row : -1;
     }
 
+    double VirtualizedList::getMaximumScrollPosition() const {
+        return juce::jmax(0.0, static_cast<double>(row_count_) * static_cast<double>(row_height_) -
+                               static_cast<double>(getContentBounds().getHeight()));
+    }
+
     void VirtualizedList::setScrollPosition(const double position) {
-        const auto maximum = juce::jmax(0.0, static_cast<double>(row_count_) *
-                                             static_cast<double>(row_height_) -
-                                             static_cast<double>(getContentBounds().getHeight()));
-        const auto next_position = juce::jlimit(0.0, maximum, position);
-        target_scroll_position_ = next_position;
-        scroll_update_pending_ = false;
-        if (std::abs(next_position - scroll_position_) > .01) {
-            scroll_position_ = next_position;
-            scroll_bar_.setCurrentRangeStart(scroll_position_, juce::dontSendNotification);
+        if (scroll_model_.setPosition(position, getMaximumScrollPosition())) {
+            scroll_bar_.setCurrentRangeStart(scroll_model_.getPosition(), juce::dontSendNotification);
             repaint();
         }
     }
 
     void VirtualizedList::requestScrollPosition(const double position) {
-        const auto maximum = juce::jmax(0.0, static_cast<double>(row_count_) *
-                                             static_cast<double>(row_height_) -
-                                             static_cast<double>(getContentBounds().getHeight()));
-        target_scroll_position_ = juce::jlimit(0.0, maximum, position);
-        scroll_update_pending_ = std::abs(target_scroll_position_ - scroll_position_) > .01;
+        scroll_model_.requestPosition(position, getMaximumScrollPosition());
     }
 
     void VirtualizedList::updateScrollRange() {
         const auto total_height = static_cast<double>(row_count_) * static_cast<double>(row_height_);
         const auto visible_height = static_cast<double>(juce::jmax(
-            0, getLocalBounds().reduced(preset_list_layout::contentInset(base_.getFontSize())).getHeight()));
+            0, getLocalBounds().reduced(getContentInset()).getHeight()));
         const auto needs_scrollbar = total_height > visible_height && visible_height > 0.0;
         scroll_bar_.setVisible(needs_scrollbar);
         scroll_bar_.setRangeLimits(0.0, juce::jmax(total_height, visible_height));
-        scroll_position_ = juce::jlimit(0.0, juce::jmax(0.0, total_height - visible_height), scroll_position_);
-        target_scroll_position_ = juce::jlimit(0.0, juce::jmax(0.0, total_height - visible_height),
-                                               target_scroll_position_);
-        scroll_update_pending_ = std::abs(target_scroll_position_ - scroll_position_) > .01;
-        scroll_bar_.setCurrentRange(scroll_position_, visible_height, juce::dontSendNotification);
+        scroll_bar_.setSingleStepSize(row_height_);
+        scroll_model_.clampToMaximum(juce::jmax(0.0, total_height - visible_height));
+        scroll_bar_.setCurrentRange(scroll_model_.getPosition(), visible_height, juce::dontSendNotification);
     }
 
     void VirtualizedList::scrollBarMoved(juce::ScrollBar*, const double new_range_start) {

@@ -11,27 +11,18 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../gui/interface_definitions.hpp"
+#include "../interface_definitions.hpp"
+#include "scroll_model.hpp"
+#include "styled_scroll_bar.hpp"
 
-namespace zlpanel {
-    namespace preset_list_layout {
-        inline int contentInset(const float font_size) {
-            return juce::roundToInt(font_size * .24f);
-        }
-
-        inline int rowTextInset(const float font_size) {
-            return juce::roundToInt(font_size * .96f);
-        }
-
-        inline int columnTextInset(const float font_size) {
-            return contentInset(font_size) + rowTextInset(font_size);
-        }
-    }
-
+namespace zlgui::scrolling {
     class VirtualizedList : public juce::Component,
                             private juce::ScrollBar::Listener {
     public:
-        explicit VirtualizedList(zlgui::UIBase& base);
+        static constexpr float kDefaultContentInsetScale = .24f;
+
+        explicit VirtualizedList(UIBase& base,
+                                 float content_inset_scale = kDefaultContentInsetScale);
 
         ~VirtualizedList() override;
 
@@ -71,25 +62,27 @@ namespace zlpanel {
 
         virtual void rowDoubleClicked(int row) = 0;
 
-        zlgui::UIBase& getBase() const;
+        UIBase& getBase() const;
 
-    protected:
-        zlgui::UIBase& base_;
+        UIBase& base_;
 
     private:
-        juce::ScrollBar scroll_bar_{true};
+        StyledScrollBar scroll_bar_;
+        const float content_inset_scale_;
         int row_count_{0};
         int row_height_{1};
         int selected_row_{-1};
         int hovered_row_{-1};
         int mouse_down_row_{-1};
-        double scroll_position_{0.0};
-        double target_scroll_position_{0.0};
-        bool scroll_update_pending_{false};
+        ScrollModel scroll_model_;
 
-        juce::Rectangle<int> getContentBounds() const;
+        [[nodiscard]] int getContentInset() const;
 
-        int getRowAt(juce::Point<int> position) const;
+        [[nodiscard]] juce::Rectangle<int> getContentBounds() const;
+
+        [[nodiscard]] int getRowAt(juce::Point<int> position) const;
+
+        [[nodiscard]] double getMaximumScrollPosition() const;
 
         void setScrollPosition(double position);
 

@@ -15,12 +15,12 @@
 #include "../../gui/gui.hpp"
 
 #include "group_list.hpp"
-#include "preset_browser_background.hpp"
 #include "preset_entry.hpp"
 #include "preset_json.hpp"
 #include "preset_list.hpp"
 #include "rounded_text_editor.hpp"
 #include "warning_overlay.hpp"
+#include "../../gui/popup/panel_surface_background.hpp"
 
 namespace zlpanel {
     class PresetBrowser final : public juce::Component,
@@ -49,7 +49,7 @@ namespace zlpanel {
         zlgui::UIBase& base_;
         const juce::File presets_directory_;
 
-        PresetBrowserBackground background_;
+        zlgui::popup::PanelSurfaceBackground background_;
 
         std::unique_ptr<juce::Drawable> delete_drawable_;
         std::unique_ptr<juce::Drawable> close_drawable_;
