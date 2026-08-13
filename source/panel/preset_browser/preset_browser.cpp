@@ -143,7 +143,7 @@ namespace zlpanel {
         delete_group_button_.setBounds(group_header.removeFromRight(button_size));
         group_header.removeFromRight(padding / 2);
         folder_open_button_.setBounds(group_header.removeFromRight(button_size));
-        folder_open_button_.getButton().setEdgeIndent(static_cast<int>(std::round(font_size * .15f)));
+        folder_open_button_.getButton().setEdgeIndent(static_cast<int>(std::round(font_size * .175f)));
         group_label_.setBounds(group_header);
 
         close_button_.setBounds(header.removeFromRight(button_size));

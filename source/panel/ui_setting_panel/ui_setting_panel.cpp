@@ -19,17 +19,22 @@ namespace zlpanel {
         credit_panel_(base),
         background_(base),
         version_text_laf_(base),
-        version_text_({}, juce::String(ZL_PLUGIN_CURRENT_VERSION) + " " +
-                      juce::String(ZL_PLUGIN_CURRENT_HASH)),
+        version_text_({},
+                      juce::String(ZL_PLUGIN_CURRENT_VERSION) + " " + juce::String(ZL_PLUGIN_CURRENT_HASH)),
         tab_bar_(base),
         view_port_(base),
-        save_drawable_(juce::Drawable::createFromImageData(BinaryData::save_svg, BinaryData::save_svgSize)),
-        close_drawable_(juce::Drawable::createFromImageData(BinaryData::close_svg, BinaryData::close_svgSize)),
-        reset_drawable_(
-            juce::Drawable::createFromImageData(BinaryData::reset_settings_svg, BinaryData::reset_settings_svgSize)),
+        save_drawable_(juce::Drawable::createFromImageData(BinaryData::save_svg,
+                                                           BinaryData::save_svgSize)),
+        close_drawable_(juce::Drawable::createFromImageData(BinaryData::close_svg,
+                                                            BinaryData::close_svgSize)),
+        reset_drawable_(juce::Drawable::createFromImageData(BinaryData::reset_settings_svg,
+                                                            BinaryData::reset_settings_svgSize)),
+        folder_open_drawable_(juce::Drawable::createFromImageData(BinaryData::folder_open_svg,
+                                                                  BinaryData::folder_open_svgSize)),
         save_button_(base_, save_drawable_.get()),
         close_button_(base_, close_drawable_.get()),
-        reset_button_(base_, reset_drawable_.get()) {
+        reset_button_(base_, reset_drawable_.get()),
+        folder_open_button_(base_, folder_open_drawable_.get()) {
         juce::ignoreUnused(p_ref_);
         setOpaque(false);
         setInterceptsMouseClicks(true, true);
@@ -47,18 +52,27 @@ namespace zlpanel {
         addAndMakeVisible(tab_bar_);
         addAndMakeVisible(view_port_);
 
-        for (auto* button : {&save_button_, &reset_button_, &close_button_}) {
+        for (auto* button : {&save_button_, &reset_button_, &close_button_, &folder_open_button_}) {
             button->setImageAlpha(.55f, 1.f);
             button->setBufferedToImage(true);
             addAndMakeVisible(button);
         }
-        save_button_.getButton().setTitle("Save UI settings");
-        reset_button_.getButton().setTitle("Reset this settings page");
-        close_button_.getButton().setTitle("Close UI settings");
-        save_button_.getButton().onClick = [this]() { saveCurrentPanel(); };
-        reset_button_.getButton().onClick = [this]() { resetCurrentPanel(); };
+        save_button_.getButton().onClick = [this]() {
+            saveCurrentPanel();
+        };
+        reset_button_.getButton().onClick = [this]() {
+            resetCurrentPanel();
+        };
         close_button_.getButton().onClick = [this]() {
             base_.setPanelProperty(zlgui::PanelSettingIdx::kUISettingPanel, false);
+        };
+        folder_open_button_.getButton().onClick = []() {
+            const juce::File ui_file =
+                juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                .getChildFile("ZL Audio").getChildFile(JucePlugin_Name).getChildFile("ui.xml");
+            if (ui_file.existsAsFile()) {
+                ui_file.revealToUser();
+            }
         };
 
         tab_bar_.onTabSelected = [this](const int index) {
@@ -96,14 +110,16 @@ namespace zlpanel {
         view_port_.setBounds(bounds);
 
         const auto get_footer_cell = [&footer](const int index) {
-            const auto left = footer.getX() + footer.getWidth() * index / 4;
-            const auto right = footer.getX() + footer.getWidth() * (index + 1) / 4;
+            const auto left = footer.getX() + footer.getWidth() * index / 5;
+            const auto right = footer.getX() + footer.getWidth() * (index + 1) / 5;
             return juce::Rectangle<int>{left, footer.getY(), right - left, footer.getHeight()};
         };
         version_text_.setBounds(get_footer_cell(0));
-        reset_button_.setBounds(get_footer_cell(1).withSizeKeepingCentre(button_size, button_size));
-        save_button_.setBounds(get_footer_cell(2).withSizeKeepingCentre(button_size, button_size));
-        close_button_.setBounds(get_footer_cell(3).withSizeKeepingCentre(button_size, button_size));
+        folder_open_button_.setBounds(get_footer_cell(1).withSizeKeepingCentre(button_size, button_size));
+        folder_open_button_.getButton().setEdgeIndent(static_cast<int>(std::round(font_size * .175f)));
+        reset_button_.setBounds(get_footer_cell(2).withSizeKeepingCentre(button_size, button_size));
+        save_button_.setBounds(get_footer_cell(3).withSizeKeepingCentre(button_size, button_size));
+        close_button_.setBounds(get_footer_cell(4).withSizeKeepingCentre(button_size, button_size));
 
         background_.setBounds(getLocalBounds());
         background_.setSurfaceBounds({tab_bar_.getBounds(), view_port_.getBounds()});
