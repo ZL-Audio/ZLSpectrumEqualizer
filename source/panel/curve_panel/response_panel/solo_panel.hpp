@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "../../../PluginProcessor.h"
+#include "../../../PluginProcessor.hpp"
 #include "../../../gui/gui.hpp"
 
 namespace zlpanel {

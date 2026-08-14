@@ -9,7 +9,7 @@
 
 #include "ui_setting_components.hpp"
 
-#include "../preset_browser/popup_style.hpp"
+#include "../helper/paint_selected_card.hpp"
 
 namespace zlpanel {
     UISettingTabBar::UISettingTabBar(zlgui::UIBase& base) : base_(base) {
@@ -25,8 +25,7 @@ namespace zlpanel {
             const auto selected = index == selected_index_;
             const auto hovered = index == hovered_index_;
             const auto tab_bounds = getTabBounds(index);
-            popup::paintSelectableCard(g, tab_bounds, base_.getTextColour(), font_size,
-                                       selected, hovered);
+            paintSelectableCard(g, tab_bounds, base_.getTextColour(), font_size, selected, hovered);
 
             g.setColour(base_.getTextColour().withAlpha(selected ? .95f : .62f));
             g.drawFittedText(tab_names_[static_cast<size_t>(index)],

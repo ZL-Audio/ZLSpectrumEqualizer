@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "../../PluginProcessor.h"
+#include "../../PluginProcessor.hpp"
 #include "juce_parameter_value.hpp"
 
 namespace zlpanel::band_helper {

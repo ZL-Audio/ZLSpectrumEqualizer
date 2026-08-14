@@ -7,7 +7,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
-#include "PluginEditor.h"
+#include "PluginEditor.hpp"
 
 #include "BinaryData.h"
 

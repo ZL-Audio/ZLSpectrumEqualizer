@@ -12,7 +12,6 @@
 #include <algorithm>
 
 #include "BinaryData.h"
-#include "popup_style.hpp"
 #include "preset_list_layout.hpp"
 
 namespace zlpanel {

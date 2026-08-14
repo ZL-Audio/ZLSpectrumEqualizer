@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "../../PluginProcessor.h"
+#include "../../PluginProcessor.hpp"
 #include "../../gui/gui.hpp"
 
 #include "group_list.hpp"

@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "../../../../PluginProcessor.h"
+#include "../../../../PluginProcessor.hpp"
 #include "../../../../gui/gui.hpp"
 #include "../../../helper/helper.hpp"
 #include "../../../helper/freq_note.hpp"

@@ -11,7 +11,7 @@
 
 #include <juce_graphics/juce_graphics.h>
 
-namespace zlpanel::popup {
+namespace zlpanel {
     inline void paintSelectableCard(juce::Graphics& g, const juce::Rectangle<int> bounds,
                                     const juce::Colour text_colour, const float font_size,
                                     const bool selected, const bool hovered) {

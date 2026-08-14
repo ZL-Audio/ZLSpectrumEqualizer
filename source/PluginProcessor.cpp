@@ -7,11 +7,11 @@
 //
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
-#include "PluginProcessor.h"
+#include "PluginProcessor.hpp"
 
 #include <numbers>
 
-#include "PluginEditor.h"
+#include "PluginEditor.hpp"
 
 namespace {
     juce::ValueTree copyWithType(const juce::ValueTree& source, const juce::Identifier& type) {

@@ -8,7 +8,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "group_list.hpp"
-#include "popup_style.hpp"
+#include "../helper/paint_selected_card.hpp"
 #include "preset_list_layout.hpp"
 
 namespace zlpanel {
@@ -29,8 +29,7 @@ namespace zlpanel {
         }
 
         const auto font_size = base_.getFontSize();
-        popup::paintSelectableCard(g, bounds, base_.getTextColour(), font_size,
-                                   selected, hovered);
+        paintSelectableCard(g, bounds, base_.getTextColour(), font_size, selected, hovered);
 
         g.setColour(base_.getTextColour().withAlpha(selected ? .95f : .68f));
         g.setFont(juce::FontOptions{1.5f * font_size});

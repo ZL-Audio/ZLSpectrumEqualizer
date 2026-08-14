@@ -10,7 +10,7 @@
 #pragma once
 
 #include "../../gui/gui.hpp"
-#include "../../PluginProcessor.h"
+#include "../../PluginProcessor.hpp"
 #include "../helper/panel_constants.hpp"
 
 namespace zlpanel {
