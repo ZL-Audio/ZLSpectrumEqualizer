@@ -9,18 +9,25 @@
 
 #pragma once
 
-#include "../../gui/gui.hpp"
-#include "../helper/helper.hpp"
+#include <vector>
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include "../../gui/interface_definitions.hpp"
 
 namespace zlpanel {
-    class ControlBackground final : public juce::Component {
+    class PanelBackground final : public juce::Component {
     public:
-        explicit ControlBackground(zlgui::UIBase& base, float alpha = .5f);
+        explicit PanelBackground(zlgui::UIBase& base, float shadow_alpha = .5f);
 
         void paint(juce::Graphics& g) override;
 
+        void setSurfaceBounds(std::vector<juce::Rectangle<int>> bounds);
+
     private:
         zlgui::UIBase& base_;
-        const float alpha_;
+        const float shadow_alpha_;
+        std::vector<juce::Rectangle<int>> surface_bounds_;
+        bool paints_surfaces_ = false;
     };
 }

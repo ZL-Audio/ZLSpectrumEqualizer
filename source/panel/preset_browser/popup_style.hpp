@@ -11,24 +11,7 @@
 
 #include <juce_graphics/juce_graphics.h>
 
-namespace zlgui::popup {
-    static constexpr auto kTextScale = 1.5f;
-    static constexpr auto kBackgroundAlpha = .9f;
-    static constexpr auto kSurfaceTint = .05f;
-    static constexpr auto kPaddingScale = .5f;
-
-    inline float textFontSize(const float base_font_size) {
-        return kTextScale * base_font_size;
-    }
-
-    inline int paddingSize(const float base_font_size) {
-        return juce::roundToInt(base_font_size * kPaddingScale);
-    }
-
-    inline juce::Colour surfaceColour(const juce::Colour background, const juce::Colour text) {
-        return background.interpolatedWith(text, kSurfaceTint);
-    }
-
+namespace zlpanel::popup {
     inline void paintSelectableCard(juce::Graphics& g, const juce::Rectangle<int> bounds,
                                     const juce::Colour text_colour, const float font_size,
                                     const bool selected, const bool hovered) {

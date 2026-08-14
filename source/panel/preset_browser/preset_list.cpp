@@ -11,11 +11,12 @@
 
 #include <algorithm>
 
-#include "../../gui/popup/popup_style.hpp"
+#include "popup_style.hpp"
 #include "preset_list_layout.hpp"
 
 namespace zlpanel {
-    PresetList::PresetList(zlgui::UIBase& base) : zlgui::scrolling::VirtualizedList(base) {
+    PresetList::PresetList(zlgui::UIBase& base) :
+        zlgui::scrolling::VirtualizedList(base) {
     }
 
     void PresetList::setPresets(const std::vector<PresetEntry>& presets, const juce::File& selected_file,
@@ -41,20 +42,20 @@ namespace zlpanel {
         }
 
         const auto& preset = (*presets_)[static_cast<size_t>(row)];
-        const auto font_size = getBase().getFontSize();
-        zlgui::popup::paintSelectableCard(g, bounds, getBase().getTextColour(), font_size,
-                                          selected, hovered);
+        const auto font_size = base_.getFontSize();
+        popup::paintSelectableCard(g, bounds, base_.getTextColour(), font_size,
+                                   selected, hovered);
 
         auto text_bounds = bounds.reduced(preset_list_layout::rowTextInset(font_size), 0);
-        g.setFont(juce::FontOptions{zlgui::popup::textFontSize(font_size)});
+        g.setFont(juce::FontOptions{1.5f * font_size});
         if (show_groups_) {
             auto group_bounds = text_bounds.removeFromRight(juce::jmin(text_bounds.getWidth() / 3,
                                                                        juce::roundToInt(font_size * 10.f)));
-            g.setColour(getBase().getTextHideColour());
+            g.setColour(base_.getTextHideColour());
             g.drawFittedText(preset.group, group_bounds, juce::Justification::centredRight, 1);
             text_bounds.removeFromRight(juce::roundToInt(font_size * .5f));
         }
-        g.setColour(getBase().getTextColour().withAlpha(selected ? .95f : .7f));
+        g.setColour(base_.getTextColour().withAlpha(selected ? .95f : .7f));
         g.drawFittedText(preset.name, text_bounds, juce::Justification::centredLeft, 1);
     }
 
@@ -86,7 +87,7 @@ namespace zlpanel {
             return preset.file == file;
         });
         return iterator == presets_->end()
-                   ? -1
-                   : static_cast<int>(std::distance(presets_->begin(), iterator));
+            ? -1
+            : static_cast<int>(std::distance(presets_->begin(), iterator));
     }
 }

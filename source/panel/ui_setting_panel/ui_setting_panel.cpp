@@ -40,6 +40,7 @@ namespace zlpanel {
         setInterceptsMouseClicks(true, true);
         base_.setPanelProperty(zlgui::PanelSettingIdx::kUISettingPanel, false);
 
+        background_.setAlpha(.9f);
         background_.setBufferedToImage(true);
         addAndMakeVisible(background_);
         version_text_laf_.setFontScale(1.125f);

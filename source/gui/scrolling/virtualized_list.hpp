@@ -55,16 +55,14 @@ namespace zlgui::scrolling {
         void flushPendingScroll();
 
     protected:
+        UIBase& base_;
+
         virtual void paintRow(juce::Graphics& g, int row, juce::Rectangle<int> bounds,
                               bool selected, bool hovered) = 0;
 
         virtual void rowClicked(int row) = 0;
 
         virtual void rowDoubleClicked(int row) = 0;
-
-        UIBase& getBase() const;
-
-        UIBase& base_;
 
     private:
         StyledScrollBar scroll_bar_;

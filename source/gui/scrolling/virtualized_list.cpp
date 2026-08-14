@@ -149,10 +149,6 @@ namespace zlgui::scrolling {
         }
     }
 
-    UIBase& VirtualizedList::getBase() const {
-        return base_;
-    }
-
     int VirtualizedList::getContentInset() const {
         return juce::roundToInt(base_.getFontSize() * content_inset_scale_);
     }

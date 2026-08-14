@@ -14,8 +14,6 @@
 #include "../helper/helper.hpp"
 #include "../multilingual/tooltip_helper.hpp"
 
-#include "../control_panel/control_background.hpp"
-
 namespace zlpanel {
     class SpecSettingLabel final : public juce::Component {
     public:

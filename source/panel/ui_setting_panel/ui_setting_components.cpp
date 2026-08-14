@@ -9,7 +9,7 @@
 
 #include "ui_setting_components.hpp"
 
-#include "../../gui/popup/popup_style.hpp"
+#include "../preset_browser/popup_style.hpp"
 
 namespace zlpanel {
     UISettingTabBar::UISettingTabBar(zlgui::UIBase& base) : base_(base) {
@@ -19,14 +19,14 @@ namespace zlpanel {
 
     void UISettingTabBar::paint(juce::Graphics& g) {
         const auto font_size = base_.getFontSize();
-        g.setFont(juce::FontOptions{zlgui::popup::textFontSize(font_size)});
+        g.setFont(juce::FontOptions{1.5f * font_size});
 
         for (auto index = 0; index < static_cast<int>(tab_names_.size()); ++index) {
             const auto selected = index == selected_index_;
             const auto hovered = index == hovered_index_;
             const auto tab_bounds = getTabBounds(index);
-            zlgui::popup::paintSelectableCard(g, tab_bounds, base_.getTextColour(), font_size,
-                                              selected, hovered);
+            popup::paintSelectableCard(g, tab_bounds, base_.getTextColour(), font_size,
+                                       selected, hovered);
 
             g.setColour(base_.getTextColour().withAlpha(selected ? .95f : .62f));
             g.drawFittedText(tab_names_[static_cast<size_t>(index)],

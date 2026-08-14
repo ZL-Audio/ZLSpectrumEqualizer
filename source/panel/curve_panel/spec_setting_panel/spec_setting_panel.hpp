@@ -14,7 +14,7 @@
 #include "../../helper/helper.hpp"
 #include "../../multilingual/tooltip_helper.hpp"
 
-#include "../../control_panel/control_background.hpp"
+#include "../../background/panel_background.hpp"
 
 namespace zlpanel {
     class SpecSettingPanel final : public juce::Component {
@@ -35,7 +35,7 @@ namespace zlpanel {
         zlgui::attachment::ComponentUpdater updater_;
         std::atomic<float>& spec_setting_open_;
 
-        ControlBackground control_background_;
+        PanelBackground control_background_;
 
         zlgui::label::NameLookAndFeel label_laf_;
 
