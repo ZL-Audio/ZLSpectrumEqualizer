@@ -230,9 +230,14 @@ namespace zlpanel {
                 break;
             }
             for (size_t band = 0; band < zlp::kBandNum; ++band) {
+                const auto to_update_target = to_update_target_y_flags_[band];
+                const auto to_update_base = to_update_base_y_flags_[band] || to_update_target;
+                if (!to_update_base) {
+                    continue;
+                }
                 single_panel_.run(band, c_filter_status_[band],
-                                  to_update_base_y_flags_[band],
-                                  to_update_target_y_flags_[band],
+                                  to_update_base,
+                                  to_update_target,
                                   xs_, c_k_, c_b_,
                                   base_mags_[band], target_mags_[band],
                                   points_[band][0].load(std::memory_order::relaxed),
@@ -240,6 +245,8 @@ namespace zlpanel {
                                   points_[band][4].load(std::memory_order::relaxed),
                                   ideal_[band].getParas().filter_type == zldsp::filter::kAllPass,
                                   ideal_[band].getParas().order == 1);
+                to_update_base_y_flags_[band] = false;
+                to_update_target_y_flags_[band] = false;
                 if (threadShouldExit()) {
                     break;
                 }
