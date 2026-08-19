@@ -65,14 +65,12 @@ namespace zlpanel {
         std::array<zlchore::thread::Notifier, zlp::kBandNum> message_to_update_draggers_{};
         zlchore::thread::Notifier message_to_update_draggers_total_{};
         zlchore::thread::Notifier message_to_update_target_dragger_{};
-        zlchore::thread::Notifier message_to_update_side_dragger_{};
 
         SinglePanel single_panel_;
         SumPanel sum_panel_;
         DraggerPanel dragger_panel_;
         SoloPanel solo_panel_;
 
-        float side_y_{0.f};
         std::atomic<float> width_{0.f}, height_{0.f}, font_size_{1.f};
         float c_width_{0.f}, c_height_{0.f}, c_font_size_{1.f};
         zlchore::thread::Notifier to_update_bound_{};
@@ -91,7 +89,6 @@ namespace zlpanel {
             static_cast<std::vector<float>::difference_type>(kNumPoints)};
 
         std::array<zldsp::filter::Ideal<float, zlp::Controller::kFilterSize>, zlp::kBandNum> ideal_{};
-        std::array<zldsp::filter::Ideal<float, zlp::Controller::kFilterSize / 2>, zlp::kBandNum> side_ideal_{};
 
         std::array<zldsp::vector::aligned_vector<float>, zlp::kBandNum> base_mags_;
         std::array<zldsp::vector::aligned_vector<float>, zlp::kBandNum> target_mags_;
@@ -102,8 +99,6 @@ namespace zlpanel {
         std::array<zlchore::thread::Notifier, zlp::kBandNum> to_update_empty_flags_{};
         std::array<std::atomic<float>, zlp::kBandNum> target_gains_{};
         std::array<zlchore::thread::Notifier, zlp::kBandNum> to_update_target_gain_flags_{};
-        std::array<zldsp::filter::Empty, zlp::kBandNum> side_empty_{};
-        std::array<zlchore::thread::Notifier, zlp::kBandNum> to_update_side_empty_flags_{};
 
         std::array<std::atomic<bool>, zlp::kBandNum> dynamic_ons_{};
         std::array<bool, zlp::kBandNum> c_dynamic_ons_{};
@@ -131,8 +126,6 @@ namespace zlpanel {
 
         // center x, left x, right x, center y, base button y, target button y
         std::array<std::array<std::atomic<float>, 6>, zlp::kBandNum> points_{};
-        // side button x, side left x, side right x
-        std::array<std::array<std::atomic<float>, 3>, zlp::kBandNum> side_points_{};
 
         void parameterChanged(const juce::String& parameter_ID, float value) override;
 
@@ -149,8 +142,6 @@ namespace zlpanel {
         void updateDrawingParas();
 
         void updateTargetPosition();
-
-        void updateSidePosition();
 
         void updateFloatingPosition();
 

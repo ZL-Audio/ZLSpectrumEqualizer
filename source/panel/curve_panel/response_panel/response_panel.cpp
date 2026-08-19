@@ -86,13 +86,10 @@ namespace zlpanel {
 
     void ResponsePanel::resized() {
         const auto bound = getLocalBounds();
-        const auto font_size = base_.getFontSize();
-        const auto bottom_height = getBottomAreaHeight(font_size);
         single_panel_.setBounds(bound);
         sum_panel_.setBounds(bound);
         dragger_panel_.setBounds(bound);
         solo_panel_.setBounds(bound);
-        side_y_ = static_cast<float>(bound.getHeight() - bottom_height) - font_size * kDraggerScale * .5f;
         width_.store(static_cast<float>(bound.getWidth()), std::memory_order::relaxed);
         height_.store(static_cast<float>(bound.getHeight()), std::memory_order::relaxed);
         font_size_.store(base_.getFontSize(), std::memory_order::relaxed);
@@ -121,7 +118,6 @@ namespace zlpanel {
         }
         updateFloatingPosition();
         updateTargetPosition();
-        updateSidePosition();
     }
 
     void ResponsePanel::updateSoloPosition() {
@@ -129,13 +125,8 @@ namespace zlpanel {
             return;
         }
         if (const auto band = base_.getSelectedBand(); band < zlp::kBandNum) {
-            if (solo_panel_.isSoloSide()) {
-                solo_panel_.updateX(side_points_[band][1].load(std::memory_order::relaxed),
-                                    side_points_[band][2].load(std::memory_order::relaxed));
-            } else {
-                solo_panel_.updateX(points_[band][1].load(std::memory_order::relaxed),
-                                    points_[band][2].load(std::memory_order::relaxed));
-            }
+            solo_panel_.updateX(points_[band][1].load(std::memory_order::relaxed),
+                                points_[band][2].load(std::memory_order::relaxed));
         }
     }
 
@@ -145,9 +136,6 @@ namespace zlpanel {
             {points_[band][0].load(std::memory_order::relaxed),
              points_[band][5].load(std::memory_order::relaxed)});
         }
-    }
-
-    void ResponsePanel::updateSidePosition() {
     }
 
     void ResponsePanel::updateFloatingPosition() {
@@ -188,7 +176,6 @@ namespace zlpanel {
         }
         updateFloatingPosition();
         updateTargetPosition();
-        updateSidePosition();
         for (int lr = 0; lr < 5; ++lr) {
             if (selected_band < zlp::kBandNum) {
                 sum_panel_.updateDrawingParas(lr, lr == selected_lr_mode);
@@ -208,7 +195,6 @@ namespace zlpanel {
         solo_panel_.updateBand();
         updateFloatingPosition();
         updateTargetPosition();
-        updateSidePosition();
     }
 
     void ResponsePanel::updateSampleRate(const double sample_rate) {

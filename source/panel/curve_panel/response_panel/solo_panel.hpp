@@ -14,15 +14,13 @@
 
 namespace zlpanel {
     class SoloPanel final : public juce::Component,
-    private juce::ValueTree::Listener {
+                            private juce::ValueTree::Listener {
     public:
-        explicit SoloPanel(PluginProcessor& p, zlgui::UIBase &base);
+        explicit SoloPanel(PluginProcessor& p, zlgui::UIBase& base);
 
         ~SoloPanel() override;
 
         void paint(juce::Graphics& g) override;
-
-        bool isSoloSide() const;
 
         void updateX(float x_left, float x_right);
 
@@ -31,9 +29,6 @@ namespace zlpanel {
     private:
         PluginProcessor& p_ref_;
         zlgui::UIBase& base_;
-        zlgui::button::ClickButton solo_whole_button_;
-        std::atomic<bool> to_update_{true};
-        bool c_solo_side_{false};
         float x_left_{0.f}, x_right_{1e15f};
 
         void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) override;

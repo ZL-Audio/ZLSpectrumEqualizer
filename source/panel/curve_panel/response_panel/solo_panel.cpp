@@ -12,8 +12,7 @@
 namespace zlpanel {
     SoloPanel::SoloPanel(PluginProcessor& p, zlgui::UIBase& base) :
         p_ref_(p),
-        base_(base),
-        solo_whole_button_(base) {
+        base_(base) {
         base_.setSoloWholeIdx(2 * zlp::kBandNum);
         p_ref_.getController().setSoloWholeIdx(2 * zlp::kBandNum);
         base_.getSoloWholeIdxTree().addListener(this);
@@ -37,10 +36,6 @@ namespace zlpanel {
         }
     }
 
-    bool SoloPanel::isSoloSide() const {
-        return c_solo_side_;
-    }
-
     void SoloPanel::updateX(const float x_left, const float x_right) {
         x_left_ = x_left;
         x_right_ = x_right;
@@ -53,7 +48,6 @@ namespace zlpanel {
 
     void SoloPanel::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) {
         const auto solo_whole_idx = base_.getSoloWholeIdx();
-        base_.setSoloWholeIdx(solo_whole_idx);
         p_ref_.getController().setSoloWholeIdx(solo_whole_idx);
         if (solo_whole_idx == 2 * zlp::kBandNum) {
             setVisible(false);
@@ -61,11 +55,6 @@ namespace zlpanel {
             x_right_ = 1e15f;
         } else {
             setVisible(true);
-            if (solo_whole_idx < zlp::kBandNum) {
-                c_solo_side_ = false;
-            } else {
-                c_solo_side_ = true;
-            }
         }
     }
 }
