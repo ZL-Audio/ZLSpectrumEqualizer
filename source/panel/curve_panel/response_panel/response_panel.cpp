@@ -152,9 +152,10 @@ namespace zlpanel {
 
     void ResponsePanel::updateFloatingPosition() {
         if (const auto band = base_.getSelectedBand(); band < zlp::kBandNum) {
+            const auto x = points_[band][0].load(std::memory_order::relaxed);
             dragger_panel_.getFloatPopPanel().updatePosition(
-            {points_[band][0].load(std::memory_order::relaxed),
-             points_[band][4].load(std::memory_order::relaxed)});
+                {x, points_[band][4].load(std::memory_order::relaxed)},
+                {x, points_[band][5].load(std::memory_order::relaxed)});
         }
     }
 
@@ -273,7 +274,8 @@ namespace zlpanel {
                         for (size_t i = shared_buffer.dyn_start; i < shared_buffer.dyn_end; ++i) {
                             delta_dsp_[i] = shared_buffer.delta[i] * kLogToDB;
                         }
-                        std::fill(delta_dsp_.data() + shared_buffer.dyn_end, delta_dsp_.data() + delta_dsp_.size(), 0.f);
+                        std::fill(delta_dsp_.data() + shared_buffer.dyn_end,
+                                  delta_dsp_.data() + delta_dsp_.size(), 0.f);
                     }
                 }
                 if (valid_size) {
@@ -436,7 +438,8 @@ namespace zlpanel {
             std::fill(to_update_base_y_flags_.begin(), to_update_base_y_flags_.end(), true);
         }
         if ((sr_changed || fft_res_changed || ws_dsp_.empty()) && c_sample_rate_ > 20.0) {
-            const auto fft_resolution = p_ref_.parameters_.getRawParameterValue(zlp::PSpecResolution::kID)->load(std::memory_order::relaxed);
+            const auto fft_resolution = p_ref_.parameters_.getRawParameterValue(
+                zlp::PSpecResolution::kID)->load(std::memory_order::relaxed);
             const auto fft_medium_order = zlp::getMediumFFTOrder(c_sample_rate_);
             const size_t order = fft_medium_order - 3 + static_cast<size_t>(std::round(fft_resolution));
             const size_t fft_size = 1ULL << order;
