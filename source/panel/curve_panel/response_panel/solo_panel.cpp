@@ -42,8 +42,11 @@ namespace zlpanel {
     }
 
     void SoloPanel::updateBand() const {
-        base_.setSoloWholeIdx(2 * zlp::kBandNum);
-        p_ref_.getController().setSoloWholeIdx(2 * zlp::kBandNum);
+        const auto solo_whole_idx = base_.getSoloWholeIdx();
+        if (solo_whole_idx < 2 * zlp::kBandNum
+            && solo_whole_idx % zlp::kBandNum != base_.getSelectedBand()) {
+            base_.setSoloWholeIdx(2 * zlp::kBandNum);
+        }
     }
 
     void SoloPanel::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) {

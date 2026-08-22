@@ -110,7 +110,13 @@ namespace zlpanel {
         std::array<zldsp::filter::FilterType, zlp::kBandNum> filter_types_{};
         juce::Rectangle<float> bound_;
         float sample_rate_{48000.f};
+        std::atomic<float>& max_db_id_ref_;
         float c_max_db_id_{-1.f};
+        float max_db_{1.f};
+        float solo_gain_at_drag_start_{0.f};
+        float solo_gain_drag_height_{1.f};
+        bool solo_gain_drag_active_{false};
+        bool exit_solo_on_mouse_up_{false};
 
         zlgui::slider::SnappingSlider q_slider_;
         std::unique_ptr<zlgui::attachment::SliderAttachment<true>> q_attachment_;
@@ -132,6 +138,14 @@ namespace zlpanel {
         void updateTargetAttachment(size_t band);
 
         void updateSlopeAttachment();
+
+        bool isEnterSoloTriggered(zlgui::MouseActionType type, const juce::ModifierKeys& mods) const;
+
+        bool isExitSoloTriggered(zlgui::MouseActionType type, const juce::ModifierKeys& mods) const;
+
+        void startSoloGainDrag(const juce::Component* component);
+
+        juce::Point<float> updateSoloGain(juce::Point<float> current, juce::Point<float> next) const;
 
         void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) override;
 

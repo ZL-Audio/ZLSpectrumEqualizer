@@ -22,8 +22,14 @@ namespace zlpanel {
         draggers_(make_dragger_array(base, std::make_index_sequence<zlp::kBandNum>())),
         target_dragger_(base),
         float_pop_panel_(p, base, tooltip_helper),
+        max_db_id_ref_(*p.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)),
         q_slider_(base, ""),
         slope_slider_(base, "") {
+        const auto max_db_idx = static_cast<size_t>(std::clamp(
+            static_cast<int>(std::round(max_db_id_ref_.load(std::memory_order::relaxed))),
+            0, static_cast<int>(zlstate::PEQMaxDB::kChoices.size() - 1)));
+        max_db_ = base_.getCurveDBScale(max_db_idx);
+
         mouse_event_panel_.addMouseListener(this, false);
         addAndMakeVisible(mouse_event_panel_);
 
@@ -99,12 +105,14 @@ namespace zlpanel {
     void DraggerPanel::repaintCallBackSlow() {
         mouse_event_panel_.repaintCallbackSlow();
         scale_panel_.repaintCallBackSlow();
-        const auto max_db_id = p_ref_.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)->load(
-            std::memory_order::relaxed);
+        const auto max_db_id = max_db_id_ref_.load(std::memory_order::relaxed);
         if (std::abs(max_db_id - c_max_db_id_) > .1f) {
             c_max_db_id_ = max_db_id;
-            const auto max_db = base_.getCurveDBScale(static_cast<size_t>(std::round(c_max_db_id_)));
-            gain_range_ = juce::NormalisableRange<float>(-max_db, max_db, .01f);
+            const auto max_db_idx = static_cast<size_t>(std::clamp(
+                static_cast<int>(std::round(c_max_db_id_)),
+                0, static_cast<int>(zlstate::PEQMaxDB::kChoices.size() - 1)));
+            max_db_ = base_.getCurveDBScale(max_db_idx);
+            gain_range_ = juce::NormalisableRange<float>(-max_db_, max_db_, .01f);
             if (const auto band = base_.getSelectedBand(); band < zlp::kBandNum) {
                 updateDraggerAttachment(band);
                 updateTargetAttachment(band);
@@ -228,10 +236,10 @@ namespace zlpanel {
         bound.removeFromBottom(static_cast<float>(getBottomAreaHeight(base_.getFontSize())));
         bound.setWidth(bound.getWidth() * width_p);
         bound.removeFromBottom(base_.getFontSize() * kDraggerScale);
+        solo_gain_drag_height_ = std::max(bound.getHeight(), 1.f);
 
         switch (filter_types_[band]) {
         case zldsp::filter::kPeak: {
-            draggers_[band].setXYEnabled(true, true);
             dragger_y_enabled_[band] = true;
             break;
         }
@@ -239,7 +247,6 @@ namespace zlpanel {
         case zldsp::filter::kHighShelf:
         case zldsp::filter::kTiltShelf:
         case zldsp::filter::kFlatTilt: {
-            draggers_[band].setXYEnabled(true, true);
             dragger_y_enabled_[band] = true;
             bound = bound.withSizeKeepingCentre(bound.getWidth(), bound.getHeight() * .5f);
             break;
@@ -250,11 +257,12 @@ namespace zlpanel {
         case zldsp::filter::kNotch:
         case zldsp::filter::kAllPass:
         default: {
-            draggers_[band].setXYEnabled(true, false);
             dragger_y_enabled_[band] = false;
             break;
         }
         }
+        const auto is_solo = base_.getSoloWholeIdx() == band;
+        draggers_[band].setXYEnabled(true, dragger_y_enabled_[band] || is_solo);
         draggers_[band].setButtonArea(bound);
         if (band == base_.getSelectedBand()) {
             target_dragger_.setButtonArea(bound);
@@ -297,7 +305,27 @@ namespace zlpanel {
         slope_attachment_->updateComponent();
     }
 
+    bool DraggerPanel::isEnterSoloTriggered(const zlgui::MouseActionType type,
+                                            const juce::ModifierKeys& mods) const {
+        if (base_.isEnterSoloTriggered(type, mods)) {
+            return true;
+        }
+        return base_.getEnterSoloKey() == zlgui::KeyActionType::kNone && mods.isCommandDown()
+            && base_.isEnterSoloTriggered(type, mods.withoutFlags(juce::ModifierKeys::commandModifier));
+    }
+
+    bool DraggerPanel::isExitSoloTriggered(const zlgui::MouseActionType type,
+                                           const juce::ModifierKeys& mods) const {
+        if (base_.isExitSoloTriggered(type, mods)) {
+            return true;
+        }
+        return base_.getExitSoloKey() == zlgui::KeyActionType::kNone && mods.isCommandDown()
+            && base_.isExitSoloTriggered(type, mods.withoutFlags(juce::ModifierKeys::commandModifier));
+    }
+
     void DraggerPanel::mouseDown(const juce::MouseEvent& event) {
+        solo_gain_drag_active_ = false;
+        exit_solo_on_mouse_up_ = false;
         if (event.originalComponent == &mouse_event_panel_) {
             items_set_.deselectAll();
             lasso_component_.setVisible(true);
@@ -322,11 +350,17 @@ namespace zlpanel {
             if (event.originalComponent == &(draggers_[band].getButton())
                 || event.originalComponent == &(target_dragger_.getButton())) {
 
-                if (base_.isEnterSoloTriggered(action_type, event.mods)) {
+                const auto enter_solo_triggered = isEnterSoloTriggered(action_type, event.mods);
+                const auto exit_solo_triggered = isExitSoloTriggered(action_type, event.mods);
+                exit_solo_on_mouse_up_ = exit_solo_triggered;
+
+                if (enter_solo_triggered) {
                     base_.setSoloWholeIdx(band);
-                } else if (base_.isExitSoloTriggered(action_type, event.mods)) {
+                } else if (exit_solo_triggered) {
                     base_.setSoloWholeIdx(2 * zlp::kBandNum);
                 }
+
+                startSoloGainDrag(event.originalComponent);
 
                 if (base_.isRightClickTriggered(action_type, event.mods) && event.originalComponent == &(draggers_[
                     band].getButton())) {
@@ -347,11 +381,7 @@ namespace zlpanel {
                             p_ref_.parameters_, zlp::PDynamicON::kID + std::to_string(band)) > .5f;
                         updateValue(p_ref_.parameters_.getParameter(zlp::PDynamicON::kID + std::to_string(band)),
                                     dynamic_on ? 0.f : 1.f);
-                        const auto max_db_id = std::round(
-                            p_ref_.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)->load(
-                                std::memory_order::relaxed));
-                        band_helper::turnOnOffDynamic(p_ref_, band, !dynamic_on,
-                                                      base_.getCurveDBScale(static_cast<size_t>(max_db_id)));
+                        band_helper::turnOnOffDynamic(p_ref_, band, !dynamic_on, max_db_);
                     }
                 }
 
@@ -380,22 +410,20 @@ namespace zlpanel {
     }
 
     void DraggerPanel::mouseUp(const juce::MouseEvent& event) {
+        if (solo_gain_drag_active_) {
+            p_ref_.getController().resetSoloGain();
+            solo_gain_drag_active_ = false;
+        }
         if (event.originalComponent == &mouse_event_panel_) {
             lasso_component_.endLasso();
             lasso_component_.setVisible(false);
             if (items_set_.getNumSelected() == 0) {
                 base_.setSelectedBand(zlp::kBandNum);
             }
-        } else {
-            if (const auto band = base_.getSelectedBand(); band < zlp::kBandNum) {
-                auto action_type = event.mods.isRightButtonDown()
-                    ? zlgui::MouseActionType::kRightClick
-                    : zlgui::MouseActionType::kLeftClick;
-                if (base_.isExitSoloTriggered(action_type, event.mods)) {
-                    base_.setSoloWholeIdx(2 * zlp::kBandNum);
-                }
-            }
+        } else if (exit_solo_on_mouse_up_) {
+            base_.setSoloWholeIdx(2 * zlp::kBandNum);
         }
+        exit_solo_on_mouse_up_ = false;
     }
 
     void DraggerPanel::mouseDrag(const juce::MouseEvent& event) {
@@ -413,11 +441,13 @@ namespace zlpanel {
             if (event.originalComponent == &(draggers_[band].getButton())
                 || event.originalComponent == &(target_dragger_.getButton())) {
 
-                if (base_.isEnterSoloTriggered(action_type, event.mods)) {
+                if (isEnterSoloTriggered(action_type, event.mods)) {
                     base_.setSoloWholeIdx(band);
-                } else if (base_.isExitSoloTriggered(action_type, event.mods)) {
+                } else if (isExitSoloTriggered(action_type, event.mods)) {
                     base_.setSoloWholeIdx(2 * zlp::kBandNum);
                 }
+
+                startSoloGainDrag(event.originalComponent);
 
                 if (base_.isRightClickTriggered(action_type, event.mods) && event.originalComponent == &(draggers_[
                     band].getButton())) {
@@ -438,11 +468,7 @@ namespace zlpanel {
                             p_ref_.parameters_, zlp::PDynamicON::kID + std::to_string(band)) > .5f;
                         updateValue(p_ref_.parameters_.getParameter(zlp::PDynamicON::kID + std::to_string(band)),
                                     dynamic_on ? 0.f : 1.f);
-                        const auto max_db_id = std::round(
-                            p_ref_.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)->load(
-                                std::memory_order::relaxed));
-                        band_helper::turnOnOffDynamic(p_ref_, band, !dynamic_on,
-                                                      base_.getCurveDBScale(static_cast<size_t>(max_db_id)));
+                        band_helper::turnOnOffDynamic(p_ref_, band, !dynamic_on, max_db_);
                     }
                 }
 
@@ -499,14 +525,44 @@ namespace zlpanel {
         }
     }
 
+    void DraggerPanel::startSoloGainDrag(const juce::Component* component) {
+        solo_gain_drag_active_ = false;
+        const auto solo_whole_idx = base_.getSoloWholeIdx();
+        if (solo_whole_idx < zlp::kBandNum
+            && (component == &draggers_[solo_whole_idx].getButton()
+                || component == &target_dragger_.getButton())) {
+            solo_gain_at_drag_start_ = p_ref_.getController().getSoloGain();
+            solo_gain_drag_active_ = true;
+        }
+    }
+
+    juce::Point<float> DraggerPanel::updateSoloGain(const juce::Point<float> current,
+                                                    const juce::Point<float> next) const {
+        const auto db_per_pixel = 2.f * max_db_ / solo_gain_drag_height_;
+        const auto gain = std::clamp(solo_gain_at_drag_start_ + (current.y - next.y) * db_per_pixel,
+                                     zlp::PGain::kRange.start, zlp::PGain::kRange.end);
+        p_ref_.getController().setSoloGain(gain);
+        return {next.x, current.y};
+    }
+
     void DraggerPanel::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) {
         const auto solo_whole_idx = base_.getSoloWholeIdx();
         if (previous_solo_whole_idx_ < zlp::kBandNum) {
-            draggers_[previous_solo_whole_idx_].setXYEnabled(
-                true, dragger_y_enabled_[previous_solo_whole_idx_]);
+            draggers_[previous_solo_whole_idx_].check_center_ = nullptr;
+            draggers_[previous_solo_whole_idx_].setXYEnabled(true,
+                                                             dragger_y_enabled_[previous_solo_whole_idx_]);
         }
+        target_dragger_.check_center_ = nullptr;
+        target_dragger_.setXYEnabled(false, true);
+
         if (solo_whole_idx < zlp::kBandNum) {
-            draggers_[solo_whole_idx].setXYEnabled(true, false);
+            const auto update_solo_gain = [this](const juce::Point<float> current,
+                                                 const juce::Point<float> next) {
+                return updateSoloGain(current, next);
+            };
+            draggers_[solo_whole_idx].check_center_ = update_solo_gain;
+            draggers_[solo_whole_idx].setXYEnabled(true, true);
+            target_dragger_.check_center_ = update_solo_gain;
         }
         previous_solo_whole_idx_ = solo_whole_idx;
     }

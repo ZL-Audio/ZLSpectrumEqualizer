@@ -250,6 +250,23 @@ namespace zlp {
             to_update_.signal();
         }
 
+        void setSoloGain(const float gain) {
+            a_solo_gain_db_.store(gain, std::memory_order::relaxed);
+            to_update_solo_gain_.signal();
+            to_update_.signal();
+        }
+
+        float getSoloGain() const {
+            return a_solo_gain_db_.load(std::memory_order::relaxed);
+        }
+
+        void resetSoloGain() {
+            a_solo_gain_db_.store(0.f, std::memory_order::relaxed);
+            to_reset_solo_gain_.signal();
+            to_update_solo_gain_.signal();
+            to_update_.signal();
+        }
+
         auto& getDynamicResponseTriBuffers() {
             return tri_buffers_;
         }
@@ -446,6 +463,10 @@ namespace zlp {
         std::atomic<size_t> a_solo_whole_idx_{2 * kBandNum};
         bool c_solo_on_{false};
         size_t c_solo_idx_{0};
+        zlchore::thread::Notifier to_reset_solo_gain_{false};
+        zlchore::thread::Notifier to_update_solo_gain_{false};
+        std::atomic<float> a_solo_gain_db_{0.f};
+        zldsp::gain::Gain<float> solo_gain_dsp_{};
 
         void prepareFFTPlans();
 
