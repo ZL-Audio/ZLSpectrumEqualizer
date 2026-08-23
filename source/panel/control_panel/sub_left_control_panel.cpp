@@ -16,9 +16,9 @@ namespace zlpanel {
                                              const multilingual::TooltipHelper& tooltip_helper) :
         p_ref_(p), base_(base), updater_(),
         control_background_(base),
-        close_drawable_(juce::Drawable::createFromImageData(BinaryData::close_svg,
-                                                            BinaryData::close_svgSize)),
-        close_button_(base, close_drawable_.get(), nullptr,
+        delete_drawable_(juce::Drawable::createFromImageData(BinaryData::trash_svg,
+                                                            BinaryData::trash_svgSize)),
+        delete_button_(base, delete_drawable_.get(), nullptr,
                       tooltip_helper.getToolTipText(multilingual::kBandOff)),
         bypass_drawable_(juce::Drawable::createFromImageData(BinaryData::bypass_svg,
                                                              BinaryData::bypass_svgSize)),
@@ -53,9 +53,9 @@ namespace zlpanel {
         control_background_.setBufferedToImage(true);
         addAndMakeVisible(control_background_);
 
-        close_button_.setBufferedToImage(true);
-        addAndMakeVisible(close_button_);
-        close_button_.getButton().onClick = [this]() {
+        delete_button_.setBufferedToImage(true);
+        addAndMakeVisible(delete_button_);
+        delete_button_.getButton().onClick = [this]() {
             if (const auto c_band = base_.getSelectedBand(); c_band < zlp::kBandNum) {
                 band_helper::turnOffBand(p_ref_, c_band, base_.getSelectedBandSet());
                 const auto band1 = band_helper::findClosestBand<true>(p_ref_, c_band);
@@ -168,7 +168,7 @@ namespace zlpanel {
         bound.reduce(padding + padding / 2, padding);
 
         auto top_bound = bound.removeFromTop(button_height);
-        close_button_.setBounds(top_bound.removeFromRight(button_height));
+        delete_button_.setBounds(top_bound.removeFromRight(button_height));
         top_bound.removeFromRight(padding);
         q_label_.setBounds(top_bound.removeFromRight(slider_width));
         top_bound.removeFromRight(padding);

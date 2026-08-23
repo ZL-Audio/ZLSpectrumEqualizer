@@ -22,9 +22,9 @@ namespace zlpanel {
         solo_drawable_(juce::Drawable::createFromImageData(BinaryData::solo_svg, BinaryData::solo_svgSize)),
         solo_button_(base, solo_drawable_.get(), solo_drawable_.get(),
                      tooltip_helper.getToolTipText(multilingual::kBandSolo)),
-        close_drawable_(juce::Drawable::createFromImageData(BinaryData::close_svg,
-                                                            BinaryData::close_svgSize)),
-        close_button_(base, close_drawable_.get(), nullptr),
+        delete_drawable_(juce::Drawable::createFromImageData(BinaryData::trash_svg,
+                                                            BinaryData::trash_svgSize)),
+        delete_button_(base, delete_drawable_.get(), nullptr),
         ftype_box_([]() -> std::vector<std::unique_ptr<juce::Drawable>> {
             std::vector<std::unique_ptr<juce::Drawable>> icons;
             icons.emplace_back(
@@ -67,9 +67,9 @@ namespace zlpanel {
         control_background_.setBufferedToImage(true);
         addAndMakeVisible(control_background_);
 
-        close_button_.setBufferedToImage(true);
-        addAndMakeVisible(close_button_);
-        close_button_.getButton().onClick = [this]() {
+        delete_button_.setBufferedToImage(true);
+        addAndMakeVisible(delete_button_);
+        delete_button_.getButton().onClick = [this]() {
             if (const auto c_band = base_.getSelectedBand(); c_band < zlp::kBandNum) {
                 band_helper::turnOffBand(p_ref_, c_band, base_.getSelectedBandSet());
                 const auto band1 = band_helper::findClosestBand<true>(p_ref_, c_band);
@@ -160,7 +160,7 @@ namespace zlpanel {
 
         auto bottom_bound = bound.removeFromBottom(button_size);
         solo_button_.setBounds(bottom_bound.removeFromLeft(button_size));
-        close_button_.setBounds(bottom_bound.removeFromRight(button_size));
+        delete_button_.setBounds(bottom_bound.removeFromRight(button_size));
         freq_slider_.setBounds(bottom_bound);
 
         ideal_height_ = static_cast<float>(getIdealHeight());

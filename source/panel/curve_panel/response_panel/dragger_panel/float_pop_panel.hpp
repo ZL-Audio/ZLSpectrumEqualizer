@@ -71,8 +71,8 @@ namespace zlpanel {
         const std::unique_ptr<juce::Drawable> solo_drawable_;
         zlgui::button::ClickButton solo_button_;
 
-        const std::unique_ptr<juce::Drawable> close_drawable_;
-        zlgui::button::ClickButton close_button_;
+        const std::unique_ptr<juce::Drawable> delete_drawable_;
+        zlgui::button::ClickButton delete_button_;
 
         zlgui::combobox::CompactCombobox ftype_box_;
         std::unique_ptr<zlgui::attachment::ComboBoxAttachment<true>> ftype_attachment_;
