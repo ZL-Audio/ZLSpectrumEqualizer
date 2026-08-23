@@ -324,6 +324,9 @@ namespace zldsp::filter::FilterDesign {
                 n, 0, w0, g0, std::sqrt(q0 * std::sqrt(2)) / std::sqrt(2), coeffs);
         case kFlatTilt:
             return updateFlatShelfCoeffs<Coeff>(f, fs, g_dB, coeffs);
+        case kFlatGain:
+            coeffs[0] = Coeff::getIdentity(dbToGain(g_dB));
+            return 1;
         case kNotch:
             return updateNotchCoeffs<Coeff>(n, 0, w0, q0, coeffs);
         case kBandPass:
@@ -365,7 +368,9 @@ namespace zldsp::filter::FilterDesign {
         }
         case kFlatTilt: {
             updateFlatShelfDynamicCache<Coeff>(f, fs, cache);
+            break;
         }
+        case kFlatGain:
         case kLowPass:
         case kHighPass:
         case kNotch:
@@ -488,6 +493,10 @@ namespace zldsp::filter::FilterDesign {
         }
         case kFlatTilt: {
             updateFlatShelfGainLinear<Coeff>(g_linear_sqrt, cache, coeffs);
+            break;
+        }
+        case kFlatGain: {
+            coeffs[0] = Coeff::getIdentity(g_linear_sqrt * g_linear_sqrt);
             break;
         }
         case kLowPass:

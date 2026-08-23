@@ -61,27 +61,31 @@ namespace zlpanel {
 
     void LeftControlPanel::repaintCallBackSlow() {
         if (ftype_ptr_ != nullptr && slope_ptr_ != nullptr) {
-            const auto ftype = static_cast<int>(std::round(ftype_ptr_->load(std::memory_order::relaxed)));
+            const auto ftype_idx = static_cast<int>(std::round(ftype_ptr_->load(std::memory_order::relaxed)));
             const auto slope = static_cast<int>(std::round(slope_ptr_->load(std::memory_order::relaxed)));
 
-            if (ftype != c_ftype_ || c_slope_ != slope) {
-                c_ftype_ = ftype;
+            if (ftype_idx != c_ftype_ || c_slope_ != slope) {
+                c_ftype_ = ftype_idx;
                 c_slope_ = slope;
-                const auto slope_6_disabled = (ftype == static_cast<int>(zldsp::filter::kPeak))
-                    || (ftype == static_cast<int>(zldsp::filter::kBandPass))
-                    || (ftype == static_cast<int>(zldsp::filter::kNotch));
+                const auto ftype = zlp::PFilterType::convertToFilterType(static_cast<float>(ftype_idx));
+                const auto slope_6_disabled = ftype == zldsp::filter::kPeak
+                    || ftype == zldsp::filter::kBandPass
+                    || ftype == zldsp::filter::kNotch;
                 sub_left_control_panel_.enableSlope6(!slope_6_disabled);
 
-                const auto gain_enabled = (ftype == static_cast<int>(zldsp::filter::kPeak))
-                    || (ftype == static_cast<int>(zldsp::filter::kLowShelf))
-                    || (ftype == static_cast<int>(zldsp::filter::kHighShelf))
-                    || (ftype == static_cast<int>(zldsp::filter::kTiltShelf))
-                    || (ftype == static_cast<int>(zldsp::filter::kFlatTilt));
+                const auto gain_enabled = ftype == zldsp::filter::kPeak
+                    || ftype == zldsp::filter::kLowShelf
+                    || ftype == zldsp::filter::kHighShelf
+                    || ftype == zldsp::filter::kTiltShelf
+                    || ftype == zldsp::filter::kFlatTilt
+                    || ftype == zldsp::filter::kFlatGain;
                 gain_slider_.setEditable(gain_enabled);
                 sub_left_control_panel_.enableGain(gain_enabled);
 
-                sub_left_control_panel_.enableSlope(c_ftype_ != zldsp::filter::kFlatTilt);
-                sub_left_control_panel_.enableQ(c_ftype_ != zldsp::filter::kFlatTilt && c_slope_ != 0);
+                const auto slope_enabled = ftype != zldsp::filter::kFlatTilt
+                    && ftype != zldsp::filter::kFlatGain;
+                sub_left_control_panel_.enableSlope(slope_enabled);
+                sub_left_control_panel_.enableQ(slope_enabled && c_slope_ != 0);
             }
         }
         const auto max_db_idx = max_db_idx_ref_.load(std::memory_order::relaxed);

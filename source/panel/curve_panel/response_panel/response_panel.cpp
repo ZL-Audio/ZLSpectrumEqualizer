@@ -322,7 +322,7 @@ namespace zlpanel {
             lr_modes_[band].store(static_cast<int>(std::round(value)), std::memory_order::relaxed);
             to_update_lr_modes_.signal();
         } else if (parameter_ID.startsWith(zlp::PFilterType::kID)) {
-            empty_[band].setFilterType(static_cast<zldsp::filter::FilterType>(std::round(value)));
+            empty_[band].setFilterType(zlp::PFilterType::convertToFilterType(value));
             to_update_empty_flags_[band].signal();
         } else if (parameter_ID.startsWith(zlp::POrder::kID)) {
             empty_[band].setOrder(zlp::POrder::kOrderArray[static_cast<size_t>(std::round(value))]);
@@ -528,7 +528,8 @@ namespace zlpanel {
     }
 
     float ResponsePanel::getButtonMag(const zldsp::filter::FilterParameters& para) {
-        if (para.filter_type == zldsp::filter::kPeak) {
+        if (para.filter_type == zldsp::filter::kPeak
+            || para.filter_type == zldsp::filter::kFlatGain) {
             return static_cast<float>(para.gain);
         } else if (para.filter_type == zldsp::filter::kLowShelf
             || para.filter_type == zldsp::filter::kHighShelf
@@ -575,16 +576,9 @@ namespace zlpanel {
                                    static_cast<float>(right_x));
         }
         case zldsp::filter::kTiltShelf:
-        case zldsp::filter::kFlatTilt: {
-            const auto fixed_q = std::sqrt(2.0) * 0.03125;
-            const auto bandwidth = para.freq / fixed_q;
-            const auto left_f = 0.5 * bandwidth * (std::sqrt(4.0 * fixed_q * fixed_q + 1.0) - 1.0);
-            const auto left_x = std::log(left_f / 10.0) * freq_to_x_scale;
-            const auto right_f = left_f + bandwidth;
-            const auto right_x = std::log(right_f / 10.0) * freq_to_x_scale;
-            return std::make_tuple(static_cast<float>(left_x),
-                                   static_cast<float>(center_x),
-                                   static_cast<float>(right_x));
+        case zldsp::filter::kFlatTilt:
+        case zldsp::filter::kFlatGain: {
+            return std::make_tuple(0.f, static_cast<float>(center_x), c_width_);
         }
         case zldsp::filter::kLowShelf:
         case zldsp::filter::kHighPass: {

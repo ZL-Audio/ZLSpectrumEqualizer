@@ -105,19 +105,19 @@ namespace zlpanel {
         }
 
         if (event.position.y > height - padding) {
-            init_values[1] = static_cast<float>(zldsp::filter::FilterType::kNotch);
+            init_values[1] = static_cast<float>(zlp::PFilterType::convertToIdx(zldsp::filter::kNotch));
         } else if (freq < 20.f && std::abs(y_portion) < .2f) {
-            init_values[1] = static_cast<float>(zldsp::filter::FilterType::kHighPass);
+            init_values[1] = static_cast<float>(zlp::PFilterType::convertToIdx(zldsp::filter::kHighPass));
         } else if (freq > 10000.f && std::abs(y_portion) < .2f) {
-            init_values[1] = static_cast<float>(zldsp::filter::FilterType::kLowPass);
+            init_values[1] = static_cast<float>(zlp::PFilterType::convertToIdx(zldsp::filter::kLowPass));
         } else if (freq < 40.f) {
-            init_values[1] = static_cast<float>(zldsp::filter::FilterType::kLowShelf);
+            init_values[1] = static_cast<float>(zlp::PFilterType::convertToIdx(zldsp::filter::kLowShelf));
             init_values[5] = std::clamp(y_portion * 2.f, -1.f, 1.f) * max_db;
         } else if (freq > 6250.f) {
-            init_values[1] = static_cast<float>(zldsp::filter::FilterType::kHighShelf);
+            init_values[1] = static_cast<float>(zlp::PFilterType::convertToIdx(zldsp::filter::kHighShelf));
             init_values[5] = std::clamp(y_portion * 2.f, -1.f, 1.f) * max_db;
         } else {
-            init_values[1] = static_cast<float>(zldsp::filter::FilterType::kPeak);
+            init_values[1] = static_cast<float>(zlp::PFilterType::convertToIdx(zldsp::filter::kPeak));
             init_values[5] = std::clamp(y_portion, -1.f, 1.f) * max_db;
         }
 
@@ -135,6 +135,9 @@ namespace zlpanel {
     }
 
     void MouseEventPanel::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {
+        if (zlp::PFilterType::convertToFilterType(c_ftype_idx_) == zldsp::filter::kFlatGain) {
+            return;
+        }
         if (event.mods.isCommandDown()) {
             slope_slider_.mouseWheelMove(event, wheel);
         } else {
@@ -192,10 +195,10 @@ namespace zlpanel {
 
     void MouseEventPanel::updateSlopeAttachment() {
         if (const auto band = base_.getSelectedBand(); band < zlp::kBandNum) {
-            const auto ftype = static_cast<int>(c_ftype_idx_);
-            const auto slope_6_disabled = (ftype == static_cast<int>(zldsp::filter::kPeak))
-                || (ftype == static_cast<int>(zldsp::filter::kBandPass))
-                || (ftype == static_cast<int>(zldsp::filter::kNotch));
+            const auto ftype = zlp::PFilterType::convertToFilterType(c_ftype_idx_);
+            const auto slope_6_disabled = ftype == zldsp::filter::kPeak
+                || ftype == zldsp::filter::kBandPass
+                || ftype == zldsp::filter::kNotch;
             slope_attachment_ = std::make_unique<zlgui::attachment::SliderAttachment<true>>(
                 slope_slider_, p_ref_.parameters_, zlp::POrder::kID + std::to_string(band),
                 juce::NormalisableRange<double>(slope_6_disabled ? 1.0 : 0.0, 6.0, 1.0),

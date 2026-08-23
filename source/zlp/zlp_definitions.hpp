@@ -11,6 +11,8 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "../dsp/filter/helpers.hpp"
+
 namespace zlp {
     inline constexpr int kVersionHint = 1;
 
@@ -346,9 +348,32 @@ namespace zlp {
         inline static const auto kChoices = juce::StringArray{
             "Peak", "Low Shelf", "Low Pass",
             "High Shelf", "High Pass", "Notch",
-            "Band Pass", "Tilt Shelf", "Flat Tilt"
+            "Band Pass", "Tilt Shelf", "Flat Tilt",
+            "Flat Gain"
         };
         static constexpr int kDefaultI = 0;
+
+        inline static constexpr std::array<zldsp::filter::FilterType, 10> kFilterTypes{
+            zldsp::filter::kPeak, zldsp::filter::kLowShelf, zldsp::filter::kLowPass,
+            zldsp::filter::kHighShelf, zldsp::filter::kHighPass, zldsp::filter::kNotch,
+            zldsp::filter::kBandPass, zldsp::filter::kTiltShelf, zldsp::filter::kFlatTilt,
+            zldsp::filter::kFlatGain
+        };
+
+        static zldsp::filter::FilterType convertToFilterType(const float value) {
+            const auto idx = static_cast<size_t>(std::clamp(
+                static_cast<int>(std::round(value)), 0, static_cast<int>(kFilterTypes.size() - 1)));
+            return kFilterTypes[idx];
+        }
+
+        static constexpr size_t convertToIdx(const zldsp::filter::FilterType filter_type) {
+            for (size_t idx = 0; idx < kFilterTypes.size(); ++idx) {
+                if (kFilterTypes[idx] == filter_type) {
+                    return idx;
+                }
+            }
+            return static_cast<size_t>(kDefaultI);
+        }
     };
 
     class POrder : public ChoiceParameters<POrder> {

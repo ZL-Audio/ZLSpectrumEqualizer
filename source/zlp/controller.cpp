@@ -1481,10 +1481,11 @@ namespace zlp {
             break;
         }
         case zldsp::filter::kTiltShelf:
-        case zldsp::filter::kFlatTilt: {
+        case zldsp::filter::kFlatTilt:
+        case zldsp::filter::kFlatGain: {
             paras.order = 2;
-            paras.q = std::sqrt(2.0f) * 0.03125f;
-            paras.filter_type = zldsp::filter::kBandPass;
+            paras.gain = 0.0;
+            paras.filter_type = zldsp::filter::kFlatGain;
             break;
         }
         case zldsp::filter::kLowShelf:

@@ -251,6 +251,10 @@ namespace zlpanel {
             bound = bound.withSizeKeepingCentre(bound.getWidth(), bound.getHeight() * .5f);
             break;
         }
+        case zldsp::filter::kFlatGain: {
+            dragger_y_enabled_[band] = true;
+            break;
+        }
         case zldsp::filter::kLowPass:
         case zldsp::filter::kHighPass:
         case zldsp::filter::kBandPass:
@@ -294,10 +298,10 @@ namespace zlpanel {
         }
         const auto band_s = std::to_string(slope_attach_band_);
         ftype_idx_ref_ = p_ref_.parameters_.getRawParameterValue(zlp::PFilterType::kID + band_s);
-        const auto ftype = static_cast<int>(c_ftype_idx_);
-        const auto slope_6_disabled = (ftype == static_cast<int>(zldsp::filter::kPeak))
-            || (ftype == static_cast<int>(zldsp::filter::kBandPass))
-            || (ftype == static_cast<int>(zldsp::filter::kNotch));
+        const auto ftype = zlp::PFilterType::convertToFilterType(c_ftype_idx_);
+        const auto slope_6_disabled = ftype == zldsp::filter::kPeak
+            || ftype == zldsp::filter::kBandPass
+            || ftype == zldsp::filter::kNotch;
         slope_attachment_ = std::make_unique<zlgui::attachment::SliderAttachment<true>>(
             slope_slider_, p_ref_.parameters_, zlp::POrder::kID + band_s,
             juce::NormalisableRange<double>(slope_6_disabled ? 1.0 : 0.0, 6.0, 1.0),
@@ -370,12 +374,13 @@ namespace zlpanel {
                 }
 
                 if (base_.isToggleDynamicTriggered(action_type, event.mods)) {
-                    const auto ftype = static_cast<int>(std::round(
-                        getValue(p_ref_.parameters_, zlp::PFilterType::kID + std::to_string(band))));
-                    const auto gain_enabled = (ftype == static_cast<int>(zldsp::filter::kPeak))
-                        || (ftype == static_cast<int>(zldsp::filter::kLowShelf))
-                        || (ftype == static_cast<int>(zldsp::filter::kHighShelf))
-                        || (ftype == static_cast<int>(zldsp::filter::kTiltShelf));
+                    const auto ftype = zlp::PFilterType::convertToFilterType(
+                        getValue(p_ref_.parameters_, zlp::PFilterType::kID + std::to_string(band)));
+                    const auto gain_enabled = ftype == zldsp::filter::kPeak
+                        || ftype == zldsp::filter::kLowShelf
+                        || ftype == zldsp::filter::kHighShelf
+                        || ftype == zldsp::filter::kTiltShelf
+                        || ftype == zldsp::filter::kFlatGain;
                     if (gain_enabled) {
                         const auto dynamic_on = getValue(
                             p_ref_.parameters_, zlp::PDynamicON::kID + std::to_string(band)) > .5f;
@@ -457,12 +462,13 @@ namespace zlpanel {
                 }
 
                 if (base_.isToggleDynamicTriggered(action_type, event.mods)) {
-                    const auto ftype = static_cast<int>(std::round(
-                        getValue(p_ref_.parameters_, zlp::PFilterType::kID + std::to_string(band))));
-                    const auto gain_enabled = (ftype == static_cast<int>(zldsp::filter::kPeak))
-                        || (ftype == static_cast<int>(zldsp::filter::kLowShelf))
-                        || (ftype == static_cast<int>(zldsp::filter::kHighShelf))
-                        || (ftype == static_cast<int>(zldsp::filter::kTiltShelf));
+                    const auto ftype = zlp::PFilterType::convertToFilterType(
+                        getValue(p_ref_.parameters_, zlp::PFilterType::kID + std::to_string(band)));
+                    const auto gain_enabled = ftype == zldsp::filter::kPeak
+                        || ftype == zldsp::filter::kLowShelf
+                        || ftype == zldsp::filter::kHighShelf
+                        || ftype == zldsp::filter::kTiltShelf
+                        || ftype == zldsp::filter::kFlatGain;
                     if (gain_enabled) {
                         const auto dynamic_on = getValue(
                             p_ref_.parameters_, zlp::PDynamicON::kID + std::to_string(band)) > .5f;
@@ -517,6 +523,13 @@ namespace zlpanel {
 
     void DraggerPanel::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {
         if (event.originalComponent != &mouse_event_panel_) {
+            const auto band = base_.getSelectedBand();
+            if (band < zlp::kBandNum
+                && filter_types_[band] == zldsp::filter::kFlatGain
+                && (event.originalComponent == &draggers_[band].getButton()
+                    || event.originalComponent == &target_dragger_.getButton())) {
+                return;
+            }
             if (event.mods.isCommandDown()) {
                 slope_slider_.mouseWheelMove(event, wheel);
             } else {

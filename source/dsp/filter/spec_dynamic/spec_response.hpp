@@ -55,7 +55,9 @@ namespace zldsp::filter {
             static constexpr size_t lanes = hn::MaxLanes(d);
             const auto v_min = hn::Set(d, kLogSqrMin);
 
-            if (paras.filter_type == zldsp::filter::kTiltShelf || paras.filter_type == zldsp::filter::kFlatTilt) {
+            if (paras.filter_type == zldsp::filter::kTiltShelf
+                || paras.filter_type == zldsp::filter::kFlatTilt
+                || paras.filter_type == zldsp::filter::kFlatGain) {
                 const auto v_half = hn::Set(d, 0.5f);
                 for (size_t i = 0; i < base_response_.size(); i += lanes) {
                     const auto v = hn::Load(d, diff_response_.data() + i);

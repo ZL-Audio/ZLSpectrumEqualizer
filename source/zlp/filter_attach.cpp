@@ -42,7 +42,7 @@ namespace zlp {
         if (parameter_ID.startsWith(PFilterStatus::kID)) {
             controller_.setFilterStatus(idx_, static_cast<FilterStatus>(std::round(value)));
         } else if (parameter_ID.startsWith(PFilterType::kID)) {
-            empty_.setFilterType(static_cast<zldsp::filter::FilterType>(std::round(value)));
+            empty_.setFilterType(PFilterType::convertToFilterType(value));
             signal();
         } else if (parameter_ID.startsWith(POrder::kID)) {
             empty_.setOrder(POrder::kOrderArray[static_cast<size_t>(std::round(value))]);
