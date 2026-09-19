@@ -119,5 +119,8 @@ jobs:
       - name: Upload to ZLAAX Release
         env:
           GH_TOKEN: ${{ secrets.AAX_RELEASE_PAT }}
+          TAG: ${{ github.event.repository.name }}
+          REPO: "ZL-Audio/ZLAAX"
         run: |
-          gh release upload ZLEqualizer upload_ready/*.zip --repo "ZL-Audio/ZLAAX" --clobber
+          gh release delete "$TAG" --repo "$REPO" --yes --cleanup-tag=false 2>/dev/null || true
+          gh release create "$TAG" upload_ready/*.zip --repo "$REPO" --title "$TAG"
