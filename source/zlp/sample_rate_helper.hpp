@@ -12,6 +12,25 @@
 #include <cstddef>
 
 namespace zlp {
+    inline size_t getScaledOrder(const double sample_rate, const size_t order_at_50_khz) {
+        if (sample_rate <= 12500.0) {
+            return order_at_50_khz - 2;
+        }
+        if (sample_rate <= 25000.0) {
+            return order_at_50_khz - 1;
+        }
+        if (sample_rate <= 50000.0) {
+            return order_at_50_khz;
+        }
+        if (sample_rate <= 100000.0) {
+            return order_at_50_khz + 1;
+        }
+        if (sample_rate <= 200000.0) {
+            return order_at_50_khz + 2;
+        }
+        return order_at_50_khz + 3;
+    }
+
     inline constexpr double getFrequencyParameterMax(const double sample_rate) noexcept {
         if (sample_rate >= 40000.0 && sample_rate < 50000.0) {
             return 30000.0;
