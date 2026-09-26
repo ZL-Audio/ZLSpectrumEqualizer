@@ -18,12 +18,11 @@ namespace zlpanel {
         scale_label_panel_(p, base, tooltip_helper),
         eq_max_box_({juce::String(static_cast<int>(base_.getCurveDBScale(0))),
                      juce::String(static_cast<int>(base_.getCurveDBScale(1))),
-                     juce::String(static_cast<int>(base_.getCurveDBScale(2)))}, base,
-                    "", {}, false),
+                     juce::String(static_cast<int>(base_.getCurveDBScale(2)))}, base),
         eq_max_attach_(eq_max_box_.getBox(), p.parameters_NA_, zlstate::PEQMaxDB::kID, updater_),
-        fft_top_box_(zlstate::PFFTTopDB::kChoices, base, "", {}, false),
+        fft_top_box_(zlstate::PFFTTopDB::kChoices, base),
         fft_top_attach_(fft_top_box_.getBox(), p.parameters_NA_, zlstate::PFFTTopDB::kID, updater_),
-        fft_min_box_(zlstate::PFFTMinDB::kChoices, base, "", {}, false),
+        fft_min_box_(zlstate::PFFTMinDB::kChoices, base),
         fft_min_attach_(fft_min_box_.getBox(), p.parameters_NA_, zlstate::PFFTMinDB::kID, updater_) {
         juce::ignoreUnused(tooltip_helper);
 
@@ -36,7 +35,7 @@ namespace zlpanel {
         fft_top_box_.setAlpha(kFFTAlpha);
         fft_top_box_.getLAF().setFontScale(1.25f);
         fft_top_box_.getLAF().setOption(top_popup_option);
-        fft_top_box_.getLAF().setLabelJustification(juce::Justification::centredRight);
+        fft_top_box_.getLAF().setAlignment(zlgui::combobox::Alignment::kRightPadding);
         addAndMakeVisible(fft_top_box_);
 
         const auto fft_popup_option = juce::PopupMenu::Options().withPreferredPopupDirection(
@@ -45,7 +44,7 @@ namespace zlpanel {
         fft_min_box_.setAlpha(kFFTAlpha);
         fft_min_box_.getLAF().setFontScale(1.25f);
         fft_min_box_.getLAF().setOption(fft_popup_option);
-        fft_min_box_.getLAF().setLabelJustification(juce::Justification::centredRight);
+        fft_min_box_.getLAF().setAlignment(zlgui::combobox::Alignment::kRightPadding);
         fft_min_box_.setBufferedToImage(true);
         addAndMakeVisible(fft_min_box_);
 
@@ -54,7 +53,7 @@ namespace zlpanel {
         eq_max_box_.setScrollEnabled(true);
         eq_max_box_.getLAF().setFontScale(1.25f);
         eq_max_box_.getLAF().setOption(eq_popup_option);
-        eq_max_box_.getLAF().setLabelJustification(juce::Justification::centredRight);
+        eq_max_box_.getLAF().setLabelAlignment(zlgui::combobox::Alignment::kRightPadding);
         addAndMakeVisible(eq_max_box_);
 
         setInterceptsMouseClicks(false, true);

@@ -17,17 +17,13 @@ namespace zlgui::combobox {
     public:
         CompactCombobox(const juce::StringArray& choices, UIBase& base,
                         const juce::String& tooltip_text = "",
-                        const std::vector<juce::String>& item_labels = {},
-                        bool align_label = true);
+                        const std::vector<juce::String>& item_labels = {});
 
         CompactCombobox(const std::vector<std::unique_ptr<juce::Drawable>>& icons, UIBase& base,
                         const juce::String& tooltip_text = "",
-                        const std::vector<juce::String>& item_labels = {},
-                        bool align_label = true);
+                        const std::vector<juce::String>& item_labels = {});
 
         ~CompactCombobox() override;
-
-        void paint(juce::Graphics& g) override;
 
         void resized() override;
 
@@ -56,6 +52,11 @@ namespace zlgui::combobox {
 
         inline CompactComboboxLookAndFeel& getLAF() {
             return box_laf_;
+        }
+
+        // Maximum option-text width in pixels, cached by resized().
+        [[nodiscard]] float getMaxTextWidth() const noexcept {
+            return box_laf_.getMaxTextWidth();
         }
 
         void setScrollEnabled(const bool is_scroll_enabled) {

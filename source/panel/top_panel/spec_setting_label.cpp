@@ -34,10 +34,8 @@ namespace zlpanel {
         const auto popup_option = juce::PopupMenu::Options().withPreferredPopupDirection(
             juce::PopupMenu::Options::PopupDirection::downwards);
 
-        resolution_box_.getLAF().setItemJustification(juce::Justification::centredRight);
-        resolution_box_.getLAF().setLabelJustification(juce::Justification::centredRight);
-        smooth_type_box_.getLAF().setItemJustification(juce::Justification::centredLeft);
-        smooth_type_box_.getLAF().setLabelJustification(juce::Justification::centredLeft);
+        resolution_box_.getLAF().setAlignment(zlgui::combobox::Alignment::kRight);
+        smooth_type_box_.getLAF().setAlignment(zlgui::combobox::Alignment::kLeft);
         for (auto& box : {&resolution_box_, &smooth_type_box_}) {
             box->getLAF().setOption(popup_option);
             box->setBufferedToImage(true);

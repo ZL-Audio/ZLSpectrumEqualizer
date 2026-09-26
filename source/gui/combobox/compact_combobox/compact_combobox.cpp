@@ -12,10 +12,9 @@
 namespace zlgui::combobox {
     CompactCombobox::CompactCombobox(const juce::StringArray& choices,
                                      UIBase& base, const juce::String& tooltip_text,
-                                     const std::vector<juce::String>& item_labels,
-                                     const bool align_label) :
+                                     const std::vector<juce::String>& item_labels) :
         base_(base),
-        box_laf_(base, align_label) {
+        box_laf_(base) {
         if (item_labels.size() < static_cast<size_t>(choices.size())) {
             combo_box_.addItemList(choices, 1);
         } else {
@@ -47,10 +46,9 @@ namespace zlgui::combobox {
     CompactCombobox::CompactCombobox(const std::vector<std::unique_ptr<juce::Drawable>>& icons,
                                      UIBase& base,
                                      const juce::String& tooltip_text,
-                                     const std::vector<juce::String>& item_labels,
-                                     const bool align_label) :
+                                     const std::vector<juce::String>& item_labels) :
         base_(base),
-        box_laf_(base, align_label) {
+        box_laf_(base) {
         const auto menu = combo_box_.getRootMenu();
         for (size_t i = 0; i < icons.size(); ++i) {
             juce::PopupMenu::Item item;
@@ -84,21 +82,10 @@ namespace zlgui::combobox {
         combo_box_.setLookAndFeel(nullptr);
     }
 
-    void CompactCombobox::paint(juce::Graphics& g) {
-        g.setFont(box_laf_.getFontScale() * base_.getFontSize());
-        float max_text_width = 0.f;
-        for (int i = 0; i < combo_box_.getNumItems(); ++i) {
-            const auto text = combo_box_.getItemText(i);
-            const auto text_width = juce::GlyphArrangement::getStringWidth(g.getCurrentFont(), text);
-            max_text_width = std::max(max_text_width, text_width);
-        }
-        const auto padding = (static_cast<float>(getLocalBounds().getWidth()) - max_text_width) * .5f;
-        box_laf_.setPadding(padding * .975f);
-    }
-
     void CompactCombobox::resized() {
         auto bound = getLocalBounds();
         box_laf_.setItemSize(bound.getWidth(), bound.getHeight());
+        box_laf_.updateTextWidth(combo_box_);
         combo_box_.setBounds(getLocalBounds());
     }
 
