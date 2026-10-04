@@ -16,6 +16,7 @@
 #include "output_panel/output_panel.hpp"
 #include "analyzer_panel/analyzer_panel.hpp"
 #include "spec_setting_panel/spec_setting_panel.hpp"
+#include "piano_roll_panel/piano_roll_panel.hpp"
 
 namespace zlpanel {
     class CurvePanel final : public juce::Component,
@@ -63,5 +64,9 @@ namespace zlpanel {
         SpecSettingPanel spec_setting_panel_;
         OutputPanel output_panel_;
         AnalyzerPanel analyzer_panel_;
+        PianoRollPanel piano_roll_panel_;
+        bool piano_roll_visible_{false};
+
+        void updatePianoRollVisibility();
     };
 }

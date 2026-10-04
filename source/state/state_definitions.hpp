@@ -262,6 +262,13 @@ namespace zlstate {
         static constexpr auto kDefaultV = false;
     };
 
+    class PPianoRollON : public BoolParameters<PPianoRollON> {
+    public:
+        static constexpr auto kID = "piano_roll_on";
+        static constexpr auto kName = "Piano Roll";
+        static constexpr auto kDefaultV = false;
+    };
+
     inline juce::AudioProcessorValueTreeState::ParameterLayout getNAParameterLayout() {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
         layout.add(PEQMaxDB::get(), PFFTTopDB::get(), PFFTMinDB::get(),
@@ -269,7 +276,7 @@ namespace zlstate {
                    PFFTSmoothOCTValue::get(), PFFTSmoothERBValue::get(),PFFTSmoothType::get(),
                    PFFTSpeed::get(), PFFTTilt::get(),
                    PFFTFreezeON::get(), PFFTStereo::get(), PCollisionON::get(), PCollisionStrength::get(),
-                   PSpecSettingOpen::get());
+                   PSpecSettingOpen::get(), PPianoRollON::get(false));
         return layout;
     }
 

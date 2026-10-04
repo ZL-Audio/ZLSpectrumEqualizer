@@ -24,6 +24,8 @@ namespace zlpanel {
 
         void updateSampleRate(double sample_rate);
 
+        void setFrequencyLabelsVisible(bool visible);
+
     private:
         static constexpr std::array kFreqValues = {
             20.f, 50.f, 100.f, 200.f, 500.f, 1000.f, 2000.f, 5000.f,
@@ -32,6 +34,7 @@ namespace zlpanel {
 
         zlgui::UIBase& base_;
         double freq_max_{0.};
+        bool frequency_labels_visible_{true};
 
         juce::Colour grid_colour_;
 

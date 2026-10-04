@@ -8,6 +8,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "curve_panel.hpp"
+#include "../helper/piano_roll_helper.hpp"
 
 namespace zlpanel {
     CurvePanel::CurvePanel(PluginProcessor& p,
@@ -20,7 +21,8 @@ namespace zlpanel {
         response_panel_(p, base, tooltip_helper),
         spec_setting_panel_(p, base, tooltip_helper),
         output_panel_(p, base, tooltip_helper),
-        analyzer_panel_(p, base, tooltip_helper) {
+        analyzer_panel_(p, base, tooltip_helper),
+        piano_roll_panel_(p, base) {
         background_panel_.setBufferedToImage(true);
         addAndMakeVisible(background_panel_);
         addAndMakeVisible(fft_panel_);
@@ -29,6 +31,9 @@ namespace zlpanel {
         addChildComponent(spec_setting_panel_);
         addChildComponent(output_panel_);
         addChildComponent(analyzer_panel_);
+        addAndMakeVisible(piano_roll_panel_);
+        piano_roll_panel_.addMouseListener(this, true);
+        updatePianoRollVisibility();
         setInterceptsMouseClicks(false, true);
     }
 
@@ -70,6 +75,9 @@ namespace zlpanel {
         const auto spec_setting_height = spec_setting_panel_.getIdealHeight();
         spec_setting_panel_.setBounds((bound.getWidth() - spec_setting_width) / 2, 0,
                                       spec_setting_width, spec_setting_height);
+
+        const auto footer_height = piano_roll_helper::getHeight(font_size);
+        piano_roll_panel_.setBounds(bound.withTop(bound.getBottom() - footer_height));
     }
 
     void CurvePanel::mouseDown(const juce::MouseEvent&) {
@@ -78,6 +86,8 @@ namespace zlpanel {
     }
 
     void CurvePanel::repaintCallBack() {
+        piano_roll_panel_.repaintCallBack();
+        updatePianoRollVisibility();
         repaint();
         response_panel_.repaintCallBack();
     }
@@ -91,11 +101,22 @@ namespace zlpanel {
 
     void CurvePanel::updateBand() {
         response_panel_.updateBand();
+        piano_roll_panel_.updateBand();
     }
 
     void CurvePanel::updateSampleRate(const double sample_rate) {
         background_panel_.updateSampleRate(sample_rate);
         response_panel_.updateSampleRate(sample_rate);
+        piano_roll_panel_.updateSampleRate(sample_rate);
+        resized();
+    }
+
+    void CurvePanel::updatePianoRollVisibility() {
+        const auto visible = piano_roll_panel_.isPianoRollVisible();
+        if (piano_roll_visible_ != visible) {
+            piano_roll_visible_ = visible;
+            background_panel_.setFrequencyLabelsVisible(!visible);
+        }
     }
 
     void CurvePanel::startThreads() {
