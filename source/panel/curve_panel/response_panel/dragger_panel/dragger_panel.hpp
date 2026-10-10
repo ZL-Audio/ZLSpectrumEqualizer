@@ -70,6 +70,10 @@ namespace zlpanel {
 
         void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
 
+        float getScaleGradientWidth() const {
+            return scale_panel_.getGradientWidth();
+        }
+
     private:
         static constexpr float kBypassAlphaMultiplier = .75f;
         static constexpr float kDiffStereoAlphaMultiplier = .5f;

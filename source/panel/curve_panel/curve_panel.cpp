@@ -16,23 +16,34 @@ namespace zlpanel {
                            multilingual::TooltipHelper& tooltip_helper) :
         Thread("curve_panel"),
         base_(base),
+        value_display_on_ref_(*p.parameters_NA_.getRawParameterValue(zlstate::PValueDisplayON::kID)),
+        meter_display_on_ref_(*p.parameters_NA_.getRawParameterValue(zlstate::PMeterDisplayON::kID)),
+        eq_max_db_idx_ref_(*p.parameters_NA_.getRawParameterValue(zlstate::PEQMaxDB::kID)),
         background_panel_(p, base, tooltip_helper),
         fft_panel_(p, base),
         response_panel_(p, base, tooltip_helper),
         spec_setting_panel_(p, base, tooltip_helper),
+        top_panel_(p, base, tooltip_helper),
         output_panel_(p, base, tooltip_helper),
         analyzer_panel_(p, base, tooltip_helper),
-        piano_roll_panel_(p, base) {
+        piano_roll_panel_(p, base),
+        value_note_panel_(base),
+        meter_panel_(p, base) {
         background_panel_.setBufferedToImage(true);
         addAndMakeVisible(background_panel_);
         addAndMakeVisible(fft_panel_);
         addAndMakeVisible(response_panel_);
         response_panel_.addMouseListener(this, true);
         addChildComponent(spec_setting_panel_);
+        top_panel_.setBufferedToImage(true);
+        addAndMakeVisible(top_panel_);
         addChildComponent(output_panel_);
         addChildComponent(analyzer_panel_);
         addAndMakeVisible(piano_roll_panel_);
         piano_roll_panel_.addMouseListener(this, true);
+        addChildComponent(value_note_panel_);
+        addAndMakeVisible(meter_panel_);
+        meter_panel_.setVisible(meter_display_on_ref_.load(std::memory_order::relaxed) > .5f);
         updatePianoRollVisibility();
         setInterceptsMouseClicks(false, true);
     }
@@ -47,37 +58,73 @@ namespace zlpanel {
     }
 
     void CurvePanel::run() {
+        bool meter_was_on{false};
         while (!threadShouldExit()) {
             const auto flag = wait(-1);
             juce::ignoreUnused(flag);
-            fft_panel_.run(*this);
+            if (threadShouldExit()) {
+                return;
+            }
+            const auto meter_on = meter_display_on_ref_.load(std::memory_order::relaxed) > .5f;
+            auto* meter = meter_on ? &meter_panel_.getDisplayPanel() : nullptr;
+            if (meter_on && !meter_was_on) {
+                meter->reset();
+            }
+            meter_was_on = meter_on;
+            fft_panel_.run(*this, meter);
+            if (meter != nullptr && !threadShouldExit()) {
+                meter->run(juce::Time::getMillisecondCounterHiRes() * .001);
+            }
         }
     }
 
     void CurvePanel::resized() {
-        const auto bound = getLocalBounds();
-        background_panel_.setBounds(bound);
-        fft_panel_.setBounds(bound);
-        response_panel_.setBounds(bound);
-
+        auto bound = getLocalBounds();
         const auto font_size = base_.getFontSize();
+        if (meter_panel_.isVisible()) {
+            const auto meter_bound = bound.removeFromRight(meter_panel_.getIdealWidth());
+            if (meter_panel_.getBounds() == meter_bound) {
+                meter_panel_.resized();
+            } else {
+                meter_panel_.setBounds(meter_bound);
+            }
+        }
+        background_panel_.setBounds(bound);
+
+        if (fft_panel_.getBounds() == bound) {
+            fft_panel_.resized();
+        } else {
+            fft_panel_.setBounds(bound);
+        }
+
+        const auto plot_bound = bound.withTrimmedTop(top_panel_.getIdealHeight());
+        top_panel_.setBounds(bound.withHeight(top_panel_.getIdealHeight()));
+        response_panel_.setBounds(plot_bound);
+
         const auto padding = getPaddingSize(font_size);
         const auto output_width = output_panel_.getIdealWidth();
         const auto output_height = output_panel_.getIdealHeight();
-        output_panel_.setBounds(bound.getWidth() - output_width - 2 * padding, 0, output_width, output_height);
+        output_panel_.setBounds(bound.getWidth() - output_width - 2 * padding, plot_bound.getY(),
+                                output_width, output_height);
 
         const auto analyzer_width = analyzer_panel_.getIdealWidth();
         const auto analyzer_height = analyzer_panel_.getIdealHeight();
-        analyzer_panel_.setBounds(getButtonSize(font_size) + 2 * padding, 0,
+        analyzer_panel_.setBounds(getButtonSize(font_size) + 2 * padding, plot_bound.getY(),
                                   analyzer_width, analyzer_height);
 
         const auto spec_setting_width = spec_setting_panel_.getIdealWidth();
         const auto spec_setting_height = spec_setting_panel_.getIdealHeight();
-        spec_setting_panel_.setBounds((bound.getWidth() - spec_setting_width) / 2, 0,
+        spec_setting_panel_.setBounds((bound.getWidth() - spec_setting_width) / 2, plot_bound.getY(),
                                       spec_setting_width, spec_setting_height);
+        top_panel_.setScaleGradientWidth(response_panel_.getScaleGradientWidth());
 
         const auto footer_height = piano_roll_helper::getHeight(font_size);
         piano_roll_panel_.setBounds(bound.withTop(bound.getBottom() - footer_height));
+        const auto value_width = static_cast<int>(std::round(base_.getFontSize() * 4.5f));
+        const auto value_height = footer_height * 2;
+        value_note_panel_.setBounds(bound.getRight() - value_width, bound.getBottom() - value_height,
+                                    value_width, value_height);
+        updateValueNotePanel(true);
     }
 
     void CurvePanel::mouseDown(const juce::MouseEvent&) {
@@ -93,18 +140,33 @@ namespace zlpanel {
     }
 
     void CurvePanel::repaintCallBackSlow() {
+        const auto meter_visible = meter_display_on_ref_.load(std::memory_order::relaxed) > .5f;
+        if (meter_visible != meter_panel_.isVisible()) {
+            meter_panel_.setVisible(meter_visible);
+            resized();
+        }
+        if (meter_visible) {
+            meter_panel_.repaintCallBackSlow();
+        }
         response_panel_.repaintCallBackSlow();
         spec_setting_panel_.repaintCallBackSlow();
         output_panel_.repaintCallBackSlow();
         analyzer_panel_.repaintCallBackSlow();
+        top_panel_.setScaleGradientWidth(response_panel_.getScaleGradientWidth());
+        top_panel_.repaintCallbackSlow();
+        updateValueNotePanel();
     }
 
     void CurvePanel::updateBand() {
         response_panel_.updateBand();
         piano_roll_panel_.updateBand();
+        updateValueNotePanel();
     }
 
     void CurvePanel::updateSampleRate(const double sample_rate) {
+        fft_max_ = freq_helper::getFFTMax(sample_rate);
+        frequency_max_ = std::max(10.0, std::min(freq_helper::getSliderMax(sample_rate),
+                                               static_cast<double>(zlp::PFreq::kRange.end)));
         background_panel_.updateSampleRate(sample_rate);
         response_panel_.updateSampleRate(sample_rate);
         piano_roll_panel_.updateSampleRate(sample_rate);
@@ -116,7 +178,72 @@ namespace zlpanel {
         if (piano_roll_visible_ != visible) {
             piano_roll_visible_ = visible;
             background_panel_.setFrequencyLabelsVisible(!visible);
+            updateValueNotePanel();
         }
+    }
+
+    void CurvePanel::updateValueNotePanel(const bool force) {
+        ValueNoteState state;
+        state.show_values = value_display_on_ref_.load(std::memory_order::relaxed) > .5f;
+        state.piano_visible = piano_roll_panel_.isPianoRollVisible();
+        if (state.show_values) {
+            const auto source = juce::Desktop::getInstance().getMainMouseSource();
+            const auto* component = source.getComponentUnderMouse();
+            if (component != nullptr && (component == this || isParentOf(component))) {
+                state.dragging = source.isDragging()
+                    && (piano_roll_panel_.getDraggedBandValues(state.frequency, state.gain)
+                        || response_panel_.getDraggedBandValues(component, state.frequency, state.gain));
+                if (state.dragging) {
+                    state.mouse_over = true;
+                } else {
+                    state.position = getLocalPoint(nullptr, source.getScreenPosition());
+                    state.mouse_over = response_panel_.getBounds().toFloat().contains(state.position) && fft_max_ > 10.0;
+                }
+            }
+        }
+        const auto over_piano = !state.dragging && state.mouse_over && state.piano_visible
+            && piano_roll_panel_.getBounds().toFloat().contains(state.position);
+        if (state.piano_visible && (!state.show_values || over_piano)) {
+            state.note = piano_roll_panel_.getDisplayNote();
+            if (state.show_values) {
+                state.frequency = piano_roll_panel_.getDisplayFrequency();
+            }
+        } else if (state.mouse_over && !state.dragging) {
+            const auto db_idx = static_cast<size_t>(std::clamp(
+                static_cast<int>(std::round(eq_max_db_idx_ref_.load(std::memory_order::relaxed))),
+                0, static_cast<int>(zlstate::PEQMaxDB::kChoices.size() - 1)));
+            state.max_db = base_.getCurveDBScale(db_idx);
+        }
+        if (!force && value_note_state_ == state) {
+            return;
+        }
+        value_note_state_ = state;
+
+        value_note_panel_.setVisible(state.show_values ? state.mouse_over : state.piano_visible);
+        if (!value_note_panel_.isVisible()) {
+            return;
+        }
+
+        auto mode = state.show_values ? ValueNotePanel::Mode::kFrequencyGain : ValueNotePanel::Mode::kNote;
+        auto frequency = state.frequency;
+        auto gain = state.gain;
+        if (state.show_values && !state.dragging) {
+            mode = over_piano ? ValueNotePanel::Mode::kFrequencyNote : ValueNotePanel::Mode::kFrequencyGain;
+            if (!over_piano || frequency <= 0.) {
+                frequency = piano_roll_helper::xToFrequency(state.position.x,
+                                                            static_cast<float>(response_panel_.getWidth()), fft_max_);
+            }
+            frequency = std::clamp(frequency, 10.0, frequency_max_);
+            if (!over_piano) {
+                const auto font_size = base_.getFontSize();
+                const auto plot_height = static_cast<float>(response_panel_.getHeight() - getBottomAreaHeight(font_size));
+                const auto plot_y = state.position.y - static_cast<float>(response_panel_.getY());
+                const auto padding = font_size * kDraggerScale;
+                gain = std::clamp((plot_height - 2.f * plot_y)
+                                     / std::max(plot_height - 2.f * padding, 1.f), -1.f, 1.f) * state.max_db;
+            }
+        }
+        value_note_panel_.setValues(mode, state.piano_visible, frequency, gain, state.note);
     }
 
     void CurvePanel::startThreads() {

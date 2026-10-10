@@ -8,6 +8,7 @@
 // You should have received a copy of the GNU Affero General Public License along with ZLSpectrumEqualizer. If not, see <https://www.gnu.org/licenses/>.
 
 #include "fft_panel.hpp"
+#include "../meter_panel/meter_display_panel.hpp"
 #include "../../../zlp/sample_rate_helper.hpp"
 
 namespace zlpanel {
@@ -101,11 +102,11 @@ namespace zlpanel {
         to_update_ys_para_.signal();
     }
 
-    void FFTPanel::run(const juce::Thread& thread) {
-        runFFT(thread);
+    void FFTPanel::run(const juce::Thread& thread, MeterDisplayPanel* meter_panel) {
+        runFFT(thread, meter_panel);
     }
 
-    void FFTPanel::runFFT(const juce::Thread& thread) {
+    void FFTPanel::runFFT(const juce::Thread& thread, MeterDisplayPanel* meter_panel) {
         juce::ScopedNoDenormals noDenormals;
         const auto pre_on = pre_ref_.load(std::memory_order::relaxed) > .5f;
         const auto post_on = post_ref_.load(std::memory_order::relaxed) > .5f;
@@ -195,7 +196,17 @@ namespace zlpanel {
         }
         // receiver pull data
         auto& fifo{sender.getAbstractFIFO()};
-        auto num_read = fifo.getNumReady() / 4 * 3;
+        const auto num_ready = fifo.getNumReady();
+        auto num_read = num_ready / 4 * 3;
+        // meter the consumed samples before trimming the FFT history
+        if (meter_panel != nullptr) {
+            // include the final samples when playback stops
+            if (num_read == 0) {
+                num_read = num_ready;
+            }
+            meter_panel->pull(fifo.prepareToRead(num_read),
+                              sender.getSampleFIFOs()[0], sender.getSampleFIFOs()[1]);
+        }
         if (num_read > history_size_) {
             (void)fifo.prepareToRead(num_read - history_size_);
             fifo.finishRead(num_read - history_size_);
@@ -319,8 +330,9 @@ namespace zlpanel {
             c_height_ = height_.load(std::memory_order::relaxed);
             const auto font_size = font_size_.load(std::memory_order::relaxed);
             const auto bottom_area_height = getBottomAreaHeight(font_size);
-            const auto height0 = font_size * kDraggerScale;
-            const auto height1 = c_height_ - static_cast<float>(bottom_area_height) - height0;
+            const auto padding = font_size * kDraggerScale;
+            const auto height0 = static_cast<float>(getTopPanelHeight(font_size)) + padding;
+            const auto height1 = c_height_ - static_cast<float>(bottom_area_height) - padding;
             y_k_ = (height1 - height0) / c_fft_range_db_;
             y_b_ = height0 - c_fft_top_db_ * y_k_;
         }

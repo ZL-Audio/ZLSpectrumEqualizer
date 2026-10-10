@@ -265,7 +265,21 @@ namespace zlstate {
     class PPianoRollON : public BoolParameters<PPianoRollON> {
     public:
         static constexpr auto kID = "piano_roll_on";
-        static constexpr auto kName = "Piano Roll";
+        static constexpr auto kName = "";
+        static constexpr auto kDefaultV = false;
+    };
+
+    class PValueDisplayON : public BoolParameters<PValueDisplayON> {
+    public:
+        static constexpr auto kID = "value_display_on";
+        static constexpr auto kName = "";
+        static constexpr auto kDefaultV = false;
+    };
+
+    class PMeterDisplayON : public BoolParameters<PMeterDisplayON> {
+    public:
+        static constexpr auto kID = "meter_display_on";
+        static constexpr auto kName = "";
         static constexpr auto kDefaultV = false;
     };
 
@@ -276,7 +290,7 @@ namespace zlstate {
                    PFFTSmoothOCTValue::get(), PFFTSmoothERBValue::get(),PFFTSmoothType::get(),
                    PFFTSpeed::get(), PFFTTilt::get(),
                    PFFTFreezeON::get(), PFFTStereo::get(), PCollisionON::get(), PCollisionStrength::get(),
-                   PSpecSettingOpen::get(), PPianoRollON::get(false));
+                   PSpecSettingOpen::get(), PPianoRollON::get(), PValueDisplayON::get(), PMeterDisplayON::get());
         return layout;
     }
 

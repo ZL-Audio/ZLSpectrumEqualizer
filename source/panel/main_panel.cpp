@@ -16,7 +16,6 @@ namespace zlpanel {
         refresh_handler_(zlstate::PTargetRefreshSpeed::kRates[base_.getRefreshRateID()]),
         curve_panel_(p, base, tooltip_helper_),
         control_panel_(p, base, tooltip_helper_),
-        top_panel_(p, base, tooltip_helper_),
         preset_browser_(p, base),
         ui_setting_panel_(p, base_),
         tooltip_laf_(base_) {
@@ -35,7 +34,6 @@ namespace zlpanel {
 
         addAndMakeVisible(curve_panel_);
         addAndMakeVisible(control_panel_);
-        addAndMakeVisible(top_panel_);
         addChildComponent(ui_setting_panel_);
         preset_browser_.setBufferedToImage(true);
         addChildComponent(preset_browser_);
@@ -72,8 +70,11 @@ namespace zlpanel {
         control_bound = control_bound.removeFromBottom(control_panel_.getIdealHeight());
         control_bound = control_bound.withSizeKeepingCentre(control_panel_.getIdealWidth(), control_bound.getHeight());
         control_panel_.setBounds(control_bound);
-        top_panel_.setBounds(bound.removeFromTop(top_panel_.getIdealHeight()));
-        curve_panel_.setBounds(bound);
+        if (curve_panel_.getBounds() == bound) {
+            curve_panel_.resized();
+        } else {
+            curve_panel_.setBounds(bound);
+        }
 
         const auto padding = getPaddingSize(font_size);
         const auto setting_width = juce::jmax(0, juce::jmin(ui_setting_panel_.getIdealWidth(),
@@ -148,7 +149,6 @@ namespace zlpanel {
         // sub slow callbacks
         control_panel_.repaintCallBackSlow();
         curve_panel_.repaintCallBackSlow();
-        top_panel_.repaintCallbackSlow();
     }
 
     void MainPanel::startThreads() {

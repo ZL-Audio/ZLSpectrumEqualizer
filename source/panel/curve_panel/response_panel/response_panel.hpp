@@ -40,7 +40,11 @@ namespace zlpanel {
 
         void run() override;
 
+        bool getDraggedBandValues(const juce::Component* component, double& frequency, float& gain);
 
+        float getScaleGradientWidth() const {
+            return dragger_panel_.getScaleGradientWidth();
+        }
 
     private:
         static constexpr std::array kIDs{
