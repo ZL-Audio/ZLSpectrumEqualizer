@@ -14,6 +14,40 @@
 
 namespace zlp {
     namespace {
+        template <FilterStereo stereo>
+        HWY_INLINE void processOutputMS(float* HWY_RESTRICT left, float* HWY_RESTRICT right,
+                                        const size_t num_samples) {
+            static_assert(stereo == FilterStereo::kMid || stereo == FilterStereo::kSide);
+            static constexpr hn::ScalableTag<float> d;
+            static constexpr size_t lanes = hn::MaxLanes(d);
+            const auto v_gain = hn::Set(d, 0.5f);
+            size_t i = 0;
+            for (; i + lanes <= num_samples; i += lanes) {
+                const auto l = hn::LoadU(d, left + i);
+                const auto r = hn::LoadU(d, right + i);
+                if constexpr (stereo == FilterStereo::kMid) {
+                    const auto mid = hn::Mul(v_gain, hn::Add(l, r));
+                    hn::StoreU(mid, d, left + i);
+                    hn::StoreU(mid, d, right + i);
+                } else {
+                    const auto side = hn::Mul(v_gain, hn::Sub(l, r));
+                    hn::StoreU(side, d, left + i);
+                    hn::StoreU(hn::Neg(side), d, right + i);
+                }
+            }
+            for (; i < num_samples; ++i) {
+                if constexpr (stereo == FilterStereo::kMid) {
+                    const auto mid = 0.5f * (left[i] + right[i]);
+                    left[i] = mid;
+                    right[i] = mid;
+                } else {
+                    const auto side = 0.5f * (left[i] - right[i]);
+                    left[i] = side;
+                    right[i] = -side;
+                }
+            }
+        }
+
         template <size_t Mask>
         void dispatchMask(Controller* instance, const bool perform_fft, const bool is_delta) {
             instance->processMainImpl<
@@ -131,6 +165,7 @@ namespace zlp {
         if (to_update_output_gain_.check()) {
             updateOutputGain();
         }
+        output_stereo_ = a_output_stereo_.load(std::memory_order::relaxed);
         sgc_on_ = a_sgc_on_.load(std::memory_order::relaxed);
         if (sgc_on_ && to_update_sgc_on_.check()) {
             updateSGC();
@@ -387,6 +422,30 @@ namespace zlp {
                 } else {
                     output_gain_dsp_.process<false>(
                         std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                }
+            }
+
+            if (!is_bypass) {
+                switch (output_stereo_) {
+                case FilterStereo::kStereo: {
+                    break;
+                }
+                case FilterStereo::kLeft: {
+                    std::memset(post_analyzer_ptrs_[1], 0, chunk * sizeof(float));
+                    break;
+                }
+                case FilterStereo::kRight: {
+                    std::memset(post_analyzer_ptrs_[0], 0, chunk * sizeof(float));
+                    break;
+                }
+                case FilterStereo::kMid: {
+                    processOutputMS<FilterStereo::kMid>(post_analyzer_ptrs_[0], post_analyzer_ptrs_[1], chunk);
+                    break;
+                }
+                case FilterStereo::kSide: {
+                    processOutputMS<FilterStereo::kSide>(post_analyzer_ptrs_[0], post_analyzer_ptrs_[1], chunk);
+                    break;
+                }
                 }
             }
 

@@ -29,7 +29,7 @@ namespace zlp {
             PExtSide::kID, PSpecResolution::kID,
             PSpecSmooth::kID, PSpecSmoothType::kID, PSpecTilt::kID,
             PSpecSkewAttack::kID, PSpecSkewRelease::kID, PSpecGate::kID,
-            POutputGain::kID, PStaticGain::kID
+            POutputGain::kID, PStaticGain::kID, POutputStereo::kID
         };
 
         void parameterChanged(const juce::String& parameter_ID, float value) override;

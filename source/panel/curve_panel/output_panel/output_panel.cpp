@@ -35,7 +35,24 @@ namespace zlpanel {
         lm_drawable_(juce::Drawable::createFromImageData(BinaryData::dline_l_svg,
                                                          BinaryData::dline_l_svgSize)),
         lm_button_(base, lm_drawable_.get(), lm_drawable_.get(),
-                   tooltip_helper.getToolTipText(multilingual::kLoudnessGC)) {
+                   tooltip_helper.getToolTipText(multilingual::kLoudnessGC)),
+        stereo_box_([]() -> std::vector<std::unique_ptr<juce::Drawable>> {
+            std::vector<std::unique_ptr<juce::Drawable>> icons;
+            icons.emplace_back(
+                juce::Drawable::createFromImageData(BinaryData::stereo_svg, BinaryData::stereo_svgSize));
+            icons.emplace_back(
+                juce::Drawable::createFromImageData(BinaryData::left_svg, BinaryData::left_svgSize));
+            icons.emplace_back(
+                juce::Drawable::createFromImageData(BinaryData::right_svg, BinaryData::right_svgSize));
+            icons.emplace_back(
+                juce::Drawable::createFromImageData(BinaryData::mid_svg, BinaryData::mid_svgSize));
+            icons.emplace_back(
+                juce::Drawable::createFromImageData(BinaryData::side_svg, BinaryData::side_svgSize));
+            return icons;
+        }(), base, tooltip_helper.getToolTipText(multilingual::kBandStereoMode),
+                    {"Stereo", "Left", "Right", "Mid", "Side"}),
+        stereo_attach_(stereo_box_.getBox(), p.parameters_,
+                       zlp::POutputStereo::kID, updater_) {
         juce::ignoreUnused(p_ref_, base_, tooltip_helper);
 
         lm_button_.getButton().onClick = [this]() {
@@ -77,6 +94,12 @@ namespace zlpanel {
             b->setBufferedToImage(true);
             addAndMakeVisible(b);
         }
+
+        stereo_box_.setComponentID(zlp::POutputStereo::kID);
+        stereo_box_.getLAF().setOption(juce::PopupMenu::Options().withPreferredPopupDirection(
+            juce::PopupMenu::Options::PopupDirection::downwards));
+        stereo_box_.setBufferedToImage(true);
+        addAndMakeVisible(stereo_box_);
 
         base_.setPanelProperty(zlgui::PanelSettingIdx::kOutputPanel, 0.);
         base_.getPanelValueTree().addListener(this);
@@ -125,12 +148,19 @@ namespace zlpanel {
         }
         bound.removeFromTop(padding);
         {
-            auto t_bound = bound.removeFromTop(button_height);
-            const auto t_padding = (t_bound.getWidth() - button_height * 2) / 4;
-            t_bound.removeFromLeft(t_padding);
-            t_bound.removeFromRight(t_padding);
-            sgc_button_.setBounds(t_bound.removeFromLeft(button_height));
-            lm_button_.setBounds(t_bound.removeFromRight(button_height));
+            const auto row = bound.removeFromTop(button_height);
+            const auto step = static_cast<float>(row.getWidth() - button_height) / 2.f;
+            const auto get_control_bounds = [row, step, button_height](const int index) {
+                return row.withWidth(button_height).translated(
+                    static_cast<int>(std::round(static_cast<float>(index) * step)), 0);
+            };
+            sgc_button_.setBounds(get_control_bounds(0));
+            lm_button_.setBounds(get_control_bounds(1));
+            const auto stereo_box_bound = get_control_bounds(2).reduced(
+                static_cast<int>(std::round(font_size * .1f)));
+
+            stereo_box_.getLAF().setIconSize(static_cast<float>(stereo_box_bound.getHeight()));
+            stereo_box_.setBounds(stereo_box_bound.expanded(padding, 0));
         }
 
         const auto dragging_distance = getSliderDraggingDistance(font_size);

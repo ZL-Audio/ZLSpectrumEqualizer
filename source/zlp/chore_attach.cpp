@@ -49,6 +49,8 @@ namespace zlp {
             controller_.setOutputGain(value);
         } else if (parameter_ID == PStaticGain::kID) {
             controller_.setSGCON(value > .5f);
+        } else if (parameter_ID == POutputStereo::kID) {
+            controller_.setOutputStereo(static_cast<FilterStereo>(std::round(value)));
         }
     }
 }

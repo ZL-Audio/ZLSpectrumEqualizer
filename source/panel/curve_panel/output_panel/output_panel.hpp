@@ -57,6 +57,9 @@ namespace zlpanel {
         const std::unique_ptr<juce::Drawable> lm_drawable_;
         zlgui::button::ClickButton lm_button_;
 
+        zlgui::combobox::CompactCombobox stereo_box_;
+        zlgui::attachment::ComboBoxAttachment<true> stereo_attach_;
+
         void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property) override;
     };
 }

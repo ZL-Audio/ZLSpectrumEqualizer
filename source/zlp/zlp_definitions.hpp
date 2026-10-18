@@ -312,6 +312,14 @@ namespace zlp {
         static constexpr auto kDefaultV = 0.f;
     };
 
+    class POutputStereo : public ChoiceParameters<POutputStereo> {
+    public:
+        static constexpr auto kID = "total_output_stereo";
+        static constexpr auto kName = "Output Stereo";
+        inline static const auto kChoices = juce::StringArray{"Stereo", "Left", "Right", "Mid", "Side"};
+        static constexpr int kDefaultI = static_cast<int>(FilterStereo::kStereo);
+    };
+
     class PGainScale : public FloatParameters<PGainScale> {
     public:
         static constexpr auto kID = "total_gain_scale";
@@ -533,7 +541,7 @@ namespace zlp {
                    PSpecSmoothType::get(), PSpecTilt::get(), PSpecSkewAttack::get(), PSpecSkewRelease::get(),
                    PSpecGate::get(),
                    POutputGain::get(), PGainScale::get(),
-                   PStaticGain::get());
+                   PStaticGain::get(), POutputStereo::get());
         for (size_t i = 0; i < kBandNum; ++i) {
             const auto suffix = std::to_string(i);
             layout.add(PFilterStatus::get(suffix),

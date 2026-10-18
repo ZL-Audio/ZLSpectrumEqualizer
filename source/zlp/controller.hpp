@@ -131,6 +131,11 @@ namespace zlp {
             to_update_.signal();
         }
 
+        void setOutputStereo(const FilterStereo stereo) {
+            a_output_stereo_.store(stereo, std::memory_order::relaxed);
+            to_update_.signal();
+        }
+
         void setSpecAttack(const size_t idx, const float attack) {
             a_spec_attack_[idx].store(attack, std::memory_order::relaxed);
             to_update_spec_attack_[idx].signal();
@@ -454,6 +459,10 @@ namespace zlp {
         zlchore::thread::Notifier to_update_output_gain_{false};
         float output_gain_linear_{1.f};
         zldsp::gain::Gain<float> output_gain_dsp_{};
+
+        // final output stereo selection
+        std::atomic<FilterStereo> a_output_stereo_{FilterStereo::kStereo};
+        FilterStereo output_stereo_{FilterStereo::kStereo};
 
         // solo related
         zldsp::filter::TDF<float, kFilterSize / 2> solo_filter_;
