@@ -30,8 +30,6 @@ namespace zlpanel {
 
         base_.getPanelValueTree().addListener(this);
 
-        startTimerHz(1);
-
         addAndMakeVisible(curve_panel_);
         addAndMakeVisible(control_panel_);
         addChildComponent(ui_setting_panel_);
@@ -42,7 +40,6 @@ namespace zlpanel {
 
     MainPanel::~MainPanel() {
         base_.getPanelValueTree().removeListener(this);
-        stopTimer();
     }
 
     void MainPanel::resized() {
@@ -126,15 +123,6 @@ namespace zlpanel {
             if (ui_setting_visibility) {
                 ui_setting_panel_.toFront(false);
             }
-        }
-    }
-
-    void MainPanel::timerCallback() {
-        if (juce::Process::isForegroundProcess()) {
-            if (getCurrentlyFocusedComponent() != this) {
-                grabKeyboardFocus();
-            }
-            stopTimer();
         }
     }
 

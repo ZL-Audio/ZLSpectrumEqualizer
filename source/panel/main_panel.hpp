@@ -16,8 +16,7 @@
 
 namespace zlpanel {
     class MainPanel final : public juce::Component,
-                            private juce::ValueTree::Listener,
-                            private juce::Timer {
+                            private juce::ValueTree::Listener {
     public:
         explicit MainPanel(PluginProcessor& p, zlgui::UIBase& base, multilingual::TooltipLanguage language);
 
@@ -62,8 +61,6 @@ namespace zlpanel {
         double c_sample_rate_{0.};
 
         void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property) override;
-
-        void timerCallback() override;
 
         void repaintCallBackSlow();
     };
