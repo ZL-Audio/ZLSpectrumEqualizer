@@ -11,25 +11,24 @@
 #include "BinaryData.h"
 
 namespace zlpanel {
-    TopPanel::TopPanel(PluginProcessor& p, zlgui::UIBase& base,
+    TopPanel::TopPanel(PluginProcessor& p, zlgui::UIState& base,
                        const multilingual::TooltipHelper& tooltip_helper) :
         p_ref_(p), base_(base), updater_(),
         logo_panel_(p, base, tooltip_helper),
         output_label_(p, base),
         analyzer_label_(p, base),
         spec_setting_label_(p, base, tooltip_helper),
-        preset_drawable_(juce::Drawable::createFromImageData(BinaryData::collections_bookmark_svg,
-                                                             BinaryData::collections_bookmark_svgSize)),
-        preset_button_(base, preset_drawable_.get(), nullptr, ""),
-        bypass_drawable_(juce::Drawable::createFromImageData(BinaryData::bypass_svg,
-                                                             BinaryData::bypass_svgSize)),
-        bypass_button_(base, bypass_drawable_.get(), bypass_drawable_.get(),
-                       tooltip_helper.getToolTipText(multilingual::kBypass)),
+        preset_button_(base.gui,
+                       juce::Drawable::createFromImageData(
+                           BinaryData::collections_bookmark_svg, BinaryData::collections_bookmark_svgSize)),
+        bypass_button_(base.gui,
+                       juce::Drawable::createFromImageData(BinaryData::bypass_svg, BinaryData::bypass_svgSize),
+                       true, tooltip_helper.getToolTipText(multilingual::kBypass)),
         bypass_attach_(bypass_button_.getButton(), p.parameters_, zlp::PBypass::kID, updater_),
-        ext_drawable_(juce::Drawable::createFromImageData(BinaryData::external_side_svg,
-                                                          BinaryData::external_side_svgSize)),
-        ext_button_(base, ext_drawable_.get(), ext_drawable_.get(),
-                    tooltip_helper.getToolTipText(multilingual::kExternalSideChain)),
+        ext_button_(base.gui,
+                    juce::Drawable::createFromImageData(
+                        BinaryData::external_side_svg, BinaryData::external_side_svgSize),
+                    true, tooltip_helper.getToolTipText(multilingual::kExternalSideChain)),
         ext_attach_(ext_button_.getButton(), p.parameters_, zlp::PExtSide::kID, updater_) {
         logo_panel_.setBufferedToImage(true);
         addAndMakeVisible(logo_panel_);
@@ -73,15 +72,15 @@ namespace zlpanel {
         juce::ColourGradient gradient;
         gradient.point1 = bound.getTopLeft();
         gradient.point2 = bound.getBottomLeft();
-        gradient.addColour(0.0, base_.getBackgroundColour().withAlpha(1.f));
+        gradient.addColour(0.0, base_.gui.getBackgroundColour().withAlpha(1.f));
         gradient.addColour(1.0, juce::Colours::transparentBlack);
         g.setGradientFill(gradient);
         g.fillRect(bound);
 
         const auto scale_bound = bound.withLeft(bound.getRight() - scale_gradient_width_);
-        const juce::ColourGradient scale_gradient(base_.getBackgroundColour().withAlpha(0.f),
+        const juce::ColourGradient scale_gradient(base_.gui.getBackgroundColour().withAlpha(0.f),
                                                   scale_bound.getTopLeft(),
-                                                  base_.getBackgroundColour().withAlpha(1.f),
+                                                  base_.gui.getBackgroundColour().withAlpha(1.f),
                                                   scale_bound.getTopRight(), false);
         g.setGradientFill(scale_gradient);
         g.fillRect(scale_bound);
@@ -95,12 +94,12 @@ namespace zlpanel {
     }
 
     int TopPanel::getIdealHeight() const {
-        const auto font_size = base_.getFontSize();
+        const auto font_size = base_.gui.getFontSize();
         return getTopPanelHeight(font_size);
     }
 
     void TopPanel::resized() {
-        const auto font_size = base_.getFontSize();
+        const auto font_size = base_.gui.getFontSize();
         const auto padding = getPaddingSize(font_size);
         const auto slider_width = getSliderWidth(font_size);
 

@@ -11,24 +11,24 @@
 #include <BinaryData.h>
 
 namespace zlpanel {
-    SpecSettingLabel::SpecSettingLabel(PluginProcessor& p, zlgui::UIBase& base,
+    SpecSettingLabel::SpecSettingLabel(PluginProcessor& p, zlgui::UIState& base,
                                        const multilingual::TooltipHelper& tooltip_helper) :
         base_(base),
-        resolution_box_(zlp::PSpecResolution::kChoices, base,
+        resolution_box_(zlp::PSpecResolution::kChoices, base.gui,
                         tooltip_helper.getToolTipText(multilingual::kSpecResolution)),
         resolution_attach_(resolution_box_.getBox(), p.parameters_,
                            zlp::PSpecResolution::kID, updater_),
-        smooth_type_box_(zlp::PSpecSmoothType::kChoices, base,
+        smooth_type_box_(zlp::PSpecSmoothType::kChoices, base.gui,
                          tooltip_helper.getToolTipText(multilingual::kSpecSmoothType)),
         smooth_type_attach_(smooth_type_box_.getBox(), p.parameters_,
                             zlp::PSpecSmoothType::kID, updater_),
-        smooth_slider_("", base,
+        smooth_slider_("", base.gui,
                        tooltip_helper.getToolTipText(multilingual::kSpecSmoothValue)),
         smooth_attach_(smooth_slider_.getSlider(), p.parameters_,
                        zlp::PSpecSmooth::kID, updater_),
-        setting_drawable_(juce::Drawable::createFromImageData(BinaryData::settings_svg,
-                                                              BinaryData::settings_svgSize)),
-        setting_button_(base, setting_drawable_.get(), setting_drawable_.get(), ""),
+        setting_button_(base.gui,
+                        juce::Drawable::createFromImageData(BinaryData::settings_svg, BinaryData::settings_svgSize),
+                        true),
         setting_attach_(setting_button_.getButton(), p.parameters_NA_,
                         zlstate::PSpecSettingOpen::kID, updater_) {
         const auto popup_option = juce::PopupMenu::Options().withPreferredPopupDirection(
@@ -57,7 +57,7 @@ namespace zlpanel {
     }
 
     void SpecSettingLabel::resized() {
-        const auto font_size = base_.getFontSize();
+        const auto font_size = base_.gui.getFontSize();
         const auto padding = getPaddingSize(font_size);
         const auto button_height = getButtonSize(font_size);
         const auto slider_width = getSliderWidth(font_size);

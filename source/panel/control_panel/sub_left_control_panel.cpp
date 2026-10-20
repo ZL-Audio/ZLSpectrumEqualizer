@@ -13,44 +13,39 @@
 
 namespace zlpanel {
     SubLeftControlPanel::SubLeftControlPanel(PluginProcessor& p,
-                                             zlgui::UIBase& base,
+                                             zlgui::UIState& base,
                                              const multilingual::TooltipHelper& tooltip_helper) :
         p_ref_(p), base_(base), updater_(),
         control_background_(base),
-        delete_drawable_(juce::Drawable::createFromImageData(BinaryData::trash_svg,
-                                                            BinaryData::trash_svgSize)),
-        delete_button_(base, delete_drawable_.get(), nullptr,
-                      tooltip_helper.getToolTipText(multilingual::kBandOff)),
-        bypass_drawable_(juce::Drawable::createFromImageData(BinaryData::bypass_svg,
-                                                             BinaryData::bypass_svgSize)),
-        bypass_button_(base, bypass_drawable_.get(), bypass_drawable_.get(),
-                       tooltip_helper.getToolTipText(multilingual::kBandBypass)),
-        label_laf_(base),
+        delete_button_(base.gui,
+                       juce::Drawable::createFromImageData(BinaryData::trash_svg, BinaryData::trash_svgSize),
+                       false, tooltip_helper.getToolTipText(multilingual::kBandOff)),
+        bypass_button_(base.gui,
+                       juce::Drawable::createFromImageData(BinaryData::bypass_svg, BinaryData::bypass_svgSize),
+                       true, tooltip_helper.getToolTipText(multilingual::kBandBypass)),
+        label_laf_(base.gui),
         freq_label_("", "FREQ"),
         gain_label_("", "GAIN"),
         q_label_("", "Q"),
-        left_drawable_(juce::Drawable::createFromImageData(BinaryData::left_arrow_svg,
-                                                           BinaryData::left_arrow_svgSize)),
-        left_button_(base, left_drawable_.get(), nullptr),
+        left_button_(base.gui,
+                     juce::Drawable::createFromImageData(BinaryData::left_arrow_svg, BinaryData::left_arrow_svgSize)),
         band_label_("", ""),
-        right_drawable_(juce::Drawable::createFromImageData(BinaryData::right_arrow_svg,
-                                                            BinaryData::right_arrow_svgSize)),
-        right_button_(base, right_drawable_.get(), nullptr),
-        ftype_box_(zlp::PFilterType::kChoices, base,
+        right_button_(base.gui,
+                      juce::Drawable::createFromImageData(BinaryData::right_arrow_svg, BinaryData::right_arrow_svgSize)),
+        ftype_box_(zlp::PFilterType::kChoices, base.gui,
                    tooltip_helper.getToolTipText(multilingual::kBandType)),
         slope_box_(juce::StringArray{
                        "6 dB/oct", "12 dB/oct", "24 dB/oct", "36 dB/oct",
                        "48 dB/oct", "72 dB/oct", "96 dB/oct"
-                   }, base,
+                   }, base.gui,
                    tooltip_helper.getToolTipText(multilingual::kBandSlope)),
-        stereo_box_(zlp::PLRMode::kChoices, base,
+        stereo_box_(zlp::PLRMode::kChoices, base.gui,
                     tooltip_helper.getToolTipText(multilingual::kBandStereoMode)),
-        q_slider_("", base,
+        q_slider_("", base.gui,
                   tooltip_helper.getToolTipText(multilingual::kBandQ), 1.25f),
-        dynamic_drawable_(juce::Drawable::createFromImageData(BinaryData::dynamic_svg,
-                                                              BinaryData::dynamic_svgSize)),
-        dynamic_button_(base, dynamic_drawable_.get(), dynamic_drawable_.get(),
-                        tooltip_helper.getToolTipText(multilingual::kBandDynamic)) {
+        dynamic_button_(base.gui,
+                        juce::Drawable::createFromImageData(BinaryData::dynamic_svg, BinaryData::dynamic_svgSize),
+                        true, tooltip_helper.getToolTipText(multilingual::kBandDynamic)) {
         control_background_.setBufferedToImage(true);
         addAndMakeVisible(control_background_);
 
@@ -118,7 +113,7 @@ namespace zlpanel {
 
         const auto popup_option = juce::PopupMenu::Options().withPreferredPopupDirection(
             juce::PopupMenu::Options::PopupDirection::upwards);
-        const auto box_alignment = combobox_helper::getAlignment(base_.getComboboxAlignment());
+        const auto box_alignment = combobox_helper::getAlignment(base_.gui.getComboboxAlignment());
         ftype_box_.getLAF().setItemAlignment(box_alignment);
         stereo_box_.getLAF().setItemAlignment(box_alignment);
         slope_box_.getLAF().setAlignment(zlgui::combobox::Alignment::kRight);
@@ -152,7 +147,7 @@ namespace zlpanel {
     SubLeftControlPanel::~SubLeftControlPanel() = default;
 
     int SubLeftControlPanel::getIdealWidth() const {
-        const auto font_size = base_.getFontSize();
+        const auto font_size = base_.gui.getFontSize();
         const auto slider_width = getSliderWidth(font_size);
         const auto button_height = getButtonSize(font_size);
         const auto padding = getPaddingSize(font_size);
@@ -161,7 +156,7 @@ namespace zlpanel {
     }
 
     void SubLeftControlPanel::resized() {
-        const auto font_size = base_.getFontSize();
+        const auto font_size = base_.gui.getFontSize();
         const auto slider_width = getSliderWidth(font_size);
         const auto button_height = getButtonSize(font_size);
         const auto box_height = getBoxHeight(font_size);
@@ -186,12 +181,12 @@ namespace zlpanel {
         const auto arrow_width = top_bound.getHeight() / 2;
         band_label_.setBounds(top_bound);
         right_button_.setBounds(top_bound.removeFromRight(arrow_width));
-        right_button_.getButton().setEdgeIndent(static_cast<int>(std::round(base_.getFontSize() * .165f)));
+        right_button_.getButton().setEdgeIndent(static_cast<int>(std::round(base_.gui.getFontSize() * .165f)));
         left_button_.setBounds(top_bound.removeFromLeft(arrow_width));
-        left_button_.getButton().setEdgeIndent(static_cast<int>(std::round(base_.getFontSize() * .165f)));
+        left_button_.getButton().setEdgeIndent(static_cast<int>(std::round(base_.gui.getFontSize() * .165f)));
 
         dynamic_button_.setBounds(bound.removeFromRight(button_height));
-        dynamic_button_.getButton().setEdgeIndent(static_cast<int>(std::round(base_.getFontSize() * .165f)));
+        dynamic_button_.getButton().setEdgeIndent(static_cast<int>(std::round(base_.gui.getFontSize() * .165f)));
         bound.removeFromRight(padding);
         q_slider_.setBounds(bound.removeFromRight(slider_width));
         bound.removeFromRight(2 * slider_width + 3 * padding);

@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "../../state/ui_state.hpp"
+
 #include "../../PluginProcessor.hpp"
 #include "../../gui/gui.hpp"
 #include "../helper/helper.hpp"
@@ -17,7 +19,7 @@
 namespace zlpanel {
     class SpecSettingLabel final : public juce::Component {
     public:
-        explicit SpecSettingLabel(PluginProcessor& p, zlgui::UIBase& base,
+        explicit SpecSettingLabel(PluginProcessor& p, zlgui::UIState& base,
                                   const multilingual::TooltipHelper& tooltip_helper);
 
         ~SpecSettingLabel() override;
@@ -27,7 +29,7 @@ namespace zlpanel {
         void repaintCallbackSlow();
 
     private:
-        zlgui::UIBase& base_;
+        zlgui::UIState& base_;
         zlgui::attachment::ComponentUpdater updater_;
 
         zlgui::combobox::CompactCombobox resolution_box_;
@@ -38,7 +40,6 @@ namespace zlpanel {
         zlgui::slider::CompactLinearSlider<false, false, false> smooth_slider_;
         zlgui::attachment::SliderAttachment<true> smooth_attach_;
 
-        const std::unique_ptr<juce::Drawable> setting_drawable_;
         zlgui::button::ClickButton setting_button_;
         zlgui::attachment::ButtonAttachment<true> setting_attach_;
 

@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "../../../state/ui_state.hpp"
+
 #include "../../../PluginProcessor.hpp"
 #include "../../../gui/gui.hpp"
 #include "../../helper/helper.hpp"
@@ -20,7 +22,7 @@ namespace zlpanel {
     class OutputPanel final : public juce::Component,
                               private juce::ValueTree::Listener {
     public:
-        explicit OutputPanel(PluginProcessor& p, zlgui::UIBase& base,
+        explicit OutputPanel(PluginProcessor& p, zlgui::UIState& base,
                              const multilingual::TooltipHelper& tooltip_helper);
 
         ~OutputPanel() override;
@@ -35,7 +37,7 @@ namespace zlpanel {
 
     private:
         PluginProcessor& p_ref_;
-        zlgui::UIBase& base_;
+        zlgui::UIState& base_;
         zlgui::attachment::ComponentUpdater updater_;
 
         PanelBackground control_background_;
@@ -50,11 +52,9 @@ namespace zlpanel {
         zlgui::slider::TwoValueRotarySlider<false, false, false> scale_slider_;
         zlgui::attachment::SliderAttachment<true> scale_attach_;
 
-        const std::unique_ptr<juce::Drawable> sgc_drawable_;
         zlgui::button::ClickButton sgc_button_;
         zlgui::attachment::ButtonAttachment<true> sgc_attach_;
 
-        const std::unique_ptr<juce::Drawable> lm_drawable_;
         zlgui::button::ClickButton lm_button_;
 
         zlgui::combobox::CompactCombobox stereo_box_;

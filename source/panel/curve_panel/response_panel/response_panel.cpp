@@ -11,7 +11,7 @@
 
 namespace zlpanel {
     ResponsePanel::ResponsePanel(PluginProcessor& p,
-                                 zlgui::UIBase& base,
+                                 zlgui::UIState& base,
                                  const multilingual::TooltipHelper& tooltip_helper) :
         Thread("response"),
         p_ref_(p), base_(base),
@@ -114,7 +114,7 @@ namespace zlpanel {
         solo_panel_.setBounds(bound);
         width_.store(static_cast<float>(bound.getWidth()), std::memory_order::relaxed);
         height_.store(static_cast<float>(bound.getHeight()), std::memory_order::relaxed);
-        font_size_.store(base_.getFontSize(), std::memory_order::relaxed);
+        font_size_.store(base_.gui.getFontSize(), std::memory_order::relaxed);
         to_update_bound_.signal();
     }
 

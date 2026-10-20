@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "../state/ui_state.hpp"
+
 #include "control_panel/control_panel.hpp"
 #include "curve_panel/curve_panel.hpp"
 #include "preset_browser/preset_browser.hpp"
@@ -18,7 +20,7 @@ namespace zlpanel {
     class MainPanel final : public juce::Component,
                             private juce::ValueTree::Listener {
     public:
-        explicit MainPanel(PluginProcessor& p, zlgui::UIBase& base, multilingual::TooltipLanguage language);
+        explicit MainPanel(PluginProcessor& p, zlgui::UIState& base, multilingual::TooltipLanguage language);
 
         ~MainPanel() override;
 
@@ -42,7 +44,7 @@ namespace zlpanel {
         static constexpr float kHoWMin = 0.33f;
 
         PluginProcessor& p_ref_;
-        zlgui::UIBase& base_;
+        zlgui::UIState& base_;
         multilingual::TooltipHelper tooltip_helper_;
 
         RefreshHandler refresh_handler_;

@@ -12,36 +12,34 @@
 
 namespace zlpanel {
     RightControlPanel::RightControlPanel(PluginProcessor& p,
-                                         zlgui::UIBase& base,
+                                         zlgui::UIState& base,
                                          const multilingual::TooltipHelper& tooltip_helper) :
         p_ref_(p), base_(base), updater_(),
         control_background_(base),
-        bypass_drawable_(juce::Drawable::createFromImageData(BinaryData::bypass_svg,
-                                                             BinaryData::bypass_svgSize)),
-        bypass_button_(base, bypass_drawable_.get(), bypass_drawable_.get(),
-                       tooltip_helper.getToolTipText(multilingual::kBandDynamicBypass)),
-        delta_drawable_(juce::Drawable::createFromImageData(BinaryData::delta_svg,
-                                                            BinaryData::delta_svgSize)),
-        delta_button_(base, delta_drawable_.get(), delta_drawable_.get(),
-                      tooltip_helper.getToolTipText(multilingual::kBandDynamicDelta)),
-        mode_box_(zlp::PDynamicMode::kChoices, base,
+        bypass_button_(base.gui,
+                       juce::Drawable::createFromImageData(BinaryData::bypass_svg, BinaryData::bypass_svgSize),
+                       true, tooltip_helper.getToolTipText(multilingual::kBandDynamicBypass)),
+        delta_button_(base.gui,
+                      juce::Drawable::createFromImageData(BinaryData::delta_svg, BinaryData::delta_svgSize),
+                      true, tooltip_helper.getToolTipText(multilingual::kBandDynamicDelta)),
+        mode_box_(zlp::PDynamicMode::kChoices, base.gui,
                   tooltip_helper.getToolTipText(multilingual::kBandDynamicMode),
                   {tooltip_helper.getToolTipText(multilingual::kBandDynamicAbs),
                    tooltip_helper.getToolTipText(multilingual::kBandDynamicBand),
                    tooltip_helper.getToolTipText(multilingual::kBandDynamicRelative)}),
-        th_slider_abs_("Threshold", base,
+        th_slider_abs_("Threshold", base.gui,
                        tooltip_helper.getToolTipText(multilingual::kBandDynamicAbsThreshold)),
-        th_slider_band_("Threshold", base,
+        th_slider_band_("Threshold", base.gui,
                         tooltip_helper.getToolTipText(multilingual::kBandDynamicBandThreshold)),
-        th_slider_rel_("Threshold", base,
+        th_slider_rel_("Threshold", base.gui,
                        tooltip_helper.getToolTipText(multilingual::kBandDynamicRelativeThreshold)),
-        knee_slider_("Knee", base,
+        knee_slider_("Knee", base.gui,
                      tooltip_helper.getToolTipText(multilingual::kBandDynamicKnee)),
-        attack_slider_("Attack", base,
+        attack_slider_("Attack", base.gui,
                        tooltip_helper.getToolTipText(multilingual::kBandDynamicAttack)),
-        release_slider_("Release", base,
+        release_slider_("Release", base.gui,
                         tooltip_helper.getToolTipText(multilingual::kBandDynamicRelease)),
-        label_laf_(base) {
+        label_laf_(base.gui) {
         control_background_.setBufferedToImage(true);
         addAndMakeVisible(control_background_);
 
@@ -77,7 +75,7 @@ namespace zlpanel {
     }
 
     int RightControlPanel::getIdealWidth() const {
-        const auto font_size = base_.getFontSize();
+        const auto font_size = base_.gui.getFontSize();
         const auto slider_width = getSliderWidth(font_size);
         const auto padding = getPaddingSize(font_size);
 
@@ -85,7 +83,7 @@ namespace zlpanel {
     }
 
     void RightControlPanel::resized() {
-        const auto font_size = base_.getFontSize();
+        const auto font_size = base_.gui.getFontSize();
         const auto button_height = getButtonSize(font_size);
         const auto slider_width = getSliderWidth(font_size);
         const auto slider_height = getSliderHeight(font_size);

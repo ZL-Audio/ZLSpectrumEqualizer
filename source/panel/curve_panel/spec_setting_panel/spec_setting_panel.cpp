@@ -10,29 +10,29 @@
 #include "spec_setting_panel.hpp"
 
 namespace zlpanel {
-    SpecSettingPanel::SpecSettingPanel(PluginProcessor& p, zlgui::UIBase& base,
+    SpecSettingPanel::SpecSettingPanel(PluginProcessor& p, zlgui::UIState& base,
                                        const multilingual::TooltipHelper& tooltip_helper) :
         base_(base),
         spec_setting_open_(*p.parameters_NA_.getRawParameterValue(zlstate::PSpecSettingOpen::kID)),
         control_background_(base),
-        label_laf_(base),
+        label_laf_(base.gui),
         tilt_label_("", "Tilt"),
-        tilt_slider_("", base,
+        tilt_slider_("", base.gui,
                      tooltip_helper.getToolTipText(multilingual::kSpecTilt)),
         tilt_attach_(tilt_slider_.getSlider(), p.parameters_,
                      zlp::PSpecTilt::kID, updater_),
         attack_skew_label_("", "Attack Skew"),
-        attack_skew_slider_("", base,
+        attack_skew_slider_("", base.gui,
                             tooltip_helper.getToolTipText(multilingual::kSpecAttackSkew)),
         attack_skew_attach_(attack_skew_slider_.getSlider(), p.parameters_,
                             zlp::PSpecSkewAttack::kID, updater_),
         release_skew_label_("", "Release Skew"),
-        release_skew_slider_("", base,
+        release_skew_slider_("", base.gui,
                              tooltip_helper.getToolTipText(multilingual::kSpecReleaseSkew)),
         release_skew_attach_(release_skew_slider_.getSlider(), p.parameters_,
                              zlp::PSpecSkewRelease::kID, updater_),
         gate_label_("", "Gate"),
-        gate_slider_("", base,
+        gate_slider_("", base.gui,
                      tooltip_helper.getToolTipText(multilingual::kSpecGate)),
         gate_attach_(gate_slider_.getSlider(), p.parameters_,
                      zlp::PSpecGate::kID, updater_) {
@@ -57,7 +57,7 @@ namespace zlpanel {
     }
 
     int SpecSettingPanel::getIdealWidth() const {
-        const auto font_size = base_.getFontSize();
+        const auto font_size = base_.gui.getFontSize();
         const auto slider_width = getSliderWidth(font_size);
         const auto button_height = getButtonSize(font_size);
 
@@ -65,7 +65,7 @@ namespace zlpanel {
     }
 
     int SpecSettingPanel::getIdealHeight() const {
-        const auto font_size = base_.getFontSize();
+        const auto font_size = base_.gui.getFontSize();
         const auto padding = getPaddingSize(font_size);
         const auto button_height = getButtonSize(font_size);
 
@@ -73,7 +73,7 @@ namespace zlpanel {
     }
 
     void SpecSettingPanel::resized() {
-        const auto font_size = base_.getFontSize();
+        const auto font_size = base_.gui.getFontSize();
         const auto button_height = getButtonSize(font_size);
         const auto slider_width = getSliderWidth(font_size);
         const auto padding = getPaddingSize(font_size);

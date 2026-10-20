@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "../../state/ui_state.hpp"
+
 #include "../../PluginProcessor.hpp"
 #include "../../gui/gui.hpp"
 #include "../helper/helper.hpp"
@@ -18,7 +20,7 @@
 namespace zlpanel {
     class SubLeftControlPanel final : public juce::Component {
     public:
-        explicit SubLeftControlPanel(PluginProcessor& p, zlgui::UIBase& base,
+        explicit SubLeftControlPanel(PluginProcessor& p, zlgui::UIState& base,
                                      const multilingual::TooltipHelper& tooltip_helper);
 
         ~SubLeftControlPanel() override;
@@ -41,15 +43,13 @@ namespace zlpanel {
 
     private:
         PluginProcessor& p_ref_;
-        zlgui::UIBase& base_;
+        zlgui::UIState& base_;
         zlgui::attachment::ComponentUpdater updater_;
 
         PanelBackground control_background_;
 
-        const std::unique_ptr<juce::Drawable> delete_drawable_;
         zlgui::button::ClickButton delete_button_;
 
-        const std::unique_ptr<juce::Drawable> bypass_drawable_;
         zlgui::button::ClickButton bypass_button_;
         std::atomic<float>* filter_status_ptr_{nullptr};
 
@@ -59,12 +59,10 @@ namespace zlpanel {
         juce::Label gain_label_;
         juce::Label q_label_;
 
-        const std::unique_ptr<juce::Drawable> left_drawable_;
         zlgui::button::ClickButton left_button_;
 
         juce::Label band_label_;
 
-        const std::unique_ptr<juce::Drawable> right_drawable_;
         zlgui::button::ClickButton right_button_;
 
         zlgui::combobox::CompactCombobox ftype_box_;
@@ -79,7 +77,6 @@ namespace zlpanel {
         zlgui::slider::TwoValueRotarySlider<false, false, false> q_slider_;
         std::unique_ptr<zlgui::attachment::SliderAttachment<true>> q_attachment_;
 
-        const std::unique_ptr<juce::Drawable> dynamic_drawable_;
         zlgui::button::ClickButton dynamic_button_;
         std::unique_ptr<zlgui::attachment::ButtonAttachment<true>> dynamic_attachment_;
     };

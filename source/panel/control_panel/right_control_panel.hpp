@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "../../state/ui_state.hpp"
+
 #include "../../PluginProcessor.hpp"
 #include "../../gui/gui.hpp"
 #include "../helper/helper.hpp"
@@ -20,7 +22,7 @@ namespace zlpanel {
     class RightControlPanel final : public juce::Component,
                                     private juce::ValueTree::Listener {
     public:
-        explicit RightControlPanel(PluginProcessor& p, zlgui::UIBase& base,
+        explicit RightControlPanel(PluginProcessor& p, zlgui::UIState& base,
                                    const multilingual::TooltipHelper& tooltip_helper);
 
         ~RightControlPanel() override;
@@ -35,16 +37,14 @@ namespace zlpanel {
 
     private:
         PluginProcessor& p_ref_;
-        zlgui::UIBase& base_;
+        zlgui::UIState& base_;
         zlgui::attachment::ComponentUpdater updater_;
 
         PanelBackground control_background_;
 
-        const std::unique_ptr<juce::Drawable> bypass_drawable_;
         zlgui::button::ClickButton bypass_button_;
         std::unique_ptr<zlgui::attachment::ButtonAttachment<true>> bypass_attachment_;
 
-        const std::unique_ptr<juce::Drawable> delta_drawable_;
         zlgui::button::ClickButton delta_button_;
         std::unique_ptr<zlgui::attachment::ButtonAttachment<true>> delta_attachment_;
 

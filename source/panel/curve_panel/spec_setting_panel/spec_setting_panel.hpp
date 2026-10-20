@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "../../../state/ui_state.hpp"
+
 #include "../../../PluginProcessor.hpp"
 #include "../../../gui/gui.hpp"
 #include "../../helper/helper.hpp"
@@ -19,7 +21,7 @@
 namespace zlpanel {
     class SpecSettingPanel final : public juce::Component {
     public:
-        explicit SpecSettingPanel(PluginProcessor& p, zlgui::UIBase& base,
+        explicit SpecSettingPanel(PluginProcessor& p, zlgui::UIState& base,
                                   const multilingual::TooltipHelper& tooltip_helper);
 
         int getIdealWidth() const;
@@ -31,7 +33,7 @@ namespace zlpanel {
         void repaintCallBackSlow();
 
     private:
-        zlgui::UIBase& base_;
+        zlgui::UIState& base_;
         zlgui::attachment::ComponentUpdater updater_;
         std::atomic<float>& spec_setting_open_;
 

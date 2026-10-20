@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "../../../../state/ui_state.hpp"
+
 #include "../../../../PluginProcessor.hpp"
 #include "../../../../gui/gui.hpp"
 #include "../../../helper/helper.hpp"
@@ -20,7 +22,7 @@ namespace zlpanel {
     class FloatPopPanel final : public juce::Component,
                                 private juce::ValueTree::Listener {
     public:
-        explicit FloatPopPanel(PluginProcessor& p, zlgui::UIBase& base,
+        explicit FloatPopPanel(PluginProcessor& p, zlgui::UIState& base,
                                const multilingual::TooltipHelper& tooltip_helper);
 
         ~FloatPopPanel() override;
@@ -46,7 +48,7 @@ namespace zlpanel {
 
     private:
         PluginProcessor& p_ref_;
-        zlgui::UIBase& base_;
+        zlgui::UIState& base_;
         zlgui::attachment::ComponentUpdater updater_{};
 
         PanelBackground control_background_;
@@ -64,14 +66,11 @@ namespace zlpanel {
         float floating_top_{}, floating_bottom_{};
         float y1_{}, y2_{}, y3_{};
 
-        const std::unique_ptr<juce::Drawable> bypass_drawable_;
         zlgui::button::ClickButton bypass_button_;
         std::atomic<float>* filter_status_ptr_{nullptr};
 
-        const std::unique_ptr<juce::Drawable> solo_drawable_;
         zlgui::button::ClickButton solo_button_;
 
-        const std::unique_ptr<juce::Drawable> delete_drawable_;
         zlgui::button::ClickButton delete_button_;
 
         zlgui::combobox::CompactCombobox ftype_box_;
