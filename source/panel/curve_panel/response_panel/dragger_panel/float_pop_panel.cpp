@@ -179,6 +179,7 @@ namespace zlpanel {
             ftype_attachment_.reset();
             lr_attachment_.reset();
             freq_attachment_.reset();
+            freq_slider_.setComponentID("");
             filter_status_ptr_ = nullptr;
         }
         setVisible(base_.getSelectedBand() < zlp::kBandNum);
@@ -191,11 +192,13 @@ namespace zlpanel {
 
     void FloatPopPanel::updateFreqAttachment() {
         freq_attachment_.reset();
+        freq_slider_.setComponentID("");
         if (base_.getSelectedBand() < zlp::kBandNum) {
             const auto band_s = std::to_string(base_.getSelectedBand());
             freq_attachment_ = std::make_unique<zlgui::attachment::SliderAttachment<true>>(
                 freq_slider_.getSlider(), p_ref_.parameters_, zlp::PFreq::kID + band_s,
                 zlp::getLogMidRange(10.0, freq_max_, 1000.0, 0.1), updater_);
+            freq_slider_.setComponentID(zlp::PFreq::kID + band_s);
             freq_attachment_->updateComponent();
             freq_slider_.updateDisplayValue();
         }

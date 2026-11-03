@@ -47,6 +47,10 @@ namespace zlpanel {
             addAndMakeVisible(l);
         }
 
+        tilt_slider_.setComponentID(zlp::PSpecTilt::kID);
+        attack_skew_slider_.setComponentID(zlp::PSpecSkewAttack::kID);
+        release_skew_slider_.setComponentID(zlp::PSpecSkewRelease::kID);
+        gate_slider_.setComponentID(zlp::PSpecGate::kID);
         for (auto& s : {&tilt_slider_, &attack_skew_slider_, &release_skew_slider_, &gate_slider_}) {
             s->getSlider().setSliderSnapsToMousePosition(false);
             s->setBufferedToImage(true);

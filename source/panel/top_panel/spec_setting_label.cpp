@@ -42,6 +42,7 @@ namespace zlpanel {
             addAndMakeVisible(box);
         }
 
+        smooth_slider_.setComponentID(zlp::PSpecSmooth::kID);
         smooth_slider_.getSlider().setSliderSnapsToMousePosition(false);
         smooth_slider_.setBufferedToImage(true);
         addAndMakeVisible(smooth_slider_);
