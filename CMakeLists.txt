@@ -2,11 +2,11 @@
 # 3.24.1 is also bundled in CLion as of 2023
 cmake_minimum_required(VERSION 3.24.1)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# This tells cmake we have goodies in the /cmake folder
+# Load the project-specific CMake helpers.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake-includes")
 include(GitVersion)
-include(PamplejuceVersion)
 
 # Keep local builds and CI on macOS 12 or newer, including reused build directories.
 if (CMAKE_HOST_APPLE)
@@ -104,7 +104,6 @@ juce_add_plugin("${PROJECT_NAME}"
         COMPANY_NAME "${COMPANY_NAME}"
         BUNDLE_ID "${BUNDLE_ID}"
 
-        # On MacOS, plugin is copied to ~/Users/yourname/Library/Audio/Plug-Ins/
         COPY_PLUGIN_AFTER_BUILD ${ZL_JUCE_COPY_PLUGIN}
         AAX_COPY_DIR "${JUCE_AAX_COPY_DIR}"
 
@@ -198,7 +197,7 @@ target_compile_definitions(SharedCode
         # JucePlugin_Name is for some reason doesn't use the nicer PRODUCT_NAME
         PRODUCT_NAME_WITHOUT_VERSION="${PRODUCT_NAME}"
         #        JUCE_COREGRAPHICS_RENDER_WITH_MULTIPLE_PAINT_CALLS=1
-        JUCE_SILENCE_XCODE_15_LINKER_WARNING=1}
+        JUCE_SILENCE_XCODE_15_LINKER_WARNING=1
 )
 
 # Link to any other modules you added (with juce_add_module) here!
@@ -221,8 +220,10 @@ target_link_libraries(SharedCode
 # add highway
 set(ZL_HWY_STATIC_TARGET "NONE" CACHE STRING "Target architecture for static dispatch")
 if (ZL_HWY_STATIC_TARGET STREQUAL "NONE")
-    message(FATAL_ERROR "ZL_HWY_STATIC_TARGET must be set: SSE2/SSE4/AVX2/NEON.")
+    message(FATAL_ERROR "ZL_HWY_STATIC_TARGET must be set: SSE2/SSE4/AVX2/NEON/LSX/LASX.")
 endif ()
+# Plugin bundles must not depend on a separately installed Highway library.
+set(HWY_FORCE_STATIC_LIBS ON CACHE BOOL "Link Highway statically" FORCE)
 set(HWY_ENABLE_CONTRIB OFF CACHE BOOL "Disable highway contrib library" FORCE)
 set(HWY_ENABLE_EXAMPLES OFF CACHE BOOL "Disable highway examples" FORCE)
 set(HWY_ENABLE_TESTS OFF CACHE BOOL "Disable highway tests" FORCE)
