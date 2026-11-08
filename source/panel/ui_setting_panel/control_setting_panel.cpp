@@ -156,6 +156,25 @@ namespace zlpanel {
     }
 
     void ControlSettingPanel::resetSetting() {
+        for (auto& slider : sensitivity_sliders_) {
+            slider.getSlider().setValue(slider.getSlider().getDoubleClickReturnValue());
+        }
+        wheel_reverse_box_.getBox().setSelectedItemIndex(zlstate::PWheelShiftReverse::kDefaultI);
+        rotary_style_box_.getBox().setSelectedItemIndex(zlstate::PRotaryStyle::kDefaultI);
+        slider_double_click_box_.getBox().setSelectedItemIndex(zlstate::PSliderDoubleClickFunc::kDefaultI);
+        action_mouse_boxes_[0].getBox().setSelectedItemIndex(zlstate::PEnterSoloMouse::kDefaultI);
+        action_key_boxes_[0].getBox().setSelectedItemIndex(zlstate::PEnterSoloKey::kDefaultI);
+        action_mouse_boxes_[1].getBox().setSelectedItemIndex(zlstate::PExitSoloMouse::kDefaultI);
+        action_key_boxes_[1].getBox().setSelectedItemIndex(zlstate::PExitSoloKey::kDefaultI);
+        action_mouse_boxes_[2].getBox().setSelectedItemIndex(zlstate::PRightClickMenuMouse::kDefaultI);
+        action_key_boxes_[2].getBox().setSelectedItemIndex(zlstate::PRightClickMenuKey::kDefaultI);
+        action_mouse_boxes_[3].getBox().setSelectedItemIndex(zlstate::PToggleDynamicMouse::kDefaultI);
+        action_key_boxes_[3].getBox().setSelectedItemIndex(zlstate::PToggleDynamicKey::kDefaultI);
+        action_mouse_boxes_[4].getBox().setSelectedItemIndex(zlstate::PToggleBypassMouse::kDefaultI);
+        action_key_boxes_[4].getBox().setSelectedItemIndex(zlstate::PToggleBypassKey::kDefaultI);
+        action_mouse_boxes_[5].getBox().setSelectedItemIndex(zlstate::PDeleteBandMouse::kDefaultI);
+        action_key_boxes_[5].getBox().setSelectedItemIndex(zlstate::PDeleteBandKey::kDefaultI);
+        saveSetting();
     }
 
     int ControlSettingPanel::getIdealHeight() const {

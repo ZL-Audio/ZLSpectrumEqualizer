@@ -209,6 +209,8 @@ namespace zlpanel {
         case kCreditP:
             return;
         }
+        base_.setPanelProperty(zlgui::kUISettingChanged,
+                               !static_cast<bool>(base_.getPanelProperty(zlgui::kUISettingChanged)));
     }
 
     void UISettingPanel::updateActionButtonStates() {

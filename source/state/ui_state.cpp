@@ -39,6 +39,9 @@ namespace zlgui {
         gui.setComboboxAlignment(static_cast<size_t>(std::round(loadPara(zlstate::PComboboxAlignment::kID))));
         single_eq_curve_thickness_.store(loadPara(zlstate::PSingleEQCurveThickness::kID));
         sum_eq_curve_thickness_.store(loadPara(zlstate::PSumEQCurveThickness::kID));
+        setCurveDBScales({loadPara(zlstate::PCurveDBScale0::kID),
+                         loadPara(zlstate::PCurveDBScale1::kID),
+                         loadPara(zlstate::PCurveDBScale2::kID)});
         gui.setTooltipLandID(static_cast<size_t>(std::round(loadPara(zlstate::PTooltipLang::kID))));
         gui.setCMap1Idx(static_cast<size_t>(std::round(loadPara(zlstate::PColourMap1Idx::kID))));
         gui.setCMap2Idx(static_cast<size_t>(std::round(loadPara(zlstate::PColourMap2Idx::kID))));
@@ -86,19 +89,19 @@ namespace zlgui {
         savePara(zlstate::PDraggerSensitivity::kID, gui.getSensitivity(kMouseDragger));
         savePara(zlstate::PDraggerFineSensitivity::kID, gui.getSensitivity(kMouseDraggerFine));
         savePara(zlstate::PWheelComboboxSensitivity::kID, gui.getSensitivity(kMouseWheelCombobox));
-        savePara(zlstate::PWheelShiftReverse::kID,
-            static_cast<float>(gui.getIsMouseWheelShiftReverse()));
+        savePara(zlstate::PWheelShiftReverse::kID, static_cast<float>(gui.getIsMouseWheelShiftReverse()));
         savePara(zlstate::PRotaryStyle::kID, static_cast<float>(gui.getRotaryStyleID()));
-        savePara(zlstate::PSliderDoubleClickFunc::kID,
-            static_cast<float>(gui.getIsSliderDoubleClickOpenEditor()));
+        savePara(zlstate::PSliderDoubleClickFunc::kID, static_cast<float>(gui.getIsSliderDoubleClickOpenEditor()));
         savePara(zlstate::PTargetRefreshSpeed::kID, static_cast<float>(refresh_rate_id_.load(std::memory_order::relaxed)));
         savePara(zlstate::PFFTQuality::kID, static_cast<float>(fft_quality_.load(std::memory_order::relaxed)));
         savePara(zlstate::PFFTExtraTilt::kID, fft_extra_tilt_.load(std::memory_order::relaxed));
         savePara(zlstate::PFFTExtraSpeed::kID, fft_extra_speed_.load(std::memory_order::relaxed));
-        savePara(zlstate::PComboboxAlignment::kID,
-                 static_cast<float>(gui.getComboboxAlignment()));
+        savePara(zlstate::PComboboxAlignment::kID, static_cast<float>(gui.getComboboxAlignment()));
         savePara(zlstate::PSingleEQCurveThickness::kID, single_eq_curve_thickness_.load(std::memory_order::relaxed));
         savePara(zlstate::PSumEQCurveThickness::kID, sum_eq_curve_thickness_.load(std::memory_order::relaxed));
+        savePara(zlstate::PCurveDBScale0::kID, getCurveDBScale(0));
+        savePara(zlstate::PCurveDBScale1::kID, getCurveDBScale(1));
+        savePara(zlstate::PCurveDBScale2::kID, getCurveDBScale(2));
         savePara(zlstate::PTooltipLang::kID, static_cast<float>(gui.getTooltipLangID()));
         savePara(zlstate::PColourMap1Idx::kID, static_cast<float>(gui.getCMap1Idx()));
         savePara(zlstate::PColourMap2Idx::kID, static_cast<float>(gui.getCMap2Idx()));
