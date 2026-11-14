@@ -92,6 +92,7 @@ namespace zlpanel::band_helper {
         const auto band_s = std::to_string(band);
         updateValue(p.parameters_.getParameter(zlp::PDynamicDelta::kID + band_s), 0.f);
         updateValue(p.parameters_.getParameter(zlp::PPassScaleON::kID + band_s), 0.f);
+        updateValue(p.parameters_.getParameter(zlp::PPassScaleV::kID + band_s), 1.f);
         updateValue(p.parameters_.getParameter(zlp::PFilterStatus::kID + band_s), 0.f);
     }
 
