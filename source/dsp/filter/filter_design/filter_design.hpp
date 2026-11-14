@@ -13,11 +13,11 @@
 #include "../helpers.hpp"
 
 namespace zldsp::filter::FilterDesign {
-    static constexpr std::array<double, 9> flat_freq = {
-        10.0, 40.0, 160.0, 640.0, 2560.0, 10240.0, 40960.0, 163840.0, 655360.0
+    static constexpr std::array<double, 11> flat_freq = {
+        2.5, 10.0, 40.0, 160.0, 640.0, 2560.0, 10240.0, 40960.0, 163840.0, 655360.0, 2621440.0
     };
 
-    static constexpr std::array<double, 9> inv_flat_freq_sqr = []() {
+    static constexpr std::array<double, flat_freq.size()> inv_flat_freq_sqr = []() {
         std::array<double, flat_freq.size()> arr{};
         for (size_t i = 0; i < flat_freq.size(); ++i) {
             arr[i] = 1.0 / (flat_freq[i] * flat_freq[i]);
@@ -25,26 +25,26 @@ namespace zldsp::filter::FilterDesign {
         return arr;
     }();
 
-    inline size_t getFlatShelfFilterNum(const double sample_rate) {
-        if (sample_rate < 12500.0) {
-            return 5;
-        }
-        if (sample_rate < 50000.0) {
-            return 6;
-        }
-        if (sample_rate < 200000.0) {
+    inline size_t getFlatShelfFilterCount(const double fs) {
+        if (fs < 12500.0) {
             return 7;
         }
-        if (sample_rate < 800000.0) {
+        if (fs < 50000.0) {
             return 8;
         }
-        return 9;
+        if (fs < 200000.0) {
+            return 9;
+        }
+        if (fs < 800000.0) {
+            return 10;
+        }
+        return flat_freq.size();
     }
 
     template <class Coeff>
     size_t updateFlatShelfCoeffs(const double freq, const double fs, const double g_dB,
                                  std::span<std::array<double, 5>> coeffs) {
-        const auto num_filters = getFlatShelfFilterNum(fs);
+        const auto num_filters = getFlatShelfFilterCount(fs);
 
         const auto g_shelf_dB = g_dB * 0.5;
         const double g_linear = dbToGain(g_shelf_dB);
@@ -76,7 +76,7 @@ namespace zldsp::filter::FilterDesign {
 
     template <class Coeff>
     inline void updateFlatShelfDynamicCache(const double f, const double fs, double* cache) {
-        const auto num_filters = getFlatShelfFilterNum(fs);
+        const auto num_filters = getFlatShelfFilterCount(fs);
         cache[0] = static_cast<double>(num_filters);
 
         const double freq_sq = f * f;
@@ -110,15 +110,22 @@ namespace zldsp::filter::FilterDesign {
             }
             return 1;
         }
+        if (n == 2) {
+            if constexpr (filter_type == kLowPass) {
+                coeffs[start_idx] = Coeff::get2LowPass(w0, q0);
+            }
+            if constexpr (filter_type == kHighPass) {
+                coeffs[start_idx] = Coeff::get2HighPass(w0, q0);
+            }
+            if constexpr (filter_type == kAllPass) {
+                coeffs[start_idx] = Coeff::get2AllPass(w0, q0);
+            }
+            return 1;
+        }
         const size_t number = n / 2;
-        const auto theta0 = pi / static_cast<double>(number) / 4;
-        const auto scale = std::pow(std::sqrt(2.0) * q0, 1 / static_cast<double>(number));
-        const auto rescale_base = std::log10(std::sqrt(2.0) * q0) / std::pow(static_cast<double>(n), 1.5) * 12;
+        const PassQDistribution distribution(n, q0);
         for (size_t i = 0; i < number; i++) {
-            const auto centered = static_cast<double>(i) - static_cast<double>(number) / 2 + 0.5;
-            const auto rescale = centered * rescale_base;
-            const auto theta = theta0 * static_cast<double>(2 * i + 1);
-            const auto qs = 1.0 / 2.0 / std::cos(theta) * scale * std::pow(2, rescale);
+            const auto qs = distribution.get(i);
             if constexpr (filter_type == kLowPass) {
                 coeffs[i + start_idx] = Coeff::get2LowPass(w0, qs);
             }
@@ -164,22 +171,19 @@ namespace zldsp::filter::FilterDesign {
         }
         const size_t number = n / 2;
         const auto _g = g_dB / static_cast<double>(number);
-        const auto theta0 = pi / static_cast<double>(number) / 4;
-        const auto scale = std::pow(std::sqrt(2.0) * q0, 1 / static_cast<double>(number));
-        const auto rescale_base = std::log10(std::sqrt(2.0) * q0) / std::pow(static_cast<double>(n), 1.5) * 12;
+        // Every section uses the same cutoff and gain during this update.
+        const auto context = Coeff::get2ShelfContext(w0, _g);
+        const PassQDistribution distribution(n, q0);
         for (size_t i = 0; i < number; i++) {
-            const auto centered = static_cast<double>(i) - static_cast<double>(number) / 2 + 0.5;
-            const auto rescale = centered * rescale_base;
-            const auto theta = theta0 * static_cast<double>(2 * i + 1);
-            const auto _q = 1.0 / 2.0 / std::cos(theta) * scale * std::pow(2, rescale);
+            const auto _q = distribution.get(i);
             if constexpr (filter_type == kLowShelf) {
-                coeffs[i + start_idx] = Coeff::get2LowShelf(w0, _g, _q);
+                coeffs[i + start_idx] = Coeff::get2LowShelf(context, _q);
             }
             if constexpr (filter_type == kHighShelf) {
-                coeffs[i + start_idx] = Coeff::get2HighShelf(w0, _g, _q);
+                coeffs[i + start_idx] = Coeff::get2HighShelf(context, _q);
             }
             if constexpr (filter_type == kTiltShelf) {
-                coeffs[i + start_idx] = Coeff::get2TiltShelf(w0, _g, _q);
+                coeffs[i + start_idx] = Coeff::get2TiltShelf(context, _q);
             }
         }
         return number;
@@ -188,14 +192,9 @@ namespace zldsp::filter::FilterDesign {
     template <class Coeff>
     inline void updateShelfDynamicCache(const size_t n, const double w0, const double q0, double* cache) {
         const size_t number = n / 2;
-        const auto theta0 = pi / static_cast<double>(number) / 4;
-        const auto scale = std::pow(std::sqrt(2.0) * q0, 1 / static_cast<double>(number));
-        const auto rescale_base = std::log10(std::sqrt(2.0) * q0) / std::pow(static_cast<double>(n), 1.5) * 12;
+        const PassQDistribution distribution(n, q0);
         for (size_t i = 0; i < number; i++) {
-            const auto centered = static_cast<double>(i) - static_cast<double>(number) / 2 + 0.5;
-            const auto rescale = centered * rescale_base;
-            const auto theta = theta0 * static_cast<double>(2 * i + 1);
-            const auto _q = 1.0 / 2.0 / std::cos(theta) * scale * std::pow(2, rescale);
+            const auto _q = distribution.get(i);
             Coeff::update2ShelfDynamicCache(w0, _q, cache + (i * 3));
         }
     }
@@ -206,10 +205,8 @@ namespace zldsp::filter::FilterDesign {
                                 std::span<std::array<double, 5>> coeffs) {
         if (n < 2) { return 0; }
         const size_t number = n / 2;
-        const auto halfbw = std::asinh(0.5 / q0) / std::log(2);
-        const auto w = w0 / std::pow(2, halfbw);
         const auto g = dbToGain(-6 / static_cast<double>(n));
-        const auto _q = std::sqrt(1 - g * g) * w * w0 / g / (w0 * w0 - w * w);
+        const auto _q = q0 * std::sqrt(1 - g * g) / g;
 
         const auto single_coeff = Coeff::get2BandPass(w0, _q);
         for (size_t i = 0; i < n / 2; ++i) {
@@ -224,10 +221,8 @@ namespace zldsp::filter::FilterDesign {
                              std::span<std::array<double, 5>> coeffs) {
         if (n < 2) { return 0; }
         const size_t number = n / 2;
-        const auto halfbw = std::asinh(0.5 / q0) / std::log(2);
-        const auto w = w0 / std::pow(2, halfbw);
         const auto g = dbToGain(-6 / static_cast<double>(n));
-        const auto _q = g * w * w0 / std::sqrt((1 - g * g)) / (w0 * w0 - w * w);
+        const auto _q = q0 * g / std::sqrt(1 - g * g);
 
         const auto single_coeff = Coeff::get2Notch(w0, _q);
         for (size_t i = 0; i < n / 2; ++i) {
@@ -257,7 +252,7 @@ namespace zldsp::filter::FilterDesign {
             n1 = updateShelfCoeffs<Coeff, kLowShelf>(n, start_idx, w2, g_dB, std::sqrt(2) / 2, coeffs);
         } else {
             const auto g_linear = std::exp2(g_dB * kDbToExp2);
-            coeffs[start_idx] = {1.0, 1.0, g_linear, g_linear, g_linear};
+            coeffs[start_idx] = Coeff::getIdentity(g_linear);
         }
         return n1 + n2;
     }
@@ -271,8 +266,7 @@ namespace zldsp::filter::FilterDesign {
         const auto scale = std::pow(2, halfbw);
         const auto w1 = w0 / scale;
         const auto w2 = w0 * scale;
-        const auto f1 = w1 > 10.0 / 48000.0;
-        const auto f2 = w2 < 22000.0 / 48000.0;
+        const auto f1 = w1 > (1.0 / 48000.0), f2 = w2 < 0.99;
         const size_t number = n / 2;
         if (f1 && f2) {
             cache[0] = 3.0;
@@ -333,6 +327,11 @@ namespace zldsp::filter::FilterDesign {
             return updateBandPassCoeffs<Coeff>(n, 0, w0, q0, coeffs);
         case kAllPass:
             return updatePassCoeffs<Coeff, kAllPass>(n, 0, w0, q0, coeffs);
+#if ZL_ENABLE_FILTER_SCALED_PASS
+        case kScaledLowPass:
+        case kScaledHighPass:
+            return 0;
+#endif
         default:
             return 0;
         }
@@ -373,6 +372,10 @@ namespace zldsp::filter::FilterDesign {
         case kFlatGain:
         case kLowPass:
         case kHighPass:
+#if ZL_ENABLE_FILTER_SCALED_PASS
+        case kScaledLowPass:
+        case kScaledHighPass:
+#endif
         case kNotch:
         case kBandPass:
         case kAllPass:
@@ -437,7 +440,7 @@ namespace zldsp::filter::FilterDesign {
             updateShelfGainLinear<Coeff, kLowShelf>(n, 0, g_linear_sqrt, cache + 1, coeffs);
         } else {
             const auto g_linear = g_linear_sqrt * g_linear_sqrt;
-            coeffs[0] = {1.0, 1.0, g_linear, g_linear, g_linear};
+            coeffs[0] = Coeff::getIdentity(g_linear);
         }
     }
 
@@ -501,6 +504,10 @@ namespace zldsp::filter::FilterDesign {
         }
         case kLowPass:
         case kHighPass:
+#if ZL_ENABLE_FILTER_SCALED_PASS
+        case kScaledLowPass:
+        case kScaledHighPass:
+#endif
         case kNotch:
         case kBandPass:
         case kAllPass:

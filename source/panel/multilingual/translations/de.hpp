@@ -14,20 +14,25 @@
 #include <array>
 
 namespace zlpanel::multilingual::de {
-    static constexpr std::array kTexts = {
-        "Loslassen: Band bypassen.",
-        "Drücken: Band solo schalten.",
-        "Filtertyp auswählen.",
-        "Filtersteilheit auswählen. Eine höhere Steilheit lässt die Frequenzgangkurve steiler abfallen.",
-        "Stereomodus auswählen.",
-        "Frequenz regeln.",
-        "Basis-Gain und Ziel-Gain regeln.",
-        "Gütefaktor (Q) regeln. Ein höherer Q-Wert verringert die Bandbreite.",
-        "Drücken: Spektraldynamikverhalten aktivieren.",
-        "Klicken: Band ausschalten.",
-
-        "Loslassen: Spektraldynamikbearbeitung bypassen.",
-        "Drücken: Spektraldynamik-Delta-Signal ausgeben.",
+    inline constexpr std::array kTexts = {
+        // band basic controls
+        "Aktiviert/deaktiviert den Band-Bypass.",
+        "Aktiviert/deaktiviert das Solo-Abhören für dieses Band.",
+        "Wählt den Filtertyp aus.",
+        "Wählt die Filterflanke aus. Eine höhere Flankensteilheit erzeugt eine steilere Frequenzgangkurve.",
+        "Wählt den Stereo-Kanalmodus aus.",
+        "Regelt die Mitten- oder Grenzfrequenz.",
+        "Regelt die Grundverstärkung und die dynamische Zielverstärkung.",
+        "Regelt den Gütefaktor (Q). Ein höherer Q-Wert verringert die Bandbreite.",
+        "Aktiviert/deaktiviert das dynamische EQ-Verhalten für dieses Band.",
+        "Schaltet dieses Band aus.",
+        "Wählt das vorherige Band aus.",
+        "Wählt das nächste Band aus.",
+        "Aktiviert/deaktiviert die Pass-Skalierung für Tiefpass- und Hochpassfilter.",
+        "Regelt die Amplitudenskalierung des Passfilters.",
+        // band dynamic controls
+        "Aktiviert/deaktiviert den Bypass der Dynamikbearbeitung für dieses Band.",
+        "Schaltet die Ausgabe des Spektraldynamik-Delta-Signals um.",
         "Spektraldynamikmodus auswählen.",
         "Dynamikbearbeitung nutzt einen statischen Schwellenwert.",
         "Dynamikbearbeitung nutzt einen dynamischen Schwellenwert, basierend auf der Band-Sidechain-Lautheit.",
@@ -35,13 +40,23 @@ namespace zlpanel::multilingual::de {
         "Statischen Schwellenwert regeln.",
         "Relativen Band-Schwellenwert regeln.",
         "Relativen Gesamtschwellenwert regeln.",
-        "Knee-Breite der Dynamikbearbeitung regeln.",
-        "Attack-Zeit der Dynamikbearbeitung regeln.",
-        "Release-Zeit der Dynamikbearbeitung regeln.",
-
-        "Loslassen: Plugin bypassen.",
-        "Drücken: Externe Sidechain verwenden.\nLoslassen: Interne Sidechain verwenden.",
-
+        "Regelt die Kniebreite (Knee) der Dynamikbearbeitung.",
+        "Regelt die Attack-Zeit der Dynamikbearbeitung.",
+        "Regelt die Release-Zeit der Dynamikbearbeitung.",
+        // top controls
+        "Blendet das Bedienfeld für UI-Einstellungen ein/aus.",
+        "Blendet den Preset-Browser ein/aus.",
+        "Blendet das Bedienfeld für Analyzer-Einstellungen ein/aus.",
+        "Blendet das Bedienfeld für Ausgangseinstellungen ein/aus.",
+        "Aktiviert/deaktiviert den Plugin-Bypass.",
+        "Aktiviert/deaktiviert den externen Side-Chain-Eingang.",
+        // preset browser
+        "Öffnet den Preset-Ordner im Dateimanager des Systems.",
+        "Löscht die ausgewählte Preset-Gruppe.",
+        "Löscht das ausgewählte Preset.",
+        "Schließt den Preset-Browser.",
+        // spectrum controls
+        "Blendet die Einstellungen zur Spektralverarbeitung ein oder aus.",
         "Auflösung der Spektralverarbeitung auswählen.",
         "Glättungstyp der Spektral-Sidechain auswählen.",
         "Glättungswert der Spektral-Sidechain auswählen.",
@@ -49,23 +64,30 @@ namespace zlpanel::multilingual::de {
         "Attack-Skew der Spektral-Sidechain regeln. Ein höherer Skew bewirkt einen schnelleren Attack bei hohen Frequenzen.",
         "Release-Skew der Spektral-Sidechain regeln. Ein höherer Skew bewirkt einen schnelleren Release bei hohen Frequenzen.",
         "Spektralgate der relativen Lautheit regeln.",
-
-        "Zusätzlichen Ausgangsgain regeln.",
-        "Skalierung von Basis- und Ziel-Gain aller Filter regeln.",
-        "Drücken: Statische Gain-Kompensation (SGC) aktivieren. SGC ist ungenau, beeinflusst jedoch nicht die Dynamik.",
-        "Drücken: Integrierte Lautheit von Ein- und Ausgangssignal messen.\nLoslassen: Ausgangsgain auf die Differenz der beiden Lautheitswerte aktualisieren.",
-
-        "Drücken: Spektrumanalysator für Eingangssignal aktivieren.",
-        "Drücken: Spektrumanalysator für Ausgangssignal aktivieren.",
-        "Drücken: Spektrumanalysator für Sidechain-Signal aktivieren.",
-        "Abfallgeschwindigkeit der Spektrumanalysatoren auswählen.",
-        "Tilt-Neigung der Spektrumanalysatoren auswählen.",
-        "Glättungswert der Spektrumanalysatoren auswählen.",
-        "Glättungstyp der Spektrumanalysatoren auswählen.",
-        "Drücken: Einfrierfunktion aktivieren. Bewege die Maus über den Analysator, um das Spektrum einzufrieren.",
-        "Drücken: Kollisionserkennung aktivieren.",
-        "Stärke der Kollisionserkennung regeln.",
-
-        "Doppelklick: UI-Einstellungen öffnen.",
+        // output controls
+        "Regelt die zusätzliche Ausgangsverstärkung.",
+        "Regelt die Gesamtskalierung der Grund- und Zielverstärkung aller Filter.",
+        "Aktiviert/deaktiviert die statische Gain-Kompensation (SGC). SGC ist näherungsweise, beeinflusst aber nicht die Dynamik.",
+        "Aktiviert/deaktiviert die Lautheitsanpassung. Beim Aktivieren wird die Ein- und Ausgangslautheit gemessen; beim Deaktivieren wird die Ausgangsverstärkung auf deren Differenz gesetzt.",
+        // analyzer controls
+        "Blendet das Eingangssignal-Spektrum ein/aus.",
+        "Blendet das Ausgangssignal-Spektrum ein/aus.",
+        "Blendet das Side-Chain-Signal-Spektrum ein/aus.",
+        "Wählt die Abklinggeschwindigkeit des Spektrumanalysators aus.",
+        "Wählt die Neigung (Tilt) des Spektrumanalysators aus.",
+        "Wählt die Frequenzglättungsbreite des Spektrumanalysators aus.",
+        "Wählt den Modus der Frequenzglättung aus.\nOCT: konstante Oktavbruchteil-Glättung.\nERB: Glättung nach äquivalenter Rechteckbandbreite.",
+        "Aktiviert/deaktiviert das Einfrieren des Spektrums beim Überfahren des Analyzers mit dem Mauszeiger.",
+        "Wählt den vom Spektrumanalysator angezeigten Stereo-Kanalmodus aus.",
+        "Aktiviert/deaktiviert die Erkennung von Frequenzkollisionen.",
+        "Regelt die Stärke der Kollisionserkennung.",
+        "Blendet die numerische Wertanzeige ein/aus.",
+        "Blendet das Pegelmesser-Bedienfeld ein/aus.",
+        // curve scale & piano roll
+        "Wählt den Dezibel-Anzeigebereich für die EQ-Frequenzgangkurve aus.",
+        "Wählt die obere Dezibel-Grenze für die Analyzer-Anzeige aus.",
+        "Wählt die minimale Dezibel-Untergrenze für die Analyzer-Anzeige aus.",
+        "Blendet die Piano-Roll ein/aus.",
+        " "
     };
 }

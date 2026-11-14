@@ -66,7 +66,7 @@ namespace zlpanel {
             icons.emplace_back(
                 juce::Drawable::createFromImageData(BinaryData::side_svg, BinaryData::side_svgSize));
             return icons;
-        }(), base.gui, "", {}),
+        }(), base.gui, tooltip_helper.getToolTipText(multilingual::kFFTStereo), {}),
         lr_attachment_(lr_box_.getBox(), p.parameters_NA_,
                        zlstate::PFFTStereo::kID, updater_),
         collision_button_(base.gui,
@@ -82,12 +82,12 @@ namespace zlpanel {
                          zlstate::PCollisionStrength::kID, updater_),
         value_button_(base.gui,
                       juce::Drawable::createFromImageData(BinaryData::dline_123_svg, BinaryData::dline_123_svgSize),
-                      true),
+                      true, tooltip_helper.getToolTipText(multilingual::kFFTValue)),
         value_attach_(value_button_.getButton(), p.parameters_NA_,
                       zlstate::PValueDisplayON::kID, updater_),
         meter_button_(base.gui,
                       juce::Drawable::createFromImageData(BinaryData::dline_meter_svg, BinaryData::dline_meter_svgSize),
-                      true),
+                      true, tooltip_helper.getToolTipText(multilingual::kFFTMeter)),
         meter_attach_(meter_button_.getButton(), p.parameters_NA_,
                       zlstate::PMeterDisplayON::kID, updater_) {
 

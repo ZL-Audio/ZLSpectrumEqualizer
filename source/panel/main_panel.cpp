@@ -16,17 +16,12 @@ namespace zlpanel {
         refresh_handler_(zlstate::PTargetRefreshSpeed::kRates[base_.getRefreshRateID()]),
         curve_panel_(p, base, tooltip_helper_),
         control_panel_(p, base, tooltip_helper_),
-        preset_browser_(p, base),
+        preset_browser_(p, base, tooltip_helper_),
         ui_setting_panel_(p, base_),
-        tooltip_laf_(base_.gui) {
+        tooltip_target_(),
+        tooltip_laf_(base_.gui, zlgui::tooltip::TooltipLookAndFeel::Style::kShadowed),
+        tooltip_window_(base_.gui, &tooltip_target_) {
         juce::ignoreUnused(base_);
-
-        if (base_.gui.getTooltipLangID() != 0) {
-            tooltip_window_ = std::make_unique<zlgui::tooltip::TooltipWindow>(&curve_panel_);
-            tooltip_window_->setLookAndFeel(&tooltip_laf_);
-            tooltip_window_->setOpaque(false);
-            tooltip_window_->setBufferedToImage(true);
-        }
 
         base_.getPanelValueTree().addListener(this);
 
@@ -35,7 +30,12 @@ namespace zlpanel {
         addChildComponent(ui_setting_panel_);
         preset_browser_.setBufferedToImage(true);
         addChildComponent(preset_browser_);
-        preset_browser_.toFront(false);
+        tooltip_target_.setInterceptsMouseClicks(false, false);
+        addAndMakeVisible(tooltip_target_);
+
+        tooltip_window_.setLookAndFeel(&tooltip_laf_);
+        tooltip_window_.setOpaque(false);
+        tooltip_window_.setBufferedToImage(true);
     }
 
     MainPanel::~MainPanel() {
@@ -61,6 +61,8 @@ namespace zlpanel {
             : std::clamp(base_.gui.getStaticFontSize(), min_font_size, max_font_size);
         base_.gui.setFontSize(font_size);
         const auto main_bound = bound;
+        const auto top_height = getTopPanelHeight(font_size);
+        tooltip_target_.setBounds(0, top_height, bound.getWidth(), bound.getHeight() - top_height);
         // set control panel bound
         auto control_bound = bound;
         control_bound.removeFromBottom(getBottomPadding(base_.gui.getFontSize()));

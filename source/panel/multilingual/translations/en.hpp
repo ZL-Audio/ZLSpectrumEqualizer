@@ -14,20 +14,25 @@
 #include <array>
 
 namespace zlpanel::multilingual::en {
-    static constexpr std::array kTexts = {
-        "Release: bypass the band.",
-        "Press: solo the band.",
-        "Choose the filter type.",
-        "Choose the filter slope. A higher slope makes the filter’s response curve change more steeply.",
-        "Choose the stereo mode.",
-        "Control the frequency.",
-        "Control the base gain and the target gain.",
-        "Control the quality factor. A larger Q value makes the bandwidth narrower.",
-        "Press: turn on the spectrum dynamic behavior.",
-        "Click: turn off the band.",
-
-        "Release: bypass the spectrum dynamic processing.",
-        "Press: output the spectrum dynamic delta signal.",
+    inline constexpr std::array kTexts = {
+        // band basic controls
+        "Toggles band bypass.",
+        "Toggles band solo audition.",
+        "Selects the filter type.",
+        "Selects the filter slope. A higher slope produces a steeper frequency response curve.",
+        "Selects the stereo channel mode.",
+        "Adjusts the center or cutoff frequency.",
+        "Adjusts the base gain and dynamic target gain.",
+        "Adjusts the Q factor. A higher Q narrows the bandwidth.",
+        "Toggles dynamic EQ behavior for this band.",
+        "Turns off this band.",
+        "Selects the previous band.",
+        "Selects the next band.",
+        "Toggles pass scaling for Low Pass and High Pass filters.",
+        "Adjusts the magnitude scale of the pass filter.",
+        // band dynamic controls
+        "Toggles dynamic processing bypass for this band.",
+        "Toggles output of the spectrum dynamic delta signal.",
         "Choose the spectrum dynamic mode.",
         "Dynamic processing uses a static threshold.",
         "Dynamic processing uses a dynamic threshold related to band side-chain loudness",
@@ -35,13 +40,23 @@ namespace zlpanel::multilingual::en {
         "Control the static threshold.",
         "Control the band relative threshold.",
         "Control the total relative threshold.",
-        "Control the knee width of the dynamic processing.",
-        "Control the attack time of the dynamic processing.",
-        "Control the release time of the dynamic processing.",
-
-        "Release: bypass the plugin.",
-        "Press: use the external side-chain.\nRelease: use the internal side-chain.",
-
+        "Adjusts the dynamic processing knee width.",
+        "Adjusts the dynamic processing attack time.",
+        "Adjusts the dynamic processing release time.",
+        // top controls
+        "Toggles the UI settings panel.",
+        "Toggles the preset browser.",
+        "Toggles the analyzer settings panel.",
+        "Toggles the output settings panel.",
+        "Toggles plugin bypass.",
+        "Toggles the external side-chain input.",
+        // preset browser
+        "Opens the presets folder in the system file manager.",
+        "Deletes the selected preset group.",
+        "Deletes the selected preset.",
+        "Closes the preset browser.",
+        // spectrum controls
+        "Toggles the spectrum processing settings panel.",
         "Choose the spectrum processing resolution.",
         "Choose the spectrum processing side-chain smooth type.",
         "Choose the spectrum processing side-chain smooth value.",
@@ -49,23 +64,30 @@ namespace zlpanel::multilingual::en {
         "Control the spectrum processing side-chain attack skew. A higher skew makes the attack faster at high frequency.",
         "Control the spectrum processing side-chain release skew. A higher skew makes the release faster at high frequency.",
         "Control the spectrum gate of relative loudness.",
-
-        "Control the additional output gain.",
-        "Control the scale of all filters’ base & target gain.",
-        "Press: turn on Static Gain Compensation. SGC is inaccurate, but does not affect dynamics.",
-        "Press: start to measure the integrated loudness of the input signal and the output signal\nRelease: update the Output Gain to the difference between the two loudness values.",
-
-        "Press: turn on input signal spectrum analyzer",
-        "Press: turn on output signal spectrum analyzer",
-        "Press: turn on side-chain signal spectrum analyzer",
-        "Choose the decay speed of spectrum analyzers.",
-        "Choose the tilt slope of spectrum analyzers.",
-        "Choose the smooth value of spectrum analyzers.",
-        "Choose the smooth type of spectrum analyzers.",
-        "Press: turn on the freezing feature. Hover the mouse over the analyzer to freeze the spectrum.",
-        "Press: turn on the collision detection.",
-        "Control the collision detection strength.",
-
-        "Double-click: open the UI settings.",
+        // output controls
+        "Adjusts the additional output gain.",
+        "Adjusts the overall scale of all filters' base and target gain.",
+        "Toggles Static Gain Compensation (SGC). SGC is approximate, but does not affect dynamics.",
+        "Toggles loudness gain matching. Enabling measures input and output loudness; disabling sets Output Gain to their difference.",
+        // analyzer controls
+        "Toggles display of the input signal spectrum.",
+        "Toggles display of the output signal spectrum.",
+        "Toggles display of the side-chain signal spectrum.",
+        "Selects the decay speed of the spectrum analyzer.",
+        "Selects the tilt slope of the spectrum analyzer.",
+        "Selects the frequency smoothing width of the spectrum analyzer.",
+        "Selects the frequency smoothing mode.\nOCT: constant fractional-octave smoothing.\nERB: equivalent rectangular bandwidth smoothing.",
+        "Toggles spectrum freezing when hovering the pointer over the analyzer.",
+        "Selects the stereo channel mode displayed by the spectrum analyzer.",
+        "Toggles frequency collision detection.",
+        "Adjusts the collision detection strength.",
+        "Toggles visibility of the numeric value readout.",
+        "Toggles visibility of the level meter panel.",
+        // curve scale & piano roll
+        "Selects the decibel display range for the EQ response curve.",
+        "Selects the upper decibel ceiling for the spectrum analyzer display.",
+        "Selects the minimum decibel floor for the spectrum analyzer display.",
+        "Toggles visibility of the piano roll.",
+        " "
     };
 }

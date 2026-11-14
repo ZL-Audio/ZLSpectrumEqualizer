@@ -1324,6 +1324,15 @@ namespace zlp {
             const auto base_changed = to_update_bases_[band] || empty_base_changed;
             if (base_changed || (target_changed && dynamic_on_[band])) {
                 auto paras = getEffectiveFilterParameters(emptys_[band], sample_rate_);
+                if (pass_scale_on_[band].load(std::memory_order::relaxed)) {
+                    auto& filter_type = paras.filter_type;
+                    if (filter_type == zldsp::filter::kLowPass) {
+                        filter_type = zldsp::filter::kScaledLowPass;
+                    } else if (filter_type == zldsp::filter::kHighPass) {
+                        filter_type = zldsp::filter::kScaledHighPass;
+                    }
+                }
+                ideal_.setScale(scales_[band].load(std::memory_order::relaxed));
                 if (base_changed) {
                     if (c_solo_on_ && c_solo_idx_ == band) {
                         updateSoloFilter<false>(paras);
@@ -1548,12 +1557,14 @@ namespace zlp {
             break;
         }
         case zldsp::filter::kLowShelf:
+        case zldsp::filter::kScaledHighPass:
         case zldsp::filter::kHighPass: {
             paras.q = std::sqrt(2.0f) * 0.5f;
             paras.filter_type = zldsp::filter::kLowPass;
             break;
         }
         case zldsp::filter::kHighShelf:
+        case zldsp::filter::kScaledLowPass:
         case zldsp::filter::kLowPass: {
             paras.q = std::sqrt(2.0f) * 0.5f;
             paras.filter_type = zldsp::filter::kHighPass;

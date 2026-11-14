@@ -15,12 +15,13 @@ namespace zlpanel {
                        const multilingual::TooltipHelper& tooltip_helper) :
         p_ref_(p), base_(base), updater_(),
         logo_panel_(p, base, tooltip_helper),
-        output_label_(p, base),
-        analyzer_label_(p, base),
+        output_label_(p, base, tooltip_helper),
+        analyzer_label_(p, base, tooltip_helper),
         spec_setting_label_(p, base, tooltip_helper),
         preset_button_(base.gui,
                        juce::Drawable::createFromImageData(
-                           BinaryData::collections_bookmark_svg, BinaryData::collections_bookmark_svgSize)),
+                           BinaryData::collections_bookmark_svg, BinaryData::collections_bookmark_svgSize),
+                       false, tooltip_helper.getToolTipText(multilingual::kPresetOpen)),
         bypass_button_(base.gui,
                        juce::Drawable::createFromImageData(BinaryData::bypass_svg, BinaryData::bypass_svgSize),
                        true, tooltip_helper.getToolTipText(multilingual::kBypass)),

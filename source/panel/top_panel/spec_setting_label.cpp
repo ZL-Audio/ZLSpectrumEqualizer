@@ -28,7 +28,7 @@ namespace zlpanel {
                        zlp::PSpecSmooth::kID, updater_),
         setting_button_(base.gui,
                         juce::Drawable::createFromImageData(BinaryData::settings_svg, BinaryData::settings_svgSize),
-                        true),
+                        true, tooltip_helper.getToolTipText(multilingual::kSpecOpen)),
         setting_attach_(setting_button_.getButton(), p.parameters_NA_,
                         zlstate::PSpecSettingOpen::kID, updater_) {
         const auto popup_option = juce::PopupMenu::Options().withPreferredPopupDirection(

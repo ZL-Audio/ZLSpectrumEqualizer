@@ -11,6 +11,7 @@
 
 namespace zlpanel::multilingual {
     enum TooltipLabel {
+        // band basic controls
         kBandBypass,
         kBandSolo,
         kBandType,
@@ -21,7 +22,12 @@ namespace zlpanel::multilingual {
         kBandQ,
         kBandDynamic,
         kBandOff,
+        kBandPrev,
+        kBandNext,
+        kBandPassScaleOn,
+        kBandPassScale,
 
+        // band dynamic controls
         kBandDynamicBypass,
         kBandDynamicDelta,
         kBandDynamicMode,
@@ -35,9 +41,22 @@ namespace zlpanel::multilingual {
         kBandDynamicAttack,
         kBandDynamicRelease,
 
+        // top controls
+        kPluginLogo,
+        kPresetOpen,
+        kAnalyzerOpen,
+        kOutputOpen,
         kBypass,
         kExternalSideChain,
 
+        // preset browser
+        kPresetFolder,
+        kPresetGroupDelete,
+        kPresetDelete,
+        kPresetClose,
+
+        // spectrum controls
+        kSpecOpen,
         kSpecResolution,
         kSpecSmoothType,
         kSpecSmoothValue,
@@ -46,11 +65,13 @@ namespace zlpanel::multilingual {
         kSpecReleaseSkew,
         kSpecGate,
 
+        // output controls
         kOutputGain,
         kGainScale,
         kStaticGC,
         kLoudnessGC,
 
+        // analyzer controls
         kFFTPre,
         kFFTPost,
         kFFTSide,
@@ -59,9 +80,18 @@ namespace zlpanel::multilingual {
         kFFTSmoothValue,
         kFFTSmoothType,
         kFFTFreeze,
+        kFFTStereo,
         kFFTCollision,
         kFFTCollisionStrength,
+        kFFTValue,
+        kFFTMeter,
 
-        kPluginLogo,
+        // curve scale & piano roll
+        kScaleEQMaxDB,
+        kScaleFFTTopDB,
+        kScaleFFTMinDB,
+        kPianoRoll,
+
+        kLabelNum
     };
 }

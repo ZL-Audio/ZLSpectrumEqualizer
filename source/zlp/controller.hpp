@@ -46,6 +46,8 @@ namespace zlp {
     }
 
     class Controller final : private juce::AsyncUpdater {
+        static_assert(ZL_ENABLE_FILTER_SCALED_PASS != 0, "zlp::Controller requires ZL_ENABLE_FILTER_SCALED_PASS to be enabled.");
+
     public:
         static constexpr size_t kFilterSize = 16;
 
@@ -63,6 +65,25 @@ namespace zlp {
         void setFilterStatus(const size_t idx, const FilterStatus filter_status) {
             a_filter_status_[idx].store(filter_status, std::memory_order::relaxed);
             to_update_filter_status_.signal();
+            to_update_.signal();
+        }
+
+        void setPassScaleON(const size_t idx, const bool pass_scale_on) {
+            pass_scale_on_[idx].store(pass_scale_on, std::memory_order::relaxed);
+            to_update_empty_bases_[idx].signal();
+            to_update_spec_response_.signal();
+            to_update_.signal();
+        }
+
+        /**
+         * set the magnitude scale of a band's scaled low/high-pass filter
+         * @param idx the band index
+         * @param scale a finite magnitude scale in [0, 1]
+         */
+        void setScale(const size_t idx, const double scale) {
+            scales_[idx].store(scale, std::memory_order::relaxed);
+            to_update_empty_bases_[idx].signal();
+            to_update_spec_response_.signal();
             to_update_.signal();
         }
 
@@ -327,6 +348,8 @@ namespace zlp {
         // empty filters for holding atomic parameters
         std::array<zldsp::filter::Empty, kBandNum> emptys_{};
         std::array<zlchore::thread::Notifier, kBandNum> to_update_empty_bases_{};
+        std::array<std::atomic<bool>, kBandNum> pass_scale_on_{};
+        std::array<std::atomic<double>, kBandNum> scales_ = make_array_of<std::atomic<double>, kBandNum>(1.0);
         std::array<std::atomic<float>, kBandNum> empty_target_gains_{};
         std::array<zlchore::thread::Notifier, kBandNum> to_update_empty_targets_{};
         // filter dynamic flags

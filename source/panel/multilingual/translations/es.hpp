@@ -14,20 +14,25 @@
 #include <array>
 
 namespace zlpanel::multilingual::es {
-    static constexpr std::array kTexts = {
-        "Soltar: omitir la banda.",
-        "Pulsar: solo de la banda.",
-        "Seleccionar el tipo de filtro.",
-        "Seleccionar la pendiente del filtro. Una pendiente más alta hace que la curva de respuesta del filtro sea más pronunciada.",
-        "Seleccionar el modo estéreo.",
-        "Ajustar la frecuencia.",
-        "Ajustar la ganancia base y la ganancia objetivo.",
-        "Ajustar el factor de calidad. Un valor de Q mayor estrecha el ancho de banda.",
-        "Pulsar: activar el comportamiento dinámico espectral.",
-        "Clic: desactivar la banda.",
-
-        "Soltar: omitir el procesamiento dinámico espectral.",
-        "Pulsar: emitir la señal delta dinámica espectral.",
+    inline constexpr std::array kTexts = {
+        // band basic controls
+        "Activa/desactiva el bypass de la banda.",
+        "Activa/desactiva la escucha en solo de la banda.",
+        "Selecciona el tipo de filtro.",
+        "Selecciona la pendiente del filtro. Una pendiente mayor produce una curva de respuesta en frecuencia más abrupta.",
+        "Selecciona el modo de canal estéreo.",
+        "Ajusta la frecuencia central o de corte.",
+        "Ajusta la ganancia base y la ganancia objetivo dinámica.",
+        "Ajusta el factor Q. Un valor Q mayor estrecha el ancho de banda.",
+        "Activa/desactiva el comportamiento dinámico de ecualización para esta banda.",
+        "Desactiva esta banda.",
+        "Selecciona la banda anterior.",
+        "Selecciona la banda siguiente.",
+        "Activa/desactiva el escalado de paso para los filtros paso bajo y paso alto.",
+        "Ajusta la escala de magnitud del filtro de paso.",
+        // band dynamic controls
+        "Activa/desactiva el bypass del procesamiento dinámico para esta banda.",
+        "Activa o desactiva la salida de la señal delta de la dinámica espectral.",
         "Seleccionar el modo dinámico espectral.",
         "El procesamiento dinámico utiliza un umbral estático.",
         "El procesamiento dinámico utiliza un umbral dinámico relacionado con la sonoridad del sidechain de la banda.",
@@ -35,13 +40,23 @@ namespace zlpanel::multilingual::es {
         "Ajustar el umbral estático.",
         "Ajustar el umbral relativo de la banda.",
         "Ajustar el umbral relativo total.",
-        "Ajustar el ancho de la rodilla (knee) del procesamiento dinámico.",
-        "Ajustar el tiempo de ataque del procesamiento dinámico.",
-        "Ajustar el tiempo de liberación del procesamiento dinámico.",
-
-        "Soltar: omitir el plugin.",
-        "Pulsar: usar el sidechain externo.\nSoltar: usar el sidechain interno.",
-
+        "Ajusta la anchura del codo (Knee) del procesamiento dinámico.",
+        "Ajusta el tiempo de ataque del procesamiento dinámico.",
+        "Ajusta el tiempo de relajación del procesamiento dinámico.",
+        // top controls
+        "Muestra/oculta el panel de ajustes de la interfaz.",
+        "Muestra/oculta el explorador de preajustes.",
+        "Muestra/oculta el panel de ajustes del analizador.",
+        "Muestra/oculta el panel de ajustes de salida.",
+        "Activa/desactiva el bypass del plugin.",
+        "Activa/desactiva la entrada de side-chain externo.",
+        // preset browser
+        "Abre la carpeta de preajustes en el administrador de archivos del sistema.",
+        "Elimina el grupo de preajustes seleccionado.",
+        "Elimina el preajuste seleccionado.",
+        "Cierra el explorador de preajustes.",
+        // spectrum controls
+        "Muestra u oculta los ajustes del procesamiento espectral.",
         "Seleccionar la resolución del procesamiento espectral.",
         "Seleccionar el tipo de suavizado del sidechain en el procesamiento espectral.",
         "Seleccionar el valor de suavizado del sidechain en el procesamiento espectral.",
@@ -49,23 +64,30 @@ namespace zlpanel::multilingual::es {
         "Ajustar el sesgo de ataque del sidechain en el procesamiento espectral. Un sesgo mayor acelera el ataque en altas frecuencias.",
         "Ajustar el sesgo de liberación del sidechain en el procesamiento espectral. Un sesgo mayor acelera la liberación en altas frecuencias.",
         "Ajustar la puerta espectral de sonoridad relativa.",
-
-        "Ajustar la ganancia de salida adicional.",
-        "Ajustar la escala de la ganancia base y objetivo de todos los filtros.",
-        "Pulsar: activar la Compensación de Ganancia Estática. La SGC es imprecisa, pero no afecta a la dinámica.",
-        "Pulsar: comenzar a medir la sonoridad integrada de la señal de entrada y de salida.\nSoltar: actualizar la ganancia de salida con la diferencia entre ambos valores de sonoridad.",
-
-        "Pulsar: activar el analizador de espectro de la señal de entrada.",
-        "Pulsar: activar el analizador de espectro de la señal de salida.",
-        "Pulsar: activar el analizador de espectro de la señal de sidechain.",
-        "Seleccionar la velocidad de caída (decay) de los analizadores de espectro.",
-        "Seleccionar la pendiente de inclinación (tilt) de los analizadores de espectro.",
-        "Seleccionar el valor de suavizado de los analizadores de espectro.",
-        "Seleccionar el tipo de suavizado de los analizadores de espectro.",
-        "Pulsar: activar la función de congelación. Pase el ratón sobre el analizador para congelar el espectro.",
-        "Pulsar: activar la detección de colisiones.",
-        "Ajustar la intensidad de la detección de colisiones.",
-
-        "Doble clic: abrir la configuración de la interfaz.",
+        // output controls
+        "Ajusta la ganancia de salida adicional.",
+        "Ajusta la escala general de la ganancia base y objetivo de todos los filtros.",
+        "Activa/desactiva la Compensación de Ganancia Estática (SGC). SGC es aproximada, pero no afecta a la dinámica.",
+        "Activa/desactiva la igualación de ganancia por sonoridad. Al activarla mide la sonoridad de entrada y salida; al desactivarla ajusta la ganancia de salida según su diferencia.",
+        // analyzer controls
+        "Muestra/oculta el espectro de la señal de entrada.",
+        "Muestra/oculta el espectro de la señal de salida.",
+        "Muestra/oculta el espectro de la señal de side-chain.",
+        "Selecciona la velocidad de decaimiento del analizador de espectro.",
+        "Selecciona la pendiente de inclinación (tilt) del analizador de espectro.",
+        "Selecciona el ancho de suavizado frecuencial del analizador de espectro.",
+        "Selecciona el modo de suavizado frecuencial.\nOCT: suavizado por fracción de octava constante.\nERB: suavizado por ancho de banda rectangular equivalente.",
+        "Activa/desactiva la congelación del espectro al pasar el puntero sobre el analizador.",
+        "Selecciona el modo de canal estéreo mostrado por el analizador de espectro.",
+        "Activa/desactiva la detección de colisiones de frecuencia.",
+        "Ajusta la intensidad de la detección de colisiones.",
+        "Muestra/oculta la lectura numérica de valores.",
+        "Muestra/oculta el panel de medidores de nivel.",
+        // curve scale & piano roll
+        "Selecciona el rango de visualización en decibelios para la curva de respuesta del ecualizador.",
+        "Selecciona el límite superior en decibelios para la visualización del analizador de espectro.",
+        "Selecciona el nivel mínimo en decibelios para la visualización del analizador de espectro.",
+        "Muestra/oculta el piano roll.",
+        " "
     };
 }

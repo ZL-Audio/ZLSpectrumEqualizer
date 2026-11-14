@@ -36,7 +36,8 @@ namespace zlp {
 
         static constexpr std::array kIDs{
             PFilterStatus::kID, PFilterType::kID, POrder::kID, PLRMode::kID,
-            PFreq::kID, PGain::kID, PQ::kID, PTargetGain::kID
+            PFreq::kID, PGain::kID, PQ::kID, PPassScaleON::kID, PPassScaleV::kID,
+            PTargetGain::kID
         };
 
         void parameterChanged(const juce::String& parameter_ID, float value) override;
