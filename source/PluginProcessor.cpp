@@ -99,7 +99,6 @@ void PluginProcessor::prepareToPlay(const double sample_rate, const int samples_
     sample_rate_.store(sample_rate, std::memory_order::relaxed);
 
     dummy_main_.resize(static_cast<size_t>(samples_per_block));
-    dummy_side_.resize(static_cast<size_t>(samples_per_block));
     const juce::PluginHostType hostType;
     update_channel_layout_per_call_ = hostType.isMaschine();
 
@@ -191,8 +190,14 @@ void PluginProcessor::updateChannelLayout() {
     if (main_bus == nullptr) {
         return;
     }
+    const bool aux_disabled = (aux_bus == nullptr || !aux_bus->isEnabled());
+    if (aux_disabled) {
+        pointers_[2] = nullptr;
+        pointers_[3] = nullptr;
+    }
     if (main_bus->getCurrentLayout() == juce::AudioChannelSet::mono()) {
-        if (aux_bus == nullptr || !aux_bus->isEnabled()) {
+        pointers_[1] = dummy_main_.data();
+        if (aux_disabled) {
             channel_layout_ = kMain1Aux0;
         } else if (aux_bus->getCurrentLayout() == juce::AudioChannelSet::mono()) {
             channel_layout_ = kMain1Aux1;
@@ -200,45 +205,13 @@ void PluginProcessor::updateChannelLayout() {
             channel_layout_ = kMain1Aux2;
         }
     } else if (main_bus->getCurrentLayout() == juce::AudioChannelSet::stereo()) {
-        if (aux_bus == nullptr || !aux_bus->isEnabled()) {
+        if (aux_disabled) {
             channel_layout_ = kMain2Aux0;
         } else if (aux_bus->getCurrentLayout() == juce::AudioChannelSet::mono()) {
             channel_layout_ = kMain2Aux1;
         } else if (aux_bus->getCurrentLayout() == juce::AudioChannelSet::stereo()) {
             channel_layout_ = kMain2Aux2;
         }
-    }
-    switch (channel_layout_) {
-    case kMain1Aux0: {
-        pointers_[1] = dummy_main_.data();
-        pointers_[2] = nullptr;
-        pointers_[3] = nullptr;
-        break;
-    }
-    case kMain1Aux1: {
-        pointers_[1] = dummy_main_.data();
-        pointers_[3] = dummy_side_.data();
-        break;
-    }
-    case kMain1Aux2: {
-        pointers_[1] = dummy_main_.data();
-        break;
-    }
-    case kMain2Aux0: {
-        pointers_[2] = nullptr;
-        pointers_[3] = nullptr;
-        break;
-    }
-    case kMain2Aux1: {
-        pointers_[3] = dummy_side_.data();
-        break;
-    }
-    case kMain2Aux2: {
-        break;
-    }
-    case kInvalid: {
-        return;
-    }
     }
 }
 
@@ -266,7 +239,7 @@ void PluginProcessor::processBlockInternal(juce::AudioBuffer<float>& buffer, con
         zldsp::vector::copy(pointers_[1], pointers_[0], num_samples);
         if (ext_side) {
             pointers_[2] = buffer.getWritePointer(1);
-            zldsp::vector::copy(pointers_[3], pointers_[2], num_samples);
+            pointers_[3] = pointers_[2];
         }
 
         controller_.process(pointers_, num_samples, bypass);
@@ -295,7 +268,7 @@ void PluginProcessor::processBlockInternal(juce::AudioBuffer<float>& buffer, con
         pointers_[1] = buffer.getWritePointer(1);
         if (ext_side) {
             pointers_[2] = buffer.getWritePointer(2);
-            zldsp::vector::copy(pointers_[3], pointers_[2], num_samples);
+            pointers_[3] = pointers_[2];
         }
 
         controller_.process(pointers_, num_samples, bypass);

@@ -28,13 +28,9 @@ public:
 
     void releaseResources() override;
 
-    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
-
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     void processBlockBypassed(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
-
-    juce::AudioProcessorEditor* createEditor() override;
 
     bool hasEditor() const override;
 
@@ -72,6 +68,9 @@ public:
         return sample_rate_.load(std::memory_order::relaxed);
     }
 
+protected:
+    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
+
 private:
     zlp::Controller controller_;
     std::array<std::unique_ptr<zlp::FilterAttach>, zlp::kBandNum> filter_attachments_;
@@ -82,7 +81,6 @@ private:
     std::atomic<float>& a_bypass_;
 
     std::vector<float> dummy_main_;
-    std::vector<float> dummy_side_;
     std::array<float*, 4> pointers_{nullptr};
 
     enum ChannelLayout {
@@ -98,6 +96,8 @@ private:
     void updateChannelLayout();
 
     void processBlockInternal(juce::AudioBuffer<float>& buffer, bool bypass);
+
+    juce::AudioProcessorEditor* createEditor() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };
