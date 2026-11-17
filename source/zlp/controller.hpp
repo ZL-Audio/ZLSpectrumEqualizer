@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <bitset>
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "zlp_definitions.hpp"
@@ -171,13 +172,13 @@ namespace zlp {
 
         void setSpecFollowerSkewAttack(const float skew) {
             a_spec_skew_attack_.store(skew, std::memory_order::relaxed);
-            to_update_spec_skew_.signal();
+            to_update_spec_skew_attack_.signal();
             to_update_.signal();
         }
 
         void setSpecFollowerSkewRelease(const float skew) {
             a_spec_skew_release_.store(skew, std::memory_order::relaxed);
-            to_update_spec_skew_.signal();
+            to_update_spec_skew_release_.signal();
             to_update_.signal();
         }
 
@@ -380,7 +381,8 @@ namespace zlp {
         std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_release_{};
         std::atomic<float> a_spec_skew_attack_{0.9f};
         std::atomic<float> a_spec_skew_release_{0.2f};
-        zlchore::thread::Notifier to_update_spec_skew_{false};
+        zlchore::thread::Notifier to_update_spec_skew_attack_{false}, to_update_spec_skew_release_{false};
+        std::bitset<kBandNum> stale_attack_tables_{}, stale_release_tables_{};
 
         std::array<std::atomic<float>, kBandNum> a_spec_threshold_abs_{};
         std::array<std::atomic<float>, kBandNum> a_spec_threshold_band_{};

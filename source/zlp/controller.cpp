@@ -1197,10 +1197,9 @@ namespace zlp {
         to_update_spec_smooth_.signal();
         to_update_spec_tilt_.signal();
         to_update_spec_gate_.signal();
-        to_update_spec_skew_.signal();
+        stale_attack_tables_.set();
+        stale_release_tables_.set();
         for (size_t band = 0; band < kBandNum; ++band) {
-            to_update_spec_attack_[band].signal();
-            to_update_spec_release_[band].signal();
             to_update_spec_threshold_[band].signal();
             to_update_spec_knee_[band].signal();
         }
@@ -1282,17 +1281,29 @@ namespace zlp {
     }
 
     void Controller::updateSpecFollower() {
-        const bool skew_changed = to_update_spec_skew_.check();
+        if (to_update_spec_skew_attack_.check()) {
+            stale_attack_tables_.set();
+        }
+        if (to_update_spec_skew_release_.check()) {
+            stale_release_tables_.set();
+        }
         const auto skew_attack = a_spec_skew_attack_.load(std::memory_order::relaxed) * 0.02f;
         const auto skew_release = a_spec_skew_release_.load(std::memory_order::relaxed) * 0.02f;
         for (const auto& band : on_bands_) {
-            if (skew_changed || to_update_spec_attack_[band].check()) {
+            if (!dynamic_on_[band]) {
+                continue;
+            }
+            const bool attack_changed = to_update_spec_attack_[band].check();
+            const bool release_changed = to_update_spec_release_[band].check();
+            if (attack_changed || stale_attack_tables_[band]) {
                 const auto attack = a_spec_attack_[band].load(std::memory_order::relaxed);
                 spec_follower_[band].updateAttack(attack, skew_attack, spec_follower_scaling_);
+                stale_attack_tables_.reset(band);
             }
-            if (skew_changed || to_update_spec_release_[band].check()) {
+            if (release_changed || stale_release_tables_[band]) {
                 const auto release = a_spec_release_[band].load(std::memory_order::relaxed);
                 spec_follower_[band].updateRelease(release, skew_release, spec_follower_scaling_);
+                stale_release_tables_.reset(band);
             }
         }
     }
