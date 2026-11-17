@@ -10,8 +10,12 @@
 #pragma once
 
 #include <algorithm>
-#include <numbers>
-#include "../filter/iir_filter/tdf/tdf.hpp"
+#include <array>
+#include <span>
+#include <vector>
+
+#include "../filter/filter_design/filter_design.hpp"
+#include "../filter/iir_filter/coeff/ivantsov_coeff.hpp"
 
 namespace zldsp::loudness {
     /**
@@ -30,57 +34,75 @@ namespace zldsp::loudness {
         }
 
         void prepare(const double sample_rate, const size_t num_channels) {
-            {
-                high_pass_.prepare(sample_rate, num_channels, 0);
-                high_pass_.setFilterType(filter::FilterType::kHighPass);
-                high_pass_.setOrder(2);
-                high_pass_.setFreq(38.13713296248405);
-                high_pass_.setQ(0.500242812458813);
-                high_pass_.updateCoeffs();
-            }
-            {
-                high_shelf_.prepare(sample_rate, num_channels, 0);
-                high_shelf_.setFilterType(filter::FilterType::kHighShelf);
-                high_shelf_.setOrder(2);
-                high_shelf_.setFreq(1500.6868667368922);
-                high_shelf_.setGain(3.9993623475151354);
-                high_shelf_.setQ(0.7096433028107384);
-                high_shelf_.updateCoeffs();
-            }
+            high_pass_ = designBiquad(filter::kHighPass, sample_rate, 38.13713296248405, 0.0, 0.500242812458813);
+            high_shelf_ = designBiquad(filter::kHighShelf, sample_rate, 1500.6868667368922,
+                                       3.9993623475151354, 0.7096433028107384);
             low_pass_enabled_ = use_low_pass_ && sample_rate > 40000.0;
             if (low_pass_enabled_) {
-                low_pass_.prepare(sample_rate, num_channels, 0);
-                low_pass_.setFilterType(filter::FilterType::kLowPass);
-                low_pass_.setOrder(2);
-                low_pass_.setFreq(std::min(22000.0, 0.49964 * sample_rate));
-                low_pass_.setQ(0.7071067811865476);
-                low_pass_.updateCoeffs();
+                low_pass_ = designBiquad(filter::kLowPass, sample_rate, std::min(22000.0, 0.49964 * sample_rate),
+                                         0.0, 0.7071067811865476);
             }
+            states_.assign(num_channels, ChannelState{});
         }
 
         void reset() {
-            high_pass_.reset();
-            high_shelf_.reset();
-            if (low_pass_enabled_) {
-                low_pass_.reset();
-            }
+            std::ranges::fill(states_, ChannelState{});
         }
 
         void process(std::span<FloatType*> buffer, const size_t num_samples) {
-            high_pass_.process(buffer, num_samples);
-            high_shelf_.process(buffer, num_samples);
             if (low_pass_enabled_) {
-                low_pass_.process(buffer, num_samples);
-            }
-            for (size_t chan = 0; chan < buffer.size(); chan++) {
-                zldsp::vector::multiply(buffer[chan], kBias, num_samples);
+                processSections<true>(buffer, num_samples);
+            } else {
+                processSections<false>(buffer, num_samples);
             }
         }
 
     private:
+        using Coefficients = std::array<double, 5>;
+
+        static Coefficients designBiquad(filter::FilterType type, double sample_rate, double freq, double gain,
+                                         double q) {
+            Coefficients coeffs{};
+            filter::FilterDesign::updateCoeffs<filter::IvantsovCoeff>(
+                type, 2, freq, sample_rate, gain, q, std::span{&coeffs, 1});
+            return coeffs;
+        }
+
+        struct BiquadState {
+            FloatType s1{}, s2{};
+
+            FloatType process(const Coefficients& coeffs, FloatType sample) {
+                const auto input = static_cast<double>(sample);
+                const auto output = input * coeffs[2] + static_cast<double>(s1);
+                s1 = static_cast<FloatType>(input * coeffs[3] - output * coeffs[0]) + s2;
+                s2 = static_cast<FloatType>(input * coeffs[4] - output * coeffs[1]);
+                return static_cast<FloatType>(output);
+            }
+        };
+
+        struct ChannelState {
+            BiquadState high_pass, high_shelf, low_pass;
+        };
+
+        template <bool with_low_pass>
+        void processSections(std::span<FloatType*> buffer, size_t num_samples) {
+            for (size_t i = 0; i < num_samples; ++i) {
+                for (size_t ch = 0; ch < buffer.size(); ++ch) {
+                    auto& state = states_[ch];
+                    auto sample = state.high_pass.process(high_pass_, buffer[ch][i]);
+                    sample = state.high_shelf.process(high_shelf_, sample);
+                    if constexpr (with_low_pass) {
+                        sample = state.low_pass.process(low_pass_, sample);
+                    }
+                    buffer[ch][i] = sample * kBias;
+                }
+            }
+        }
+
         bool use_low_pass_{false};
         bool low_pass_enabled_{false};
-        zldsp::filter::TDF<FloatType, 1> high_pass_, high_shelf_, low_pass_;
+        Coefficients high_pass_{}, high_shelf_{}, low_pass_{};
+        std::vector<ChannelState> states_;
         static constexpr FloatType kBias = static_cast<FloatType>(1.0051643348917434);
     };
 }
