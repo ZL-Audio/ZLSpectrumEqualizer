@@ -87,6 +87,9 @@ namespace zlp {
         fft_order_ = fft_extreme_high_->get_order();
         const size_t max_fft_size = 1ULL << fft_order_;
         const size_t max_num_bin_effective = max_fft_size / 2;
+        for (auto& input : fft_ins_) {
+            input.resize(max_fft_size);
+        }
         {
             const std::lock_guard lock(tri_buffer_lock_);
             for (auto& tri_buf : tri_buffers_) {
@@ -1101,10 +1104,6 @@ namespace zlp {
             std::ranges::fill(fifo, 0.f);
         }
         for (auto& fifo : output_fifos_) {
-            fifo.resize(fft_size_);
-            std::ranges::fill(fifo, 0.f);
-        }
-        for (auto& fifo : fft_ins_) {
             fifo.resize(fft_size_);
             std::ranges::fill(fifo, 0.f);
         }
