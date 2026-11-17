@@ -104,7 +104,6 @@ namespace zlp {
         const size_t max_analyzer_hop = (static_cast<size_t>(1) << fft_order_) / 4;
         for (size_t chan = 0; chan < 2; ++chan) {
             pre_analyzer_temp_[chan].resize(max_analyzer_hop);
-            post_analyzer_temp_[chan].resize(max_analyzer_hop);
             side_analyzer_temp_[chan].resize(max_analyzer_hop);
         }
         analyzer_sender_.prepare(sample_rate_, max_analyzer_hop, {2, 2, 2}, 0.1);

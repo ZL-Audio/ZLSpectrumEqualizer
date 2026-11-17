@@ -432,7 +432,8 @@ namespace zlp {
         size_t fft_pos_ = 0;
         size_t fft_hop_size_ = fft_size_ / 4;
 
-        std::array<zldsp::vector::aligned_vector<float>, 4> input_fifos_, output_fifos_;
+        std::array<zldsp::vector::aligned_vector<float>, 4> input_fifos_;
+        std::array<zldsp::vector::aligned_vector<float>, 2> output_fifos_;
         std::array<zldsp::vector::aligned_vector<float>, 4> fft_ins_;
         std::array<zldsp::vector::aligned_vector<float>, 2> fft_out_reals_, fft_out_imags_;
         zldsp::vector::aligned_vector<float> dynamic_band_response_;
@@ -456,7 +457,6 @@ namespace zlp {
 
         zldsp::analyzer::AnalyzerSenderBase<float, 3> analyzer_sender_{};
         std::array<std::vector<float>, 2> pre_analyzer_temp_;
-        std::array<std::vector<float>, 2> post_analyzer_temp_;
         std::array<std::vector<float>, 2> side_analyzer_temp_;
         std::array<float*, 2> pre_analyzer_ptrs_{};
         std::array<float*, 2> post_analyzer_ptrs_{};
