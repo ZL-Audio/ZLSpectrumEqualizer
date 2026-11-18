@@ -80,6 +80,8 @@ namespace zlp {
         fft_order_ = fft_extreme_high_->get_order();
         const size_t max_fft_size = 1ULL << fft_order_;
         const size_t max_num_bin_effective = max_fft_size / 2;
+        attack_scaling_.resize(max_num_bin_effective);
+        release_scaling_.resize(max_num_bin_effective);
         for (auto& input : fft_ins_) {
             input.resize(max_fft_size);
         }
@@ -1099,9 +1101,6 @@ namespace zlp {
         spec_smoother_.prepare(fft_size_);
         spec_tilter_.prepare(fft_size_);
 
-        spec_follower_scaling_.resize(num_bin_effective_);
-        zldsp::filter::SpecFollower<float>::fillScaling(sample_rate_, fft_size_, spec_follower_scaling_);
-
         for (auto& channel_data : channel_datas_) {
             channel_data.bands.resize(kBandNum);
             channel_data.dynamic_bands.resize(kBandNum);
@@ -1167,8 +1166,9 @@ namespace zlp {
         to_update_spec_smooth_.signal();
         to_update_spec_tilt_.signal();
         to_update_spec_gate_.signal();
-        stale_attack_tables_.set();
-        stale_release_tables_.set();
+        applied_attack_skew_ = kUnsetFollowerSkew;
+        applied_release_skew_ = kUnsetFollowerSkew;
+        to_update_spec_follower_curves_.signal();
         for (size_t band = 0; band < kBandNum; ++band) {
             to_update_spec_threshold_[band].signal();
             to_update_spec_knee_[band].signal();
@@ -1199,6 +1199,7 @@ namespace zlp {
     }
 
     void Controller::updateDynamicStatus() {
+        has_dynamic_bands_ = false;
         dynamic_delta_on_ = false;
         for (const auto& band : on_bands_) {
             dynamic_bypass_[band] = a_dynamic_bypass_[band].load(std::memory_order::relaxed);
@@ -1212,6 +1213,7 @@ namespace zlp {
             }
 
             const auto dynamic_on = a_dynamic_on_[band].load(std::memory_order::relaxed);
+            has_dynamic_bands_ |= dynamic_on;
             if (dynamic_on != dynamic_on_[band]) {
                 dynamic_on_[band] = dynamic_on;
                 to_update_empty_targets_[band].signal();
@@ -1250,15 +1252,32 @@ namespace zlp {
         spec_tilter_.setTiltSlope(sample_rate_, slope);
     }
 
-    void Controller::updateSpecFollower() {
-        if (to_update_spec_skew_attack_.check()) {
+    void Controller::updateSpecFollowerCurves() {
+        const auto attack_skew = a_spec_skew_attack_.load(std::memory_order::relaxed) * 0.02f;
+        const auto release_skew = a_spec_skew_release_.load(std::memory_order::relaxed) * 0.02f;
+        const double bin_width = sample_rate_ / static_cast<double>(fft_size_);
+
+        if (!juce::exactlyEqual(applied_attack_skew_, attack_skew)) {
+            attack_scaling_.resize(num_bin_effective_);
+            zldsp::filter::SpecFollower<float>::fillScaling(bin_width, attack_skew, attack_scaling_);
+            applied_attack_skew_ = attack_skew;
             stale_attack_tables_.set();
         }
-        if (to_update_spec_skew_release_.check()) {
+        if (!juce::exactlyEqual(applied_release_skew_, release_skew)) {
+            release_scaling_.resize(num_bin_effective_);
+            zldsp::filter::SpecFollower<float>::fillScaling(bin_width, release_skew, release_scaling_);
+            applied_release_skew_ = release_skew;
             stale_release_tables_.set();
         }
-        const auto skew_attack = a_spec_skew_attack_.load(std::memory_order::relaxed) * 0.02f;
-        const auto skew_release = a_spec_skew_release_.load(std::memory_order::relaxed) * 0.02f;
+    }
+
+    void Controller::updateSpecFollower() {
+        if (!has_dynamic_bands_) {
+            return;
+        }
+        if (to_update_spec_follower_curves_.check()) {
+            updateSpecFollowerCurves();
+        }
         for (const auto& band : on_bands_) {
             if (!dynamic_on_[band]) {
                 continue;
@@ -1267,12 +1286,12 @@ namespace zlp {
             const bool release_changed = to_update_spec_release_[band].check();
             if (attack_changed || stale_attack_tables_[band]) {
                 const auto attack = a_spec_attack_[band].load(std::memory_order::relaxed);
-                spec_follower_[band].updateAttack(attack, skew_attack, spec_follower_scaling_);
+                spec_follower_[band].updateAttack(attack, attack_scaling_);
                 stale_attack_tables_.reset(band);
             }
             if (release_changed || stale_release_tables_[band]) {
                 const auto release = a_spec_release_[band].load(std::memory_order::relaxed);
-                spec_follower_[band].updateRelease(release, skew_release, spec_follower_scaling_);
+                spec_follower_[band].updateRelease(release, release_scaling_);
                 stale_release_tables_.reset(band);
             }
         }

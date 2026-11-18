@@ -10,6 +10,7 @@
 #pragma once
 
 #include <bitset>
+#include <limits>
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "zlp_definitions.hpp"
@@ -170,13 +171,13 @@ namespace zlp {
 
         void setSpecFollowerSkewAttack(const float skew) {
             a_spec_skew_attack_.store(skew, std::memory_order::relaxed);
-            to_update_spec_skew_attack_.signal();
+            to_update_spec_follower_curves_.signal();
             to_update_.signal();
         }
 
         void setSpecFollowerSkewRelease(const float skew) {
             a_spec_skew_release_.store(skew, std::memory_order::relaxed);
-            to_update_spec_skew_release_.signal();
+            to_update_spec_follower_curves_.signal();
             to_update_.signal();
         }
 
@@ -361,6 +362,7 @@ namespace zlp {
         std::array<bool, kBandNum> dynamic_on_{};
         std::array<bool, kBandNum> dynamic_bypass_{};
         zlchore::thread::Notifier to_update_dynamic_status_{false};
+        bool has_dynamic_bands_{false};
 
         // filter dynamic parameters
         std::atomic<float> a_spec_smooth_value_{0.0f};
@@ -381,7 +383,7 @@ namespace zlp {
         std::array<zlchore::thread::Notifier, kBandNum> to_update_spec_release_{};
         std::atomic<float> a_spec_skew_attack_{0.9f};
         std::atomic<float> a_spec_skew_release_{0.2f};
-        zlchore::thread::Notifier to_update_spec_skew_attack_{false}, to_update_spec_skew_release_{false};
+        zlchore::thread::Notifier to_update_spec_follower_curves_{false};
         std::bitset<kBandNum> stale_attack_tables_{}, stale_release_tables_{};
 
         std::array<std::atomic<float>, kBandNum> a_spec_threshold_abs_{};
@@ -404,13 +406,15 @@ namespace zlp {
         // spectrum processing
         std::array<zldsp::filter::SpecResponse<float>, kBandNum> spec_response_
             = make_array_of<zldsp::filter::SpecResponse<float>, kBandNum>();
+        std::vector<double> attack_scaling_, release_scaling_;
+        static constexpr float kUnsetFollowerSkew = std::numeric_limits<float>::infinity();
+        float applied_attack_skew_{kUnsetFollowerSkew}, applied_release_skew_{kUnsetFollowerSkew};
         std::array<zldsp::filter::SpecFollower<float>, kBandNum> spec_follower_
             = make_array_of<zldsp::filter::SpecFollower<float>, kBandNum>();
         std::array<zldsp::filter::SpecDynamic<float>, kBandNum> spec_dynamic_
             = make_array_of<zldsp::filter::SpecDynamic<float>, kBandNum>();
         zldsp::filter::SpecSmoother<float> spec_smoother_;
         zldsp::filter::SpecTilter<float> spec_tilter_;
-        std::vector<double> spec_follower_scaling_{};
         std::array<float, kBandNum> band_avgs_{};
 
         // fft working space
@@ -546,6 +550,8 @@ namespace zlp {
         void updateSpecSmooth();
 
         void updateSpecTilt();
+
+        void updateSpecFollowerCurves();
 
         void updateSpecFollower();
 
