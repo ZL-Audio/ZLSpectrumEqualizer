@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <functional>
 #include <span>
 
 #include "../chore/smoothed_value.hpp"
@@ -42,7 +43,7 @@ namespace zldsp::gain {
         }
 
         FloatType getCurrentGainLinear() const noexcept {
-            return gain_.getCurrent();
+            return gain_.isSmoothing() ? gain_.getCurrent() : gain_.getTarget();
         }
 
         FloatType getCurrentGainDecibels() const noexcept {
@@ -64,8 +65,12 @@ namespace zldsp::gain {
                 if constexpr (bypass) {
                     return;
                 }
+                const auto gain = gain_.getTarget();
+                if (std::equal_to<FloatType>{}(gain, FloatType(1))) {
+                    return;
+                }
                 for (size_t chan = 0; chan < buffer.size(); ++chan) {
-                    vector::multiply(buffer[chan], gain_.getCurrent(), num_samples);
+                    vector::multiply(buffer[chan], gain, num_samples);
                 }
             } else {
                 for (size_t idx = 0; idx < num_samples; ++idx) {
