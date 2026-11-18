@@ -14,6 +14,18 @@
 
 namespace zlp {
     namespace {
+        constexpr size_t kMainInput = 0;
+        constexpr size_t kSideChainInput = 2;
+
+        template <typename Function>
+        void forEachFrameSegment(const size_t frame_size, const size_t fifo_pos, Function&& process) {
+            const size_t first_size = frame_size - fifo_pos;
+            process(fifo_pos, 0, first_size);
+            if (fifo_pos > 0) {
+                process(0, first_size, fifo_pos);
+            }
+        }
+
         template <FilterStereo stereo>
         HWY_INLINE void processOutputMS(float* HWY_RESTRICT left, float* HWY_RESTRICT right,
                                         const size_t num_samples) {
@@ -47,25 +59,6 @@ namespace zlp {
                 }
             }
         }
-
-        template <size_t Mask>
-        void dispatchMask(Controller* instance, const bool perform_fft, const bool is_delta) {
-            instance->processMainImpl<
-                (Mask & 1) != 0,
-                (Mask & 2) != 0,
-                (Mask & 4) != 0,
-                (Mask & 8) != 0,
-                (Mask & 16) != 0
-            >(perform_fft, is_delta);
-        }
-
-        template <size_t... Is>
-        constexpr std::array<void (*)(Controller*, bool, bool), sizeof...(Is)> makeDispatchTable(
-            std::index_sequence<Is...>) {
-            return {&dispatchMask<Is>...};
-        }
-
-        constexpr auto dispatcher = makeDispatchTable(std::make_index_sequence<32>{});
 
         zldsp::filter::FilterParameters getEffectiveFilterParameters(
             const zldsp::filter::Empty& filter, const double sample_rate) {
@@ -213,321 +206,176 @@ namespace zlp {
         if (fft_ == nullptr) {
             return;
         }
-        size_t samples_processed = 0;
-        while (samples_processed < num_samples) {
-            // copy data to FIFO until reach a hop size or buffer size
-            const size_t chunk = std::min(num_samples - samples_processed, fft_hop_size_ - fft_count_);
-            const size_t chunk1 = std::min(chunk, fft_size_ - fft_pos_);
-            const size_t chunk2 = chunk - chunk1;
+        size_t offset = 0;
+        while (offset < num_samples) {
+            const size_t chunk = std::min(num_samples - offset, fft_hop_size_ - fft_count_);
+            exchangeFifoSamples(buffer, offset, chunk);
 
-            if (editor_on_) {
-                // pre analyzer pointers
-                for (size_t chan = 0; chan < 2; ++chan) {
-                    std::copy_n(input_fifos_[chan].data() + fft_pos_, chunk1,
-                                pre_analyzer_temp_[chan].data());
-                    if (chunk2 > 0) {
-                        std::copy_n(input_fifos_[chan].data(), chunk2,
-                                    pre_analyzer_temp_[chan].data() + chunk1);
-                    }
-                    pre_analyzer_ptrs_[chan] = pre_analyzer_temp_[chan].data();
-                }
-
-                if ((side_status_ != SideStatus::kNotRequired || editor_on_) && is_ext_side_) {
-                    for (size_t chan = 2; chan < 4; ++chan) {
-                        std::copy_n(input_fifos_[chan].data() + fft_pos_, chunk1,
-                                    side_analyzer_temp_[chan - 2].data());
-                        if (chunk2 > 0) {
-                            std::copy_n(input_fifos_[chan].data(), chunk2,
-                                        side_analyzer_temp_[chan - 2].data() + chunk1);
-                        }
-                        side_analyzer_ptrs_[chan - 2] = side_analyzer_temp_[chan - 2].data();
-                    }
-                } else {
-                    std::fill_n(side_analyzer_temp_[0].data(), chunk, 0.0f);
-                    std::fill_n(side_analyzer_temp_[1].data(), chunk, 0.0f);
-                    side_analyzer_ptrs_[0] = side_analyzer_temp_[0].data();
-                    side_analyzer_ptrs_[1] = side_analyzer_temp_[1].data();
-                }
-            }
-
-            for (size_t chan = 0; chan < 2; ++chan) {
-                std::copy_n(buffer[chan] + samples_processed, chunk1,
-                            input_fifos_[chan].data() + fft_pos_);
-                if (chunk2 > 0) {
-                    std::copy_n(buffer[chan] + samples_processed + chunk1, chunk2,
-                                input_fifos_[chan].data());
-                }
-                std::copy_n(output_fifos_[chan].data() + fft_pos_, chunk1,
-                            buffer[chan] + samples_processed);
-                if (chunk2 > 0) {
-                    std::copy_n(output_fifos_[chan].data(), chunk2,
-                                buffer[chan] + samples_processed + chunk1);
-                }
-                std::fill_n(output_fifos_[chan].data() + fft_pos_, chunk1, 0.0f);
-                if (chunk2 > 0) {
-                    std::fill_n(output_fifos_[chan].data(), chunk2, 0.0f);
-                }
-            }
-            if ((side_status_ != SideStatus::kNotRequired || editor_on_) && is_ext_side_) {
-                for (size_t chan = 2; chan < 4; ++chan) {
-                    if (buffer[chan] != nullptr) {
-                        std::copy_n(buffer[chan] + samples_processed, chunk1,
-                                    input_fifos_[chan].data() + fft_pos_);
-                        if (chunk2 > 0) {
-                            std::copy_n(buffer[chan] + samples_processed + chunk1, chunk2,
-                                        input_fifos_[chan].data());
-                        }
-                    } else {
-                        std::fill_n(input_fifos_[chan].data() + fft_pos_, chunk1, 0.0f);
-                        if (chunk2 > 0) {
-                            std::fill_n(input_fifos_[chan].data(), chunk2, 0.0f);
-                        }
-                    }
-                }
-            }
-            // forward FFT pos
             fft_pos_ += chunk;
             if (fft_pos_ >= fft_size_) {
                 fft_pos_ -= fft_size_;
             }
             fft_count_ += chunk;
-            // if reach a hop size, process spectrum
             if (fft_count_ >= fft_hop_size_) {
                 fft_count_ = 0;
-                // copy to FFT working space
-                for (size_t chan = 0; chan < 2; ++chan) {
-                    std::copy_n(input_fifos_[chan].data() + fft_pos_, fft_size_ - fft_pos_,
-                                fft_ins_[chan].data());
-                    if (fft_pos_ > 0) {
-                        std::copy_n(input_fifos_[chan].data(), fft_pos_,
-                                    fft_ins_[chan].data() + fft_size_ - fft_pos_);
-                    }
-                }
-                if (side_status_ != SideStatus::kNotRequired && is_ext_side_) {
-                    for (size_t chan = 2; chan < 4; ++chan) {
-                        std::copy_n(input_fifos_[chan].data() + fft_pos_, fft_size_ - fft_pos_,
-                                    fft_ins_[chan].data());
-                        if (fft_pos_ > 0) {
-                            std::copy_n(input_fifos_[chan].data(), fft_pos_,
-                                        fft_ins_[chan].data() + fft_size_ - fft_pos_);
-                        }
-                    }
-                }
                 processFrame(is_bypass);
-                // overlap-add
-                const size_t range1 = fft_size_ - fft_pos_;
-                for (size_t chan = 0; chan < 2; ++chan) {
-                    {
-                        auto* HWY_RESTRICT out_ptr = output_fifos_[chan].data() + fft_pos_;
-                        const auto* HWY_RESTRICT in_ptr = fft_ins_[chan].data();
-                        for (size_t k = 0; k < range1; k += lanes) {
-                            const auto v_out = hn::Load(d, out_ptr + k);
-                            const auto v_in = hn::Load(d, in_ptr + k);
-                            hn::Store(hn::Add(v_out, v_in), d, out_ptr + k);
-                        }
-                    }
-                    {
-                        auto* HWY_RESTRICT out_ptr = output_fifos_[chan].data();
-                        const auto* HWY_RESTRICT in_ptr = fft_ins_[chan].data() + range1;
-                        for (size_t k = 0; k < fft_pos_; k += lanes) {
-                            const auto v_out = hn::Load(d, out_ptr + k);
-                            const auto v_in = hn::Load(d, in_ptr + k);
-                            hn::Store(hn::Add(v_out, v_in), d, out_ptr + k);
-                        }
-                    }
-                }
             }
-            // post analyzer pointers
+
+            processOutputChunk(buffer, offset, chunk, is_bypass);
+            offset += chunk;
+        }
+    }
+
+    void Controller::exchangeFifoSamples(const std::array<float*, 4>& buffer, const size_t offset, const size_t chunk) {
+        const size_t chunk1 = std::min(chunk, fft_size_ - fft_pos_);
+        const size_t chunk2 = chunk - chunk1;
+
+        if (editor_on_) {
             for (size_t chan = 0; chan < 2; ++chan) {
-                post_analyzer_ptrs_[chan] = buffer[chan] + samples_processed;
-            }
-            if (editor_on_) {
-                if (!c_solo_on_) {
-                    if (loudness_matcher_on_) {
-                        loudness_matcher_.processPre(
-                            std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()), chunk);
-                    }
-                    if (loudness_matcher_on_) {
-                        loudness_matcher_.processPost(
-                            std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
-                    }
-                    if (is_bypass) {
-                        output_gain_dsp_.process<true>(
-                            std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
-                    } else {
-                        output_gain_dsp_.process<false>(
-                            std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
-                    }
+                std::copy_n(input_fifos_[chan].data() + fft_pos_, chunk1,
+                            pre_analyzer_temp_[chan].data());
+                if (chunk2 > 0) {
+                    std::copy_n(input_fifos_[chan].data(), chunk2,
+                                pre_analyzer_temp_[chan].data() + chunk1);
                 }
+                pre_analyzer_ptrs_[chan] = pre_analyzer_temp_[chan].data();
+            }
 
-                displayed_gain_.store(output_gain_dsp_.getCurrentGainLinear(), std::memory_order::relaxed);
-
-                analyzer_sender_.process({
-                                             std::span(pre_analyzer_ptrs_.data(), pre_analyzer_ptrs_.size()),
-                                             std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()),
-                                             std::span(side_analyzer_ptrs_.data(), side_analyzer_ptrs_.size())
-                                         }, chunk);
-
-                if (c_solo_on_) {
-                    switch (lrms_[c_solo_idx_]) {
-                    case FilterStereo::kStereo: {
-                        std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
-                        std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
-                        solo_filter_.process(solo_pointers_, chunk);
-                        break;
+            if (is_ext_side_) {
+                for (size_t chan = 2; chan < 4; ++chan) {
+                    std::copy_n(input_fifos_[chan].data() + fft_pos_, chunk1,
+                                side_analyzer_temp_[chan - 2].data());
+                    if (chunk2 > 0) {
+                        std::copy_n(input_fifos_[chan].data(), chunk2,
+                                    side_analyzer_temp_[chan - 2].data() + chunk1);
                     }
-                    case FilterStereo::kLeft: {
-                        std::memset(solo_pointers_[1], 0, chunk * sizeof(float));
-                        std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
-                        solo_filter_.process({&solo_pointers_[0], 1}, chunk);
-                        break;
-                    }
-                    case FilterStereo::kRight: {
-                        std::memset(solo_pointers_[0], 0, chunk * sizeof(float));
-                        std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
-                        solo_filter_.process({&solo_pointers_[1], 1}, chunk);
-                        break;
-                    }
-                    case FilterStereo::kMid: {
-                        std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
-                        std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
-                        zldsp::splitter::InplaceMSSplitter<float>::split(
-                            solo_pointers_[0], solo_pointers_[1], chunk);
-                        solo_filter_.process({&solo_pointers_[0], 1}, chunk);
-                        std::memset(solo_pointers_[1], 0, chunk * sizeof(float));
-                        zldsp::splitter::InplaceMSSplitter<float>::combine(
-                            solo_pointers_[0], solo_pointers_[1], chunk);
-                        break;
-                    }
-                    case FilterStereo::kSide: {
-                        std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
-                        std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
-                        zldsp::splitter::InplaceMSSplitter<float>::split(
-                            solo_pointers_[0], solo_pointers_[1], chunk);
-                        solo_filter_.process({&solo_pointers_[1], 1}, chunk);
-                        std::memset(solo_pointers_[0], 0, chunk * sizeof(float));
-                        zldsp::splitter::InplaceMSSplitter<float>::combine(
-                            solo_pointers_[0], solo_pointers_[1], chunk);
-                        break;
-                    }
-                    }
-                    if (!is_bypass) {
-                        solo_gain_dsp_.process(solo_pointers_, chunk);
-                        std::copy_n(solo_pointers_[0], chunk, post_analyzer_ptrs_[0]);
-                        std::copy_n(solo_pointers_[1], chunk, post_analyzer_ptrs_[1]);
-                    }
+                    side_analyzer_ptrs_[chan - 2] = side_analyzer_temp_[chan - 2].data();
                 }
             } else {
-                if (is_bypass) {
-                    output_gain_dsp_.process<true>(
-                        std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                std::fill_n(side_analyzer_temp_[0].data(), chunk, 0.0f);
+                std::fill_n(side_analyzer_temp_[1].data(), chunk, 0.0f);
+                side_analyzer_ptrs_[0] = side_analyzer_temp_[0].data();
+                side_analyzer_ptrs_[1] = side_analyzer_temp_[1].data();
+            }
+        }
+
+        for (size_t chan = 0; chan < 2; ++chan) {
+            std::copy_n(buffer[chan] + offset, chunk1,
+                        input_fifos_[chan].data() + fft_pos_);
+            if (chunk2 > 0) {
+                std::copy_n(buffer[chan] + offset + chunk1, chunk2,
+                            input_fifos_[chan].data());
+            }
+            std::copy_n(output_fifos_[chan].data() + fft_pos_, chunk1,
+                        buffer[chan] + offset);
+            if (chunk2 > 0) {
+                std::copy_n(output_fifos_[chan].data(), chunk2,
+                            buffer[chan] + offset + chunk1);
+            }
+            std::fill_n(output_fifos_[chan].data() + fft_pos_, chunk1, 0.0f);
+            if (chunk2 > 0) {
+                std::fill_n(output_fifos_[chan].data(), chunk2, 0.0f);
+            }
+        }
+        if ((side_status_ != SideStatus::kNotRequired || editor_on_) && is_ext_side_) {
+            for (size_t chan = 2; chan < 4; ++chan) {
+                if (buffer[chan] != nullptr) {
+                    std::copy_n(buffer[chan] + offset, chunk1,
+                                input_fifos_[chan].data() + fft_pos_);
+                    if (chunk2 > 0) {
+                        std::copy_n(buffer[chan] + offset + chunk1, chunk2,
+                                    input_fifos_[chan].data());
+                    }
                 } else {
-                    output_gain_dsp_.process<false>(
-                        std::span(post_analyzer_ptrs_.data(), post_analyzer_ptrs_.size()), chunk);
+                    std::fill_n(input_fifos_[chan].data() + fft_pos_, chunk1, 0.0f);
+                    if (chunk2 > 0) {
+                        std::fill_n(input_fifos_[chan].data(), chunk2, 0.0f);
+                    }
                 }
             }
-
-            if (!is_bypass) {
-                switch (output_stereo_) {
-                case FilterStereo::kStereo: {
-                    break;
-                }
-                case FilterStereo::kLeft: {
-                    std::memset(post_analyzer_ptrs_[1], 0, chunk * sizeof(float));
-                    break;
-                }
-                case FilterStereo::kRight: {
-                    std::memset(post_analyzer_ptrs_[0], 0, chunk * sizeof(float));
-                    break;
-                }
-                case FilterStereo::kMid: {
-                    processOutputMS<FilterStereo::kMid>(post_analyzer_ptrs_[0], post_analyzer_ptrs_[1], chunk);
-                    break;
-                }
-                case FilterStereo::kSide: {
-                    processOutputMS<FilterStereo::kSide>(post_analyzer_ptrs_[0], post_analyzer_ptrs_[1], chunk);
-                    break;
-                }
-                }
-            }
-
-            samples_processed += chunk;
         }
     }
 
     void Controller::processFrame(const bool is_bypass) {
-        bool main_fft_done = false;
-        if (side_status_ != SideStatus::kNotRequired) {
-            if (is_ext_side_) {
-                processSide();
+        const bool needs_detector = side_status_ != SideStatus::kNotRequired;
+        const bool share_main_fft = needs_detector && !is_ext_side_;
+        if (needs_detector) {
+            if (share_main_fft) {
+                forwardInputPair(kMainInput);
+                computeSideChainPowerFromSpectrum();
             } else {
-                multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window1_.data());
-                fft_->forward(fft_ins_[0].data(), {fft_out_reals_[0].data(), fft_out_imags_[0].data()}); // NOLINT
-                fft_->forward(fft_ins_[1].data(), {fft_out_reals_[1].data(), fft_out_imags_[1].data()}); // NOLINT
-                main_fft_done = true;
-                computeSideAbsSqrFromMain();
+                analyzeExternalSideChain();
             }
-            processDynamicBands(stereo_data_, tri_buffers_[0]);
-            processDynamicBands(l_data_, tri_buffers_[1]);
-            processDynamicBands(r_data_, tri_buffers_[2]);
-            processDynamicBands(m_data_, tri_buffers_[3]);
-            processDynamicBands(s_data_, tri_buffers_[4]);
+            for (size_t route = 0; route < channel_datas_.size(); ++route) {
+                processDynamicBands(channel_datas_[route], tri_buffers_[route]);
+            }
         }
-        processMain(is_bypass, !main_fft_done);
+
+        // An internal detector leaves the main FFT ready for synthesis, including during bypass.
+        if (!share_main_fft) {
+            if (is_bypass || (active_route_mask_ == 0 && !dynamic_delta_on_)) {
+                overlapAdd<FrameSource::kDryInput>();
+                return;
+            }
+            forwardInputPair(kMainInput);
+        }
+        if (!is_bypass) {
+            applyMainResponse(dynamic_delta_on_);
+        }
+        for (size_t chan = 0; chan < fft_out_reals_.size(); ++chan) {
+            fft_->backward({fft_out_reals_[chan].data(), fft_out_imags_[chan].data()}, fft_ins_[chan].data()); // NOLINT
+        }
+        overlapAdd<FrameSource::kInverseFFT>();
     }
 
-    void Controller::processSide() {
-        if (side_status_ == SideStatus::kLR) {
-            processSideLR();
-        } else if (side_status_ == SideStatus::kMS) {
-            processSideMS();
-        } else {
-            processSideLRMS();
+    void Controller::forwardInputPair(const size_t first_channel) {
+        for (size_t i = 0; i < 2; ++i) {
+            const size_t chan = first_channel + i;
+            gatherWindowedInput(chan);
+            fft_->forward(fft_ins_[chan].data(), {fft_out_reals_[i].data(), fft_out_imags_[i].data()}); // NOLINT
         }
     }
 
-    void Controller::processMain(const bool is_bypass, const bool perform_fft) {
-        if (is_bypass) {
-            dispatcher[0](this, perform_fft, false);
-        } else if (dynamic_delta_on_) {
-            dispatcher[dynamic_delta_mask_](this, perform_fft, true);
-        } else {
-            dispatcher[dispatch_mask_](this, perform_fft, false);
+    void Controller::gatherWindowedInput(const size_t chan) {
+        const auto* input = input_fifos_[chan].data();
+        auto* frame = fft_ins_[chan].data();
+        forEachFrameSegment(fft_size_, fft_pos_, [&](size_t fifo_offset, size_t frame_offset, size_t size) {
+            zldsp::vector::multiply(frame + frame_offset, input + fifo_offset, window1_.data() + frame_offset, size);
+        });
+    }
+
+    void Controller::analyzeExternalSideChain() {
+        switch (side_status_) {
+        case SideStatus::kLR:
+            analyzeSideChainPair<SideStatus::kLR>(l_data_, r_data_);
+            break;
+        case SideStatus::kMS:
+            analyzeSideChainPair<SideStatus::kMS>(m_data_, s_data_);
+            break;
+        case SideStatus::kLRMS:
+            forwardInputPair(kSideChainInput);
+            computeSideChainPowerFromSpectrum();
+            break;
+        case SideStatus::kNotRequired:
+            break;
         }
     }
 
-    void Controller::processSideLR() {
-        processDualChannelSide<false>(l_data_, r_data_);
-    }
-
-    void Controller::processSideMS() {
-        zldsp::splitter::InplaceMSSplitter<float>::split(fft_ins_[2].data(), fft_ins_[3].data(), fft_size_);
-        processDualChannelSide<true>(m_data_, s_data_);
-    }
-
-    void Controller::processSideLRMS() {
-        auto* HWY_RESTRICT l_real_ptr = fft_out_reals_[0].data();
-        auto* HWY_RESTRICT l_imag_ptr = fft_out_imags_[0].data();
-        auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
-        auto* HWY_RESTRICT r_imag_ptr = fft_out_imags_[1].data();
-
-        multiplyWithWindow(fft_ins_[2].data(), fft_ins_[3].data(), window1_.data());
-        fft_->forward(fft_ins_[2].data(), {l_real_ptr, l_imag_ptr}); // NOLINT
-        fft_->forward(fft_ins_[3].data(), {r_real_ptr, r_imag_ptr}); // NOLINT
-
-        computeSideAbsSqrFromMain();
-    }
-
-    template <bool compensate_stereo_energy>
-    void Controller::processDualChannelSide(ChannelData& ch1, ChannelData& ch2) {
-        if (!ch1.dynamic_bands.empty() || !stereo_data_.dynamic_bands.empty()) {
-            zldsp::vector::multiply(fft_ins_[2].data(), window1_.data(), fft_size_);
-            fft_->forward_sqr_mag(fft_ins_[2].data(), ch1.fft_side_abs_sqr.data()); // NOLINT
+    template <Controller::SideStatus channels>
+    void Controller::analyzeSideChainPair(ChannelData& ch1, ChannelData& ch2) {
+        if constexpr (channels == SideStatus::kMS) {
+            gatherWindowedMidSideInput();
         }
-        if (!ch2.dynamic_bands.empty() || !stereo_data_.dynamic_bands.empty()) {
-            zldsp::vector::multiply(fft_ins_[3].data(), window1_.data(), fft_size_);
-            fft_->forward_sqr_mag(fft_ins_[3].data(), ch2.fft_side_abs_sqr.data()); // NOLINT
-        }
+        const auto transform = [&](size_t chan, ChannelData& data) {
+            if (!data.dynamic_bands.empty() || !stereo_data_.dynamic_bands.empty()) {
+                if constexpr (channels == SideStatus::kLR) {
+                    gatherWindowedInput(chan);
+                }
+                fft_->forward_sqr_mag(fft_ins_[chan].data(), data.fft_side_abs_sqr.data()); // NOLINT
+            }
+        };
+        transform(2, ch1);
+        transform(3, ch2);
         if (!stereo_data_.dynamic_bands.empty() && stereo_data_.side_end_idx > stereo_data_.side_start_idx) {
             auto* HWY_RESTRICT stereo_abs_sqr = stereo_data_.fft_side_abs_sqr.data();
             const auto* HWY_RESTRICT ch1_abs_sqr = ch1.fft_side_abs_sqr.data();
@@ -540,7 +388,7 @@ namespace zlp {
                 const auto v2 = hn::Load(d, ch2_abs_sqr + i);
                 const auto sum = hn::Add(v1, v2);
 
-                if constexpr (compensate_stereo_energy) {
+                if constexpr (channels == SideStatus::kMS) {
                     hn::Store(hn::Add(sum, sum), d, stereo_abs_sqr + i);
                 } else {
                     hn::Store(sum, d, stereo_abs_sqr + i);
@@ -556,7 +404,27 @@ namespace zlp {
         }
     }
 
-    void Controller::computeSideAbsSqrFromMain() {
+    void Controller::gatherWindowedMidSideInput() {
+        const auto half = hn::Set(d, 0.5f);
+        forEachFrameSegment(fft_size_, fft_pos_, [&](size_t fifo_offset, size_t frame_offset, size_t size) {
+            const auto* l_input = input_fifos_[2].data() + fifo_offset;
+            const auto* r_input = input_fifos_[3].data() + fifo_offset;
+            const auto* window = window1_.data() + frame_offset;
+            auto* mid_frame = fft_ins_[2].data() + frame_offset;
+            auto* side_frame = fft_ins_[3].data() + frame_offset;
+            for (size_t i = 0; i < size; i += lanes) {
+                const auto l = hn::Load(d, l_input + i);
+                const auto r = hn::Load(d, r_input + i);
+                const auto mid = hn::Mul(half, hn::Add(l, r));
+                const auto side = hn::Sub(mid, r);
+                const auto w = hn::Load(d, window + i);
+                hn::Store(hn::Mul(mid, w), d, mid_frame + i);
+                hn::Store(hn::Mul(side, w), d, side_frame + i);
+            }
+        });
+    }
+
+    void Controller::computeSideChainPowerFromSpectrum() {
         const auto* HWY_RESTRICT l_real_ptr = fft_out_reals_[0].data();
         const auto* HWY_RESTRICT l_imag_ptr = fft_out_imags_[0].data();
         const auto* HWY_RESTRICT r_real_ptr = fft_out_reals_[1].data();
@@ -819,20 +687,21 @@ namespace zlp {
         }
     }
 
-    template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
-    void Controller::processMainImpl(const bool perform_fft, const bool is_delta) {
-        if constexpr (!(has_stereo || has_l || has_r || has_m || has_s)) {
-            if (!is_delta && perform_fft) {
-                multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window_bypass_.data());
-                return;
-            }
-        }
+    void Controller::applyMainResponse(const bool is_delta) {
+        static constexpr auto responses = []<size_t... Masks>(std::index_sequence<Masks...>) {
+            return std::array{&Controller::applyChannelResponses<Masks>...};
+        }(std::make_index_sequence<32>{});
+        const auto mask = is_delta ? delta_route_mask_ : active_route_mask_;
+        (this->*responses[mask])(is_delta);
+    }
 
-        if (perform_fft) {
-            multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window1_.data());
-            fft_->forward(fft_ins_[0].data(), {fft_out_reals_[0].data(), fft_out_imags_[0].data()}); // NOLINT
-            fft_->forward(fft_ins_[1].data(), {fft_out_reals_[1].data(), fft_out_imags_[1].data()}); // NOLINT
-        }
+    template <size_t channel_mask>
+    void Controller::applyChannelResponses(const bool is_delta) {
+        constexpr bool has_stereo = (channel_mask & 1) != 0;
+        constexpr bool has_l = (channel_mask & 2) != 0;
+        constexpr bool has_r = (channel_mask & 4) != 0;
+        constexpr bool has_m = (channel_mask & 8) != 0;
+        constexpr bool has_s = (channel_mask & 16) != 0;
 
         auto* HWY_RESTRICT l_real_ptr = fft_out_reals_[0].data();
         auto* HWY_RESTRICT l_imag_ptr = fft_out_imags_[0].data();
@@ -1044,22 +913,125 @@ namespace zlp {
             r_real_ptr[i] = vr_real;
             r_imag_ptr[i] = vr_imag;
         }
-
-        fft_->backward({fft_out_reals_[0].data(), fft_out_imags_[0].data()}, fft_ins_[0].data()); // NOLINT
-        fft_->backward({fft_out_reals_[1].data(), fft_out_imags_[1].data()}, fft_ins_[1].data()); // NOLINT
-
-        multiplyWithWindow(fft_ins_[0].data(), fft_ins_[1].data(), window2_.data());
     }
 
-    void Controller::multiplyWithWindow(float* HWY_RESTRICT in1_ptr,
-                                        float* HWY_RESTRICT in2_ptr,
-                                        const float* HWY_RESTRICT window_ptr) const {
-        for (size_t i = 0; i < fft_size_; i += lanes) {
-            const auto v_window = hn::Load(d, window_ptr + i);
-            const auto v_in1 = hn::Load(d, in1_ptr + i);
-            const auto v_in2 = hn::Load(d, in2_ptr + i);
-            hn::Store(hn::Mul(v_window, v_in1), d, in1_ptr + i);
-            hn::Store(hn::Mul(v_window, v_in2), d, in2_ptr + i);
+    template <Controller::FrameSource source>
+    void Controller::overlapAdd() {
+        constexpr bool dry = source == FrameSource::kDryInput;
+        const auto* window = dry ? window_bypass_.data() : window2_.data();
+        forEachFrameSegment(fft_size_, fft_pos_, [&](size_t fifo_offset, size_t frame_offset, size_t size) {
+            for (size_t chan = 0; chan < output_fifos_.size(); ++chan) {
+                const auto* input = dry ? input_fifos_[chan].data() + fifo_offset
+                                        : fft_ins_[chan].data() + frame_offset;
+                auto* output = output_fifos_[chan].data() + fifo_offset;
+                for (size_t i = 0; i < size; i += lanes) {
+                    const auto sample = hn::Load(d, input + i);
+                    const auto w = hn::Load(d, window + frame_offset + i);
+                    const auto previous = hn::Load(d, output + i);
+                    hn::Store(hn::MulAdd(w, sample, previous), d, output + i);
+                }
+            }
+        });
+    }
+
+    void Controller::processOutputChunk(const std::array<float*, 4>& buffer, const size_t offset, const size_t chunk,
+                                        const bool is_bypass) {
+        for (size_t chan = 0; chan < post_analyzer_ptrs_.size(); ++chan) {
+            post_analyzer_ptrs_[chan] = buffer[chan] + offset;
+        }
+        const bool solo_active = editor_on_ && c_solo_on_;
+        if (!solo_active) {
+            if (editor_on_ && loudness_matcher_on_) {
+                loudness_matcher_.processPre(pre_analyzer_ptrs_, chunk);
+                loudness_matcher_.processPost(post_analyzer_ptrs_, chunk);
+            }
+            if (is_bypass) {
+                output_gain_dsp_.process<true>(post_analyzer_ptrs_, chunk);
+            } else {
+                output_gain_dsp_.process<false>(post_analyzer_ptrs_, chunk);
+            }
+        }
+
+        if (editor_on_) {
+            displayed_gain_.store(output_gain_dsp_.getCurrentGainLinear(), std::memory_order_relaxed);
+            analyzer_sender_.process({pre_analyzer_ptrs_, post_analyzer_ptrs_, side_analyzer_ptrs_}, chunk);
+            if (solo_active) {
+                processSoloChunk(chunk, is_bypass);
+            }
+        }
+        if (is_bypass) {
+            return;
+        }
+        switch (output_stereo_) {
+        case FilterStereo::kStereo: {
+            break;
+        }
+        case FilterStereo::kLeft: {
+            std::memset(post_analyzer_ptrs_[1], 0, chunk * sizeof(float));
+            break;
+        }
+        case FilterStereo::kRight: {
+            std::memset(post_analyzer_ptrs_[0], 0, chunk * sizeof(float));
+            break;
+        }
+        case FilterStereo::kMid: {
+            processOutputMS<FilterStereo::kMid>(post_analyzer_ptrs_[0], post_analyzer_ptrs_[1], chunk);
+            break;
+        }
+        case FilterStereo::kSide: {
+            processOutputMS<FilterStereo::kSide>(post_analyzer_ptrs_[0], post_analyzer_ptrs_[1], chunk);
+            break;
+        }
+        }
+    }
+
+    void Controller::processSoloChunk(const size_t chunk, const bool is_bypass) {
+        switch (lrms_[c_solo_idx_]) {
+        case FilterStereo::kStereo: {
+            std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+            std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+            solo_filter_.process(solo_pointers_, chunk);
+            break;
+        }
+        case FilterStereo::kLeft: {
+            std::memset(solo_pointers_[1], 0, chunk * sizeof(float));
+            std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+            solo_filter_.process({&solo_pointers_[0], 1}, chunk);
+            break;
+        }
+        case FilterStereo::kRight: {
+            std::memset(solo_pointers_[0], 0, chunk * sizeof(float));
+            std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+            solo_filter_.process({&solo_pointers_[1], 1}, chunk);
+            break;
+        }
+        case FilterStereo::kMid: {
+            std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+            std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+            zldsp::splitter::InplaceMSSplitter<float>::split(
+                solo_pointers_[0], solo_pointers_[1], chunk);
+            solo_filter_.process({&solo_pointers_[0], 1}, chunk);
+            std::memset(solo_pointers_[1], 0, chunk * sizeof(float));
+            zldsp::splitter::InplaceMSSplitter<float>::combine(
+                solo_pointers_[0], solo_pointers_[1], chunk);
+            break;
+        }
+        case FilterStereo::kSide: {
+            std::copy_n(pre_analyzer_ptrs_[0], chunk, solo_pointers_[0]);
+            std::copy_n(pre_analyzer_ptrs_[1], chunk, solo_pointers_[1]);
+            zldsp::splitter::InplaceMSSplitter<float>::split(
+                solo_pointers_[0], solo_pointers_[1], chunk);
+            solo_filter_.process({&solo_pointers_[1], 1}, chunk);
+            std::memset(solo_pointers_[0], 0, chunk * sizeof(float));
+            zldsp::splitter::InplaceMSSplitter<float>::combine(
+                solo_pointers_[0], solo_pointers_[1], chunk);
+            break;
+        }
+        }
+        if (!is_bypass) {
+            solo_gain_dsp_.process(solo_pointers_, chunk);
+            std::copy_n(solo_pointers_[0], chunk, post_analyzer_ptrs_[0]);
+            std::copy_n(solo_pointers_[1], chunk, post_analyzer_ptrs_[1]);
         }
     }
 
@@ -1469,20 +1441,18 @@ namespace zlp {
             }
         }
 
-        dispatch_mask_ = 0;
-        if (!stereo_data_.bands.empty()) { dispatch_mask_ |= 1; }
-        if (!l_data_.bands.empty()) { dispatch_mask_ |= 2; }
-        if (!r_data_.bands.empty()) { dispatch_mask_ |= 4; }
-        if (!m_data_.bands.empty()) { dispatch_mask_ |= 8; }
-        if (!s_data_.bands.empty()) { dispatch_mask_ |= 16; }
-
-        dynamic_delta_mask_ = 0;
-        for (size_t chan = 0; chan < channel_datas_.size(); ++chan) {
-            const auto& dynamic_bands = channel_datas_[chan].dynamic_bands;
-            if (std::ranges::any_of(dynamic_bands, [this](const size_t band) {
+        active_route_mask_ = 0;
+        delta_route_mask_ = 0;
+        for (size_t route = 0; route < channel_datas_.size(); ++route) {
+            const auto& data = channel_datas_[route];
+            const auto bit = size_t{1} << route;
+            if (!data.bands.empty()) {
+                active_route_mask_ |= bit;
+            }
+            if (std::ranges::any_of(data.dynamic_bands, [this](const size_t band) {
                 return dynamic_delta_[band];
             })) {
-                dynamic_delta_mask_ |= 1ULL << chan;
+                delta_route_mask_ |= bit;
             }
         }
 

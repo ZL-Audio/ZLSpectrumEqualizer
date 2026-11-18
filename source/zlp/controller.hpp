@@ -47,7 +47,8 @@ namespace zlp {
     }
 
     class Controller final : private juce::AsyncUpdater {
-        static_assert(ZL_ENABLE_FILTER_SCALED_PASS != 0, "zlp::Controller requires ZL_ENABLE_FILTER_SCALED_PASS to be enabled.");
+        static_assert(
+            ZL_ENABLE_FILTER_SCALED_PASS != 0, "zlp::Controller requires ZL_ENABLE_FILTER_SCALED_PASS to be enabled.");
 
     public:
         static constexpr size_t kFilterSize = 16;
@@ -59,9 +60,6 @@ namespace zlp {
         void prepareBuffer();
 
         void process(const std::array<float*, 4>& buffer, size_t num_samples, bool is_bypass);
-
-        template <bool has_stereo, bool has_l, bool has_r, bool has_m, bool has_s>
-        void processMainImpl(bool perform_fft, bool is_delta = false);
 
         void setFilterStatus(const size_t idx, const FilterStatus filter_status) {
             a_filter_status_[idx].store(filter_status, std::memory_order::relaxed);
@@ -307,6 +305,8 @@ namespace zlp {
             kNotRequired, kLR, kMS, kLRMS
         };
 
+        enum class FrameSource { kDryInput, kInverseFFT };
+
         static constexpr hn::ScalableTag<float> d{};
         static constexpr size_t lanes = hn::MaxLanes(d);
 
@@ -321,7 +321,7 @@ namespace zlp {
             size_t dynamic_start_idx{0}, dynamic_end_idx{0};
             std::vector<size_t> dynamic_bands{};
             zldsp::vector::aligned_vector<float> dynamic_response;
-            // Selected transfer H; delta output is formed as (H - I) in processMainImpl.
+            // applyChannelResponses forms the audible delta (H - I) from the selected transfer H.
             zldsp::vector::aligned_vector<float> delta_response;
             bool require_relative{false};
         };
@@ -438,8 +438,8 @@ namespace zlp {
         std::array<zldsp::vector::aligned_vector<float>, 2> fft_out_reals_, fft_out_imags_;
         zldsp::vector::aligned_vector<float> dynamic_band_response_;
 
-        size_t dispatch_mask_{0};
-        size_t dynamic_delta_mask_{0};
+        size_t active_route_mask_{0};
+        size_t delta_route_mask_{0};
         std::array<ChannelData, 5> channel_datas_{};
         std::array<bool, 5> to_update_channel_static_{false};
         std::array<bool, 5> to_update_channel_smooth_bounds_{false};
@@ -506,27 +506,36 @@ namespace zlp {
 
         void resizeWorkingSpace();
 
+        void exchangeFifoSamples(const std::array<float*, 4>& buffer, size_t offset, size_t chunk);
+
         void processFrame(bool is_bypass);
 
-        void processSide();
+        void forwardInputPair(size_t first_channel);
 
-        void computeSideAbsSqrFromMain();
+        void gatherWindowedInput(size_t chan);
 
-        void processSideLR();
+        void analyzeExternalSideChain();
 
-        void processSideMS();
+        template <SideStatus channels>
+        void analyzeSideChainPair(ChannelData& ch1, ChannelData& ch2);
 
-        void processSideLRMS();
+        void gatherWindowedMidSideInput();
 
-        template <bool compensate_stereo_energy>
-        void processDualChannelSide(ChannelData& ch1, ChannelData& ch2);
+        void computeSideChainPowerFromSpectrum();
 
         void processDynamicBands(ChannelData& data, zlchore::thread::TriBuffer<SharedData>& shared_data);
 
-        void processMain(bool is_bypass, bool perform_fft);
+        void applyMainResponse(bool is_delta);
 
-        void multiplyWithWindow(float* HWY_RESTRICT in1_ptr, float* HWY_RESTRICT in2_ptr,
-                                const float* HWY_RESTRICT window_ptr) const;
+        template <size_t channel_mask>
+        void applyChannelResponses(bool is_delta);
+
+        template <FrameSource source>
+        void overlapAdd();
+
+        void processOutputChunk(const std::array<float*, 4>& buffer, size_t offset, size_t chunk, bool is_bypass);
+
+        void processSoloChunk(size_t chunk, bool is_bypass);
 
         void updateFFTResolution();
 
